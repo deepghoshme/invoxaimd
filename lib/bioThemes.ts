@@ -23,6 +23,7 @@ export type BioContent = {
   animation?: "none" | "fade" | "rise" | "pop";
   button_style?: "rounded" | "pill" | "outline";
   icon_position?: "left" | "center" | "right";
+  avatar_position?: "left" | "center" | "right";
   highlight_color?: string;
   stripe_color?: string;
   highlight_size?: "s" | "m" | "l";

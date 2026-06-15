@@ -48,6 +48,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
   const [animation, setAnimation] = useState(c.animation ?? "rise");
   const [buttonStyle, setButtonStyle] = useState(c.button_style ?? "rounded");
   const [iconPos, setIconPos] = useState(c.icon_position ?? "left");
+  const [avatarPos, setAvatarPos] = useState(c.avatar_position ?? "center");
   const [highlightColor, setHighlightColor] = useState(c.highlight_color ?? "#FF6A3D");
   const [stripeColor, setStripeColor] = useState(c.stripe_color ?? "#FFFFFF");
   const [hiSize, setHiSize] = useState(c.highlight_size ?? "m");
@@ -81,12 +82,13 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
       animation: animation as BioContent["animation"],
       button_style: buttonStyle as BioContent["button_style"],
       icon_position: iconPos as BioContent["icon_position"],
+      avatar_position: avatarPos as BioContent["avatar_position"],
       highlight_color: highlightColor,
       stripe_color: stripeColor,
       highlight_size: hiSize as BioContent["highlight_size"],
       highlight_text_size: hiTextSize as BioContent["highlight_text_size"],
     }),
-    [displayName, headline, avatarUrl, coverUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, highlightColor, stripeColor, hiSize, hiTextSize],
+    [displayName, headline, avatarUrl, coverUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, avatarPos, highlightColor, stripeColor, hiSize, hiTextSize],
   );
 
   // --- minimum requirements before publish ---
@@ -190,6 +192,13 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
             <Field label="Headline"><input className="input" value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Creator · Coach · Founder" /></Field>
             <Field label="Cover banner (upload or URL)"><ImageInput value={coverUrl} onChange={setCoverUrl} placeholder="https://…/cover.jpg" /></Field>
             <Field label="Avatar (upload or URL)"><ImageInput value={avatarUrl} onChange={setAvatarUrl} placeholder="https://…/photo.jpg" /></Field>
+            <Field label="Avatar position">
+              <div className="chiprow">
+                {(["left", "center", "right"] as const).map((p) => (
+                  <div key={p} className={`chip-toggle${avatarPos === p ? " on" : ""}`} onClick={() => setAvatarPos(p)} style={{ textTransform: "capitalize", justifyContent: "center" }}>{p}</div>
+                ))}
+              </div>
+            </Field>
             <Field label="Short bio"><textarea className="input" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} /></Field>
           </section>
 

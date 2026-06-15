@@ -142,6 +142,9 @@ export default function BioTemplate({
   const featured = links.find((l) => l.highlight);
   const rootClass = `${forceMobile ? "force-mobile " : ""}${featured ? "has-cta " : ""}`.trim();
 
+  const avatarPos = content.avatar_position ?? "center";
+  const justify = avatarPos === "left" ? "flex-start" : avatarPos === "right" ? "flex-end" : "center";
+
   return (
     <div
       className={`bio-root ${rootClass}`.trim()}
@@ -157,6 +160,45 @@ export default function BioTemplate({
     >
       <BioBackgroundFX motion={content.bg_motion} theme={theme} />
 
+      {/* Full-width Facebook-style cover (bottom corners curved) + positioned avatar */}
+      <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
+        <div
+          style={{
+            width: "100%",
+            height: "clamp(140px, 28vw, 210px)",
+            borderRadius: "0 0 28px 28px",
+            background: content.cover_url
+              ? `center/cover no-repeat url(${content.cover_url})`
+              : `linear-gradient(135deg, ${theme.primary}, ${theme.bg})`,
+            boxShadow: "0 16px 36px -24px rgba(0,0,0,0.55)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
+            bottom: -48,
+            width: "min(540px, 100%)",
+            display: "flex",
+            justifyContent: justify,
+            padding: "0 26px",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: "50%",
+              background: content.avatar_url ? `center/cover url(${content.avatar_url})` : theme.primary,
+              border: `4px solid ${theme.bg}`,
+              boxShadow: "0 12px 28px -14px rgba(0,0,0,0.55)",
+            }}
+          />
+        </div>
+      </div>
+
       <div
         className="bio-content"
         style={{
@@ -166,47 +208,20 @@ export default function BioTemplate({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          padding: "48px 20px",
+          padding: "66px 20px 48px",
         }}
       >
         {/* margin-auto centers when short, but collapses on overflow so the page
             stays scrollable and nothing hides behind the fixed mobile CTA */}
-        <div className={anim} style={{ width: "min(480px, 100%)", textAlign: "center", marginTop: "auto", marginBottom: "auto" }}>
-          {/* Facebook-style cover banner with the avatar overlapping its bottom */}
-          <div style={{ position: "relative", marginBottom: 54 }}>
-            <div
-              style={{
-                height: 150,
-                borderRadius: 18,
-                background: content.cover_url
-                  ? `center/cover no-repeat url(${content.cover_url})`
-                  : `linear-gradient(135deg, ${theme.primary}, ${theme.bg})`,
-                boxShadow: "0 12px 32px -18px rgba(0,0,0,0.5)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                bottom: -46,
-                transform: "translateX(-50%)",
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                background: content.avatar_url ? `center/cover url(${content.avatar_url})` : theme.primary,
-                border: `4px solid ${theme.bg}`,
-                boxShadow: "0 12px 28px -14px rgba(0,0,0,0.55)",
-              }}
-            />
-          </div>
+        <div className={anim} style={{ width: "min(480px, 100%)", textAlign: avatarPos, marginTop: "auto", marginBottom: "auto" }}>
           <h1 style={{ margin: "0 0 4px", fontSize: "1.6rem", fontFamily: "var(--font-heading), sans-serif", color: theme.text }}>
             {name}
           </h1>
           {content.headline && <p style={{ margin: "0 0 12px", color: theme.muted, fontWeight: 600 }}>{content.headline}</p>}
-          {content.bio && <p style={{ margin: "0 auto 22px", maxWidth: "32rem", color: theme.text, opacity: 0.9 }}>{content.bio}</p>}
+          {content.bio && <p style={{ margin: "0 0 22px", maxWidth: "32rem", color: theme.text, opacity: 0.9 }}>{content.bio}</p>}
 
           {socials.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: justify, flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
               {socials.map((s, i) => (
                 <a key={i} href={s.url} target="_blank" rel="noreferrer" aria-label={s.platform}>
                   <SocialIcon platform={s.platform} />
