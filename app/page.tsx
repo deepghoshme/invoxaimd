@@ -1,8 +1,21 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+
 /**
- * Marketing landing placeholder (invoxai.io root). Confirms the design tokens
- * and font wiring render; replaced by the real marketing site in a later phase.
+ * Root router by host:
+ *  - app.invoxai.io    → the seller app (dashboard guard sends to login/onboarding)
+ *  - admin.invoxai.io  → admin panel (not built yet → login for now)
+ *  - everything else   → the marketing landing (invoxai.io)
  */
-export default function Home() {
+export default async function Home() {
+  const host = (await headers()).get("host") ?? "";
+  const sub = host.split(":")[0].split(".")[0];
+
+  if (sub === "app") redirect("/dashboard");
+  if (sub === "admin") redirect("/login");
+
   return (
     <main
       style={{
@@ -25,7 +38,7 @@ export default function Home() {
           color: "var(--color-muted)",
         }}
       >
-        Foundation · Phase 0
+        Foundation · Phase 1
       </span>
 
       <h1
