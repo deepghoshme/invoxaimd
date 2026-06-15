@@ -63,7 +63,22 @@
 - [x] Shared UI primitives in `globals.css` (card/input/btn/alert/steps)
 - [x] Build green; route guards + tls-check verified at runtime
 
+- [x] **Live on the VPS** — `deploy/setup.sh` + `caddy-step.sh` run: `invoxai-web`
+  systemd service + Caddy 2.11.4 (auto-HTTPS). Hostinger cloud firewall opened
+  80/443. Domains serve over HTTPS.
+- [x] **Host-based routing** (`app/page.tsx`): `app.*`→`/dashboard`, `admin.*`→`/admin`,
+  else marketing landing
+- [x] **Google OAuth** configured in Supabase + Google Cloud (Site URL fixed to
+  `https://app.invoxai.io`, redirect allow-list, `…supabase.co/auth/v1/callback`)
+- [x] **Thin admin panel** (`/admin`, `admin.invoxai.io`): stats, per-category
+  commission editor (RLS admin-write), reserved subdomains. Auth checked IN-page
+  before any fetch (verified: unauth → 307 /login, no payload leak).
+- [x] **Admin role granted** to `iamdeep.mk@gmail.com` (user-confirmed)
+- Note: auth cookies are **host-only** by design → each surface (app/admin) has its
+  own login; admin session does not leak to seller subdomains.
+
 ### Next (still Foundation)
+- [ ] **OTP email template** (user, Supabase dashboard): ensure it contains `{{ .Token }}`
 - [ ] **Hosted Supabase auth config** (user, in dashboard): enable Google provider
   (client id/secret) + ensure the OTP email template includes `{{ .Token }}`
   (default template sends a magic link, not the 6-digit code)
