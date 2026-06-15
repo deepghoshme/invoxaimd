@@ -1,15 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import AppShell, { type NavItem } from "@/components/AppShell";
 import CategoriesEditor from "./CategoriesEditor";
 
 export const dynamic = "force-dynamic";
 
-async function signOut() {
-  "use server";
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
-}
+const ADMIN_NAV: NavItem[] = [
+  { label: "Overview", href: "/admin", icon: "📊", exact: true },
+];
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
@@ -73,28 +71,13 @@ export default async function AdminPage() {
   const sellerCount = sellersRes.count ?? 0;
 
   return (
+    <AppShell brand="Admin" nav={ADMIN_NAV}>
     <main style={{ maxWidth: 920, margin: "0 auto", padding: "var(--space-4) var(--space-3)" }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "var(--space-4)",
-          flexWrap: "wrap",
-          gap: "var(--space-2)",
-        }}
-      >
-        <div>
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-            Admin · invoxai.io
-          </p>
-          <h1 style={{ margin: "0.1rem 0 0" }}>Platform control</h1>
-        </div>
-        <form action={signOut}>
-          <button className="btn btn-ghost" type="submit">
-            Sign out
-          </button>
-        </form>
+      <header style={{ marginBottom: "var(--space-4)" }}>
+        <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+          Admin · invoxai.io
+        </p>
+        <h1 style={{ margin: "0.1rem 0 0" }}>Platform control</h1>
       </header>
 
       <section
@@ -144,5 +127,6 @@ export default async function AdminPage() {
         </div>
       </section>
     </main>
+    </AppShell>
   );
 }

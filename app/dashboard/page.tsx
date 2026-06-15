@@ -3,13 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-async function signOut() {
-  "use server";
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
-}
-
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -54,11 +47,6 @@ export default async function DashboardPage() {
           </p>
           <h1 style={{ margin: "0.1rem 0 0" }}>{store.store_name}</h1>
         </div>
-        <form action={signOut}>
-          <button className="btn btn-ghost" type="submit">
-            Sign out
-          </button>
-        </form>
       </header>
 
       <section

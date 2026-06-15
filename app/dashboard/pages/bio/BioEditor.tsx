@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ImageInput from "@/components/ImageInput";
 import { saveBioPage, setBioStatus } from "../actions";
 
 type Link = { label: string; url: string };
@@ -145,8 +146,8 @@ export default function BioEditor({
         <Field label="Headline">
           <input className="input" value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Creator · Coach · Founder" />
         </Field>
-        <Field label="Avatar image URL">
-          <input className="input" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…/photo.jpg" />
+        <Field label="Avatar image (upload or URL)">
+          <ImageInput value={avatarUrl} onChange={setAvatarUrl} placeholder="https://…/photo.jpg" />
         </Field>
         <Field label="Short bio">
           <textarea className="input" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="A line or two about you." />
@@ -177,8 +178,8 @@ export default function BioEditor({
         <Field label="Meta description">
           <textarea className="input" rows={2} value={seoDesc} onChange={(e) => setSeoDesc(e.target.value)} />
         </Field>
-        <Field label="Open Graph image URL">
-          <input className="input" value={ogImage} onChange={(e) => setOgImage(e.target.value)} placeholder="https://…/share.jpg" />
+        <Field label="Open Graph image (upload or URL)">
+          <ImageInput value={ogImage} onChange={setOgImage} placeholder="https://…/share.jpg" />
         </Field>
         <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontSize: "0.9rem" }}>
           <input type="checkbox" checked={noindex} onChange={(e) => setNoindex(e.target.checked)} />
