@@ -1,0 +1,115 @@
+/*
+ * invoxai.io — shared design system
+ * Sunset (light, default) + Twilight (dark). Tokens are named CSS variables;
+ * components consume var(--token), never raw hex. Spec §10.
+ */
+
+:root {
+  /* ---- Sunset (light, default) ---- */
+  --color-bg: #fff9f4;
+  --color-card: #ffffff;
+  --color-surface: #ffffff;
+  --color-primary: #ff6a3d;
+  --color-primary-hover: #f0532a;
+  --color-secondary: #ff4d7d;
+  --color-accent: #7b3fe4;
+  --color-highlight: #ffb23e;
+  --color-text: #2b1b2e;
+  --color-muted: #7a6770;
+  --color-border: #f0e1d6;
+
+  --brand-gradient: linear-gradient(
+    135deg,
+    #ffb23e 0%,
+    #ff6a3d 38%,
+    #ff4d7d 72%,
+    #7b3fe4 100%
+  );
+
+  /* ---- Typography ---- */
+  --font-heading: var(--font-sora), "Sora", system-ui, sans-serif;
+  --font-body: var(--font-inter), "Inter", system-ui, sans-serif;
+
+  /* ---- Shape & spacing ---- */
+  --radius: 16px;
+  --radius-sm: 10px;
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  /* ---- Twilight (dark) ---- */
+  --color-bg: #16101f;
+  --color-card: #221833;
+  --color-surface: #221833;
+  --color-primary: #ff7e55;
+  --color-primary-hover: #ff6a3d;
+  --color-secondary: #ff6aa0;
+  --color-accent: #a06bff;
+  --color-highlight: #ffb23e;
+  --color-text: #f6eef2;
+  --color-muted: #b9a8bc;
+  --color-border: #34264a;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #16101f;
+    --color-card: #221833;
+    --color-surface: #221833;
+    --color-primary: #ff7e55;
+    --color-primary-hover: #ff6a3d;
+    --color-secondary: #ff6aa0;
+    --color-accent: #a06bff;
+    --color-highlight: #ffb23e;
+    --color-text: #f6eef2;
+    --color-muted: #b9a8bc;
+    --color-border: #34264a;
+
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}

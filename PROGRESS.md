@@ -28,11 +28,21 @@
 - [x] `config.toml` auth: Google + Email OTP (6-digit, 10-min)
 - [x] **Applied all 4 migrations to hosted Supabase** (project `rfprazujzxykmjzobmtl`) — verified: 6 tables RLS-on, policies present, helpers SECURITY DEFINER, seeds + enums + `is_subdomain_available()` all correct
 - [x] `.env.local` (gitignored) with Supabase URL + publishable/anon/service_role keys + DATABASE_URL; `.env.example` committed
+- [x] **Initial git commit** of foundation work (was untracked) — `de9d3f1`
+- [x] **Next.js app scaffold** (App Router, TS, SSR) — `package.json`, `tsconfig.json`,
+  `next.config.ts`, root `layout.tsx` (Sora + Inter via `next/font`), marketing
+  landing placeholder `app/page.tsx`. `npm run build` green; prod server returns 200.
+- [x] **Supabase client layer** (`lib/supabase/`):
+  - `client.ts` browser (anon, RLS) · `server.ts` cookie-bound SSR (anon, RLS) ·
+    `admin.ts` service-role (`server-only`, bypasses RLS — narrow use only)
+  - `lib/env.ts` validated env access (service-role read lazily so client bundles can't leak it)
+  - `middleware.ts` refreshes the auth session cookies on every request
+- [x] **Design system tokens** in `app/globals.css` — Sunset (light) + Twilight (dark)
+  as named CSS vars, brand gradient, 16px radius, Sora/Inter wiring
 
 ### Next (still Foundation)
 - [ ] **Rotate DB password + service_role key** (were shared in chat) once stable
 - [ ] Verify RLS as real users (anon/authenticated JWT), not just service-role DDL
-- [ ] Next.js app scaffold (SSR) + Supabase client (browser/server/admin)
 - [ ] Email config schema (admin + seller, encrypted creds) + "send test" + OTP send
 - [ ] Onboarding flow (OTP → store name → subdomain check → category → billing)
 - [ ] Thin admin (categories, commission rates, reserved names)
