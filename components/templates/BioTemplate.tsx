@@ -25,12 +25,15 @@ function LinkButton({
   l,
   st,
   className,
+  cta,
 }: {
   l: BioLink;
   st: LinkStyle;
   className?: string;
+  cta?: boolean;
 }) {
   const hi = !!l.highlight;
+  const centerInner = cta || st.iconPos === "center";
   const bg = hi
     ? st.highlightColor || st.theme.primary
     : st.outline
@@ -45,7 +48,7 @@ function LinkButton({
   const label = l.label || l.url;
 
   let inner: React.ReactNode;
-  if (st.iconPos === "center") {
+  if (centerInner) {
     inner = (
       <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
         {icon}
@@ -75,18 +78,23 @@ function LinkButton({
         position: "relative",
         overflow: "hidden",
         display: "block",
-        padding: hi ? "16px 46px" : "14px 44px",
-        borderRadius: st.radius,
+        width: "100%",
+        textAlign: "center",
+        padding: cta ? "18px 16px" : hi ? "16px 46px" : "14px 44px",
+        borderRadius: cta ? 0 : st.radius,
         background: bg,
         color,
-        border,
-        fontWeight: hi ? 800 : 600,
+        border: cta ? "none" : border,
+        fontWeight: hi || cta ? 800 : 600,
+        fontSize: cta ? "1.04rem" : undefined,
         letterSpacing: "0.01em",
         fontFamily: "var(--font-heading), sans-serif",
         textDecoration: "none",
-        boxShadow: hi
-          ? `0 14px 34px -12px ${bg}, inset 0 1px 0 rgba(255,255,255,0.25)`
-          : "0 2px 8px -4px rgba(0,0,0,0.22)",
+        boxShadow: cta
+          ? "0 -8px 24px -10px rgba(0,0,0,0.3)"
+          : hi
+            ? `0 14px 34px -12px ${bg}, inset 0 1px 0 rgba(255,255,255,0.25)`
+            : "0 2px 8px -4px rgba(0,0,0,0.22)",
       }}
     >
       {hi && (
@@ -192,7 +200,7 @@ export default function BioTemplate({
 
       {featured && (
         <div className="bio-mobile-cta">
-          <LinkButton l={featured} st={st} />
+          <LinkButton l={featured} st={st} cta />
         </div>
       )}
 
