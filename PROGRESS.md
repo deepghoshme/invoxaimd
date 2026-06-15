@@ -40,14 +40,24 @@
 - [x] **Design system tokens** in `app/globals.css` — Sunset (light) + Twilight (dark)
   as named CSS vars, brand gradient, 16px radius, Sora/Inter wiring
 
+- [x] **DNS verified live** — apex, `www`, `app`, `admin`, and wildcard `*.invoxai.io`
+  all resolve to the VPS `93.127.195.147` (confirmed via dig)
+- [x] **Caddy + deploy config prepared** (`deploy/`):
+  - `Caddyfile` — reverse-proxy → `127.0.0.1:3000`; auto-HTTPS for apex/www/app/admin;
+    **on-demand TLS** for seller subdomains + custom domains (www→apex redirect, gzip/zstd)
+  - `app/api/tls-check/route.ts` — Caddy "ask" endpoint; allows a host only if it matches
+    a claimed `stores.subdomain` or a verified `stores.custom_domain` (rate-limit guard)
+  - `invoxai-web.service` systemd unit (nvm node path baked in) + `deploy/README.md` runbook
+  - ⏳ **NOT yet applied** — needs sudo: user runs the `deploy/README.md` steps to
+    install Caddy, the systemd service, and provision certs
+
 ### Next (still Foundation)
 - [ ] **Rotate DB password + service_role key** (were shared in chat) once stable
 - [ ] Verify RLS as real users (anon/authenticated JWT), not just service-role DDL
 - [ ] Email config schema (admin + seller, encrypted creds) + "send test" + OTP send
 - [ ] Onboarding flow (OTP → store name → subdomain check → category → billing)
 - [ ] Thin admin (categories, commission rates, reserved names)
-- [ ] Design system (sunset tokens as CSS vars) + first template + renderer
-- [ ] Caddy wildcard subdomain SSL config
+- [ ] First sunset template + renderer (design tokens already in `app/globals.css`)
 
 ## Decisions / open questions
 - **Contact overage ₹10/extra** — marked *confirm* in spec; not yet modeled.

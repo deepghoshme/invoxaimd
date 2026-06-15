@@ -1,0 +1,21 @@
+# systemd unit for the invoxai.io Next.js app.
+# Install: see deploy/README.md. Lives at /etc/systemd/system/invoxai-web.service.
+
+[Unit]
+Description=invoxai.io Next.js app
+After=network.target
+
+[Service]
+Type=simple
+User=invox
+WorkingDirectory=/home/invox/invoxai
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=PATH=/home/invox/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/usr/bin:/bin
+# `next start` serves the production build; it loads .env.local from WorkingDirectory.
+ExecStart=/home/invox/.nvm/versions/node/v20.20.2/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
