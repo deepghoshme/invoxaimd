@@ -72,11 +72,11 @@ export default async function DashboardPage() {
       >
         <h2 style={{ marginTop: 0 }}>🎉 You&apos;re all set</h2>
         <p style={{ marginBottom: "var(--space-2)", opacity: 0.95 }}>
-          Your store is live-ready. Create your first page to start selling.
+          Your store is live-ready. Build your first page to start sharing.
         </p>
-        <button className="btn" style={{ background: "#fff", color: "var(--color-primary)" }} disabled>
-          Create your first page (coming next)
-        </button>
+        <a className="btn" href="/dashboard/pages/bio" style={{ background: "#fff", color: "var(--color-primary)" }}>
+          Build your bio page →
+        </a>
       </section>
 
       <div
