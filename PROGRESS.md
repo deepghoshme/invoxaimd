@@ -102,6 +102,16 @@
   - professional full-width layouts (`.page-wrap` / `.wide-wrap`)
   - 📌 memory: image-upload-everywhere + left-sidebar-responsive saved
 
+- [x] **Bio builder polish (2026-06-15)**: full-width FB cover (bottom-curved) +
+  avatar position L/C/R; featured link (shine + size/text controls + colors);
+  full-width mobile sticky CTA; 14 themes; 10 looping animated backgrounds;
+  scroll-safe centered fill; contained centered column on web (full-width mobile);
+  hidden preview scrollbar; smaller modern brand badge
+
+## ⏭️ RESUME HERE NEXT SESSION (2026-06-16+)
+**Next build:** one-page product (`/opp/{id}`) + page-type-aware **Razorpay checkout**
+(record order + fire purchase pixels). Reuse the bio builder pattern.
+
 ### Next (still Foundation / Phase 1)
 - [ ] **OTP email template** (user, Supabase dashboard): ensure it contains `{{ .Token }}`
 - [ ] **Hosted Supabase auth config** (user, in dashboard): enable Google provider
