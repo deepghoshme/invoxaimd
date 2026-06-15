@@ -51,11 +51,25 @@
   - ⏳ **NOT yet applied** — needs sudo: user runs the `deploy/README.md` steps to
     install Caddy, the systemd service, and provision certs
 
+- [x] **Auth UI** (`/login`) — Email OTP (signInWithOtp → verifyOtp, 2-step) +
+  Google OAuth; `/auth/callback` exchanges the OAuth code for a session
+- [x] **Onboarding wizard** (`/onboarding`) — store name → subdomain (live
+  availability via `is_subdomain_available` RPC, debounced) → category (shows
+  commission rate) → billing (jsonb). Server actions write RLS-scoped; advances
+  `onboarding_step`; sets `onboarding_completed` on finish. `lib/auth.ts` helpers.
+- [x] **Dashboard** (`/dashboard`) — onboarding guard (redirects to `/onboarding`
+  until complete; both redirect to `/login` when signed out — verified), store
+  summary + "create first page" CTA, sign-out server action
+- [x] Shared UI primitives in `globals.css` (card/input/btn/alert/steps)
+- [x] Build green; route guards + tls-check verified at runtime
+
 ### Next (still Foundation)
+- [ ] **Hosted Supabase auth config** (user, in dashboard): enable Google provider
+  (client id/secret) + ensure the OTP email template includes `{{ .Token }}`
+  (default template sends a magic link, not the 6-digit code)
+- [ ] **Apply deploy** (`deploy/setup.sh`, needs sudo) to put domains on HTTPS
 - [ ] **Rotate DB password + service_role key** (were shared in chat) once stable
-- [ ] Verify RLS as real users (anon/authenticated JWT), not just service-role DDL
-- [ ] Email config schema (admin + seller, encrypted creds) + "send test" + OTP send
-- [ ] Onboarding flow (OTP → store name → subdomain check → category → billing)
+- [ ] Email config schema (admin + seller, encrypted creds) + "send test"
 - [ ] Thin admin (categories, commission rates, reserved names)
 - [ ] First sunset template + renderer (design tokens already in `app/globals.css`)
 
