@@ -14,7 +14,7 @@ export default async function Home() {
   const sub = host.split(":")[0].split(".")[0];
 
   if (sub === "app") redirect("/dashboard");
-  if (sub === "admin") redirect("/login");
+  if (sub === "admin") redirect("/admin");
 
   return (
     <main
