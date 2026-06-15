@@ -8,6 +8,7 @@ import {
   BIO_THEMES,
   ANIMATIONS,
   BG_MOTIONS,
+  SIZE_OPTS,
   type BioContent,
   type BioLink,
   type SocialLink,
@@ -48,6 +49,8 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
   const [iconPos, setIconPos] = useState(c.icon_position ?? "left");
   const [highlightColor, setHighlightColor] = useState(c.highlight_color ?? "#FF6A3D");
   const [stripeColor, setStripeColor] = useState(c.stripe_color ?? "#FFFFFF");
+  const [hiSize, setHiSize] = useState(c.highlight_size ?? "m");
+  const [hiTextSize, setHiTextSize] = useState(c.highlight_text_size ?? "m");
   // --- SEO + pixels ---
   const [seoTitle, setSeoTitle] = useState(s.title ?? "");
   const [seoDesc, setSeoDesc] = useState(s.description ?? "");
@@ -78,8 +81,10 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
       icon_position: iconPos as BioContent["icon_position"],
       highlight_color: highlightColor,
       stripe_color: stripeColor,
+      highlight_size: hiSize as BioContent["highlight_size"],
+      highlight_text_size: hiTextSize as BioContent["highlight_text_size"],
     }),
-    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, highlightColor, stripeColor],
+    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, highlightColor, stripeColor, hiSize, hiTextSize],
   );
 
   // --- minimum requirements before publish ---
@@ -281,6 +286,20 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
               <ColorRow label="Button" value={highlightColor} onChange={setHighlightColor} />
               <ColorRow label="Shine stripe" value={stripeColor} onChange={setStripeColor} />
             </div>
+            <Field label="Featured button size">
+              <div className="chiprow">
+                {SIZE_OPTS.map((o) => (
+                  <div key={o.id} className={`chip-toggle${hiSize === o.id ? " on" : ""}`} onClick={() => setHiSize(o.id)} style={{ justifyContent: "center" }}>{o.name}</div>
+                ))}
+              </div>
+            </Field>
+            <Field label="Featured text size">
+              <div className="chiprow">
+                {SIZE_OPTS.map((o) => (
+                  <div key={o.id} className={`chip-toggle${hiTextSize === o.id ? " on" : ""}`} onClick={() => setHiTextSize(o.id)} style={{ justifyContent: "center" }}>{o.name}</div>
+                ))}
+              </div>
+            </Field>
           </section>
 
           <section className="card" style={{ marginBottom: "var(--space-2)" }}>

@@ -19,7 +19,12 @@ type LinkStyle = {
   iconPos: "left" | "center" | "right";
   highlightColor?: string;
   stripeColor?: string;
+  hiSize: "s" | "m" | "l";
+  hiTextSize: "s" | "m" | "l";
 };
+
+const PAD_V = { s: "11px", m: "16px", l: "22px" } as const;
+const FONT = { s: "0.92rem", m: "1.05rem", l: "1.22rem" } as const;
 
 function LinkButton({
   l,
@@ -80,13 +85,13 @@ function LinkButton({
         display: "block",
         width: "100%",
         textAlign: "center",
-        padding: cta ? "18px 16px" : hi ? "16px 46px" : "14px 44px",
+        padding: `${hi || cta ? PAD_V[st.hiSize] : "14px"} ${cta ? "18px" : hi ? "46px" : "44px"}`,
         borderRadius: cta ? 0 : st.radius,
         background: bg,
         color,
         border: cta ? "none" : border,
         fontWeight: hi || cta ? 800 : 600,
-        fontSize: cta ? "1.04rem" : undefined,
+        fontSize: hi || cta ? FONT[st.hiTextSize] : undefined,
         letterSpacing: "0.01em",
         fontFamily: "var(--font-heading), sans-serif",
         textDecoration: "none",
@@ -130,6 +135,8 @@ export default function BioTemplate({
     iconPos: content.icon_position ?? "left",
     highlightColor: content.highlight_color,
     stripeColor: content.stripe_color,
+    hiSize: content.highlight_size ?? "m",
+    hiTextSize: content.highlight_text_size ?? "m",
   };
 
   const featured = links.find((l) => l.highlight);
@@ -158,12 +165,13 @@ export default function BioTemplate({
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
           alignItems: "center",
           padding: "48px 20px",
         }}
       >
-        <div className={anim} style={{ width: "min(480px, 100%)", textAlign: "center" }}>
+        {/* margin-auto centers when short, but collapses on overflow so the page
+            stays scrollable and nothing hides behind the fixed mobile CTA */}
+        <div className={anim} style={{ width: "min(480px, 100%)", textAlign: "center", marginTop: "auto", marginBottom: "auto" }}>
           <div
             style={{
               width: 100,

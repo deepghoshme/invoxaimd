@@ -24,7 +24,15 @@ export type BioContent = {
   icon_position?: "left" | "center" | "right";
   highlight_color?: string;
   stripe_color?: string;
+  highlight_size?: "s" | "m" | "l";
+  highlight_text_size?: "s" | "m" | "l";
 };
+
+export const SIZE_OPTS = [
+  { id: "s", name: "Small" },
+  { id: "m", name: "Medium" },
+  { id: "l", name: "Large" },
+] as const;
 
 export const BG_MOTIONS = [
   { id: "none", name: "None" },
