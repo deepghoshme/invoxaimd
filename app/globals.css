@@ -593,6 +593,18 @@ a:hover {
   min-height: 100%;
 }
 
+/* Centered column on web; background fills the sides. Full width on mobile. */
+.bio-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ---- Bio buttons (modern) ---- */
 .bio-btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;

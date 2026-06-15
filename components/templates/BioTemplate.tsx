@@ -160,7 +160,10 @@ export default function BioTemplate({
     >
       <BioBackgroundFX motion={content.bg_motion} theme={theme} />
 
-      {/* Full-width Facebook-style cover (bottom corners curved) + positioned avatar */}
+      {/* Centered column on web (background fills the sides); full width on mobile */}
+      <div className="bio-shell">
+
+      {/* Cover (bottom corners curved) + positioned avatar */}
       <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
         <div
           style={{
@@ -236,6 +239,7 @@ export default function BioTemplate({
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       {featured && (
