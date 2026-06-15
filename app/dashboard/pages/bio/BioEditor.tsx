@@ -45,6 +45,9 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
   const [bgMotion, setBgMotion] = useState(c.bg_motion ?? "none");
   const [animation, setAnimation] = useState(c.animation ?? "rise");
   const [buttonStyle, setButtonStyle] = useState(c.button_style ?? "rounded");
+  const [iconPos, setIconPos] = useState(c.icon_position ?? "left");
+  const [highlightColor, setHighlightColor] = useState(c.highlight_color ?? "#FF6A3D");
+  const [stripeColor, setStripeColor] = useState(c.stripe_color ?? "#FFFFFF");
   // --- SEO + pixels ---
   const [seoTitle, setSeoTitle] = useState(s.title ?? "");
   const [seoDesc, setSeoDesc] = useState(s.description ?? "");
@@ -72,8 +75,11 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
       bg_motion: bgMotion as BioContent["bg_motion"],
       animation: animation as BioContent["animation"],
       button_style: buttonStyle as BioContent["button_style"],
+      icon_position: iconPos as BioContent["icon_position"],
+      highlight_color: highlightColor,
+      stripe_color: stripeColor,
     }),
-    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle],
+    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, highlightColor, stripeColor],
   );
 
   // --- minimum requirements before publish ---
@@ -131,6 +137,8 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
     setLinks((ls) => ls.map((l, idx) => (idx === i ? { ...l, [k]: v } : l)));
   const setSocial = (i: number, k: keyof SocialLink, v: string) =>
     setSocials((ss) => ss.map((x, idx) => (idx === i ? { ...x, [k]: v } : x)));
+  const toggleHighlight = (i: number) =>
+    setLinks((ls) => ls.map((l, idx) => (idx === i ? { ...l, highlight: !l.highlight } : l)));
 
   return (
     <div className="wide-wrap">
@@ -194,18 +202,31 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
 
           <section className="card" style={{ marginBottom: "var(--space-2)" }}>
             <h2 style={{ marginTop: 0 }}>Link buttons</h2>
+            <Field label="Icon position">
+              <div className="chiprow">
+                {(["left", "center", "right"] as const).map((p) => (
+                  <div key={p} className={`chip-toggle${iconPos === p ? " on" : ""}`} onClick={() => setIconPos(p)} style={{ textTransform: "capitalize", justifyContent: "center" }}>{p}</div>
+                ))}
+              </div>
+            </Field>
             {links.map((l, i) => (
-              <div key={i} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", padding: "0.7rem", marginBottom: "var(--space-1)" }}>
+              <div key={i} style={{ border: `1.5px solid ${l.highlight ? "var(--color-primary)" : "var(--color-border)"}`, borderRadius: "var(--radius-sm)", padding: "0.7rem", marginBottom: "var(--space-1)" }}>
                 <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
                   <input className="input" placeholder="Label" value={l.label} onChange={(e) => setLink(i, "label", e.target.value)} style={{ flex: 1 }} />
                   <input className="input" placeholder="https://…" value={l.url} onChange={(e) => setLink(i, "url", e.target.value)} style={{ flex: 2 }} />
                   <button className="btn btn-ghost" type="button" onClick={() => setLinks((ls) => ls.filter((_, idx) => idx !== i))} style={{ padding: "0 0.7rem" }}>✕</button>
                 </div>
-                <span className="hint">Custom icon (optional):</span>
+                <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <span className={`chip-toggle${l.highlight ? " on" : ""}`} onClick={() => toggleHighlight(i)}>
+                    {l.highlight ? "★ Featured" : "☆ Highlight"}
+                  </span>
+                  <span className="hint" style={{ flex: 1 }}>Custom icon (optional):</span>
+                </div>
                 <ImageInput value={l.icon_url ?? ""} onChange={(v) => setLink(i, "icon_url", v)} placeholder="icon image URL" />
               </div>
             ))}
             <button className="btn btn-ghost" type="button" onClick={() => setLinks((ls) => [...ls, { label: "", url: "" }])}>+ Add link</button>
+            <p className="hint" style={{ marginTop: "0.5rem" }}>A featured link is highlighted with a shine, and on mobile it sticks to the bottom of the screen.</p>
           </section>
 
           <section className="card" style={{ marginBottom: "var(--space-2)" }}>
@@ -255,6 +276,11 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
                 ))}
               </div>
             </Field>
+            <div className="field">
+              <label className="label">Featured button &amp; shine colors</label>
+              <ColorRow label="Button" value={highlightColor} onChange={setHighlightColor} />
+              <ColorRow label="Shine stripe" value={stripeColor} onChange={setStripeColor} />
+            </div>
           </section>
 
           <section className="card" style={{ marginBottom: "var(--space-2)" }}>
@@ -284,7 +310,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
           </div>
           <div className={`device device-${device}`}>
             <div className="device-scroll" key={`${theme}-${animation}-${device}`}>
-              <BioTemplate content={liveContent} fallbackName={displayName || "Your name"} />
+              <BioTemplate content={liveContent} fallbackName={displayName || "Your name"} forceMobile={device === "mobile"} />
             </div>
           </div>
           <p className="muted" style={{ textAlign: "center", fontSize: "0.78rem", marginTop: "var(--space-1)" }}>

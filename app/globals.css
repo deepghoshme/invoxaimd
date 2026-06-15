@@ -536,6 +536,74 @@ a:hover {
   50% { transform: scale(1.15); opacity: 0.85; }
 }
 
+/* ---- Highlighted button: looping white shine stripe ---- */
+.btn-shine {
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 45%;
+  height: 100%;
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: btnshine 2.8s ease-in-out infinite;
+}
+@keyframes btnshine {
+  0% { left: -60%; }
+  55%, 100% { left: 150%; }
+}
+
+/* ---- Mobile bottom CTA (highlighted link) ---- */
+.bio-mobile-cta {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 46;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.16), transparent);
+}
+@media (max-width: 640px) {
+  .bio-mobile-cta { display: block; }
+  .bio-featured-inlist { display: none !important; }
+  .has-cta .bio-content { padding-bottom: 96px; }
+}
+.force-mobile .bio-mobile-cta { display: block; }
+.force-mobile .bio-featured-inlist { display: none !important; }
+.force-mobile.has-cta .bio-content { padding-bottom: 96px; }
+
+/* ---- Brand badge (small, auto-lifts above CTA) ---- */
+.brand-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: #2b1b2e;
+}
+.brand-badge:hover { color: #2b1b2e; }
+.brand-badge-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #ffb23e, #ff6a3d, #ff4d7d, #7b3fe4);
+}
+@media (max-width: 640px) {
+  .has-cta .brand-badge { bottom: 84px; }
+}
+.force-mobile.has-cta .brand-badge { bottom: 84px; }
+
 /* ---- Segmented control ---- */
 .segment {
   display: inline-flex;

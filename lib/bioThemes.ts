@@ -2,7 +2,7 @@
 // the public renderer (server) and the editor live preview (client).
 
 export type SocialLink = { platform: string; url: string };
-export type BioLink = { label: string; url: string; icon_url?: string };
+export type BioLink = { label: string; url: string; icon_url?: string; highlight?: boolean };
 export type BioBackground = {
   type: "theme" | "solid" | "gradient" | "image";
   color?: string;
@@ -21,6 +21,9 @@ export type BioContent = {
   bg_motion?: "none" | "gradient" | "blobs" | "aurora" | "bubbles" | "glow";
   animation?: "none" | "fade" | "rise" | "pop";
   button_style?: "rounded" | "pill" | "outline";
+  icon_position?: "left" | "center" | "right";
+  highlight_color?: string;
+  stripe_color?: string;
 };
 
 export const BG_MOTIONS = [
