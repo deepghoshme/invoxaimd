@@ -72,7 +72,7 @@ export default async function AdminPage() {
 
   return (
     <AppShell brand="Admin" nav={ADMIN_NAV}>
-    <main style={{ maxWidth: 920, margin: "0 auto", padding: "var(--space-4) var(--space-3)" }}>
+    <main className="page-wrap">
       <header style={{ marginBottom: "var(--space-4)" }}>
         <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
           Admin · invoxai.io

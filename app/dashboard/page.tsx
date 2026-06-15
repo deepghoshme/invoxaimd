@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const siteUrl = `https://${store.subdomain}.invoxai.io`;
 
   return (
-    <main style={{ maxWidth: 880, margin: "0 auto", padding: "var(--space-4) var(--space-3)" }}>
+    <main className="page-wrap">
       <header
         style={{
           display: "flex",

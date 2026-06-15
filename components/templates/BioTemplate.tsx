@@ -1,60 +1,81 @@
-import type { SiteStore } from "@/lib/sites";
+import {
+  backgroundCss,
+  getBioTheme,
+  BUTTON_RADIUS,
+  type BioContent,
+} from "@/lib/bioThemes";
+import SocialIcon from "@/components/SocialIcon";
 
-export type BioContent = {
-  display_name?: string;
-  headline?: string;
-  avatar_url?: string;
-  bio?: string;
-  links?: { label?: string; url?: string }[];
-};
+export type { BioContent };
 
-/** Sunset-themed link-in-bio template. Pure presentational; data is JSONB content. */
+/**
+ * Sunset-family bio/link-in-bio template. Pure presentational + theme-driven, no
+ * server deps — rendered both by the public site and the editor's live preview.
+ */
 export default function BioTemplate({
   content,
-  store,
+  fallbackName,
 }: {
   content: BioContent;
-  store: SiteStore;
+  fallbackName?: string;
 }) {
-  const name = content.display_name || store.store_name || "My page";
+  const theme = getBioTheme(content.theme);
+  const name = content.display_name || fallbackName || "My page";
   const links = (content.links ?? []).filter((l) => l?.url);
+  const socials = (content.socials ?? []).filter((s) => s?.url);
+  const radius = BUTTON_RADIUS[content.button_style ?? "rounded"];
+  const outline = content.button_style === "outline";
+  const anim = content.animation && content.animation !== "none" ? `bio-${content.animation}` : undefined;
 
   return (
-    <main
+    <div
       style={{
-        minHeight: "100dvh",
-        background: "var(--color-bg)",
-        padding: "var(--space-5) var(--space-3)",
+        minHeight: "100%",
+        background: backgroundCss(content, theme),
+        color: theme.text,
+        padding: "56px 20px",
         display: "flex",
         justifyContent: "center",
+        fontFamily: "var(--font-body), system-ui, sans-serif",
       }}
     >
-      <div style={{ width: "min(520px, 100%)", textAlign: "center" }}>
+      <div
+        className={anim}
+        style={{ width: "min(480px, 100%)", textAlign: "center" }}
+      >
         <div
           style={{
-            width: 104,
-            height: 104,
-            margin: "0 auto var(--space-2)",
+            width: 100,
+            height: 100,
+            margin: "0 auto 16px",
             borderRadius: "50%",
             background: content.avatar_url
               ? `center/cover url(${content.avatar_url})`
-              : "var(--brand-gradient)",
-            boxShadow: "0 10px 30px -12px rgba(43,27,46,0.4)",
+              : theme.primary,
+            boxShadow: "0 12px 30px -14px rgba(0,0,0,0.5)",
           }}
         />
-        <h1 style={{ margin: "0 0 0.25rem", fontSize: "1.7rem" }}>{name}</h1>
+        <h1 style={{ margin: "0 0 4px", fontSize: "1.6rem", fontFamily: "var(--font-heading), sans-serif", color: theme.text }}>
+          {name}
+        </h1>
         {content.headline && (
-          <p style={{ margin: "0 0 var(--space-2)", color: "var(--color-muted)", fontWeight: 600 }}>
-            {content.headline}
-          </p>
+          <p style={{ margin: "0 0 12px", color: theme.muted, fontWeight: 600 }}>{content.headline}</p>
         )}
         {content.bio && (
-          <p style={{ margin: "0 auto var(--space-4)", maxWidth: "34rem", color: "var(--color-text)" }}>
-            {content.bio}
-          </p>
+          <p style={{ margin: "0 auto 22px", maxWidth: "32rem", color: theme.text, opacity: 0.9 }}>{content.bio}</p>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+        {socials.length > 0 && (
+          <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+            {socials.map((s, i) => (
+              <a key={i} href={s.url} target="_blank" rel="noreferrer" aria-label={s.platform}>
+                <SocialIcon platform={s.platform} />
+              </a>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {links.map((l, i) => (
             <a
               key={i}
@@ -62,29 +83,37 @@ export default function BioTemplate({
               target="_blank"
               rel="noreferrer"
               style={{
-                display: "block",
-                padding: "0.95rem 1.25rem",
-                borderRadius: "var(--radius)",
-                background: "var(--color-card)",
-                border: "1.5px solid var(--color-border)",
-                color: "var(--color-text)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "14px 18px",
+                borderRadius: radius,
+                background: outline ? "transparent" : theme.card,
+                border: `1.5px solid ${outline ? theme.primary : theme.cardBorder}`,
+                color: theme.text,
                 fontWeight: 600,
-                fontFamily: "var(--font-heading)",
-                transition: "transform 0.12s ease, border-color 0.12s ease",
+                fontFamily: "var(--font-heading), sans-serif",
+                textDecoration: "none",
               }}
             >
-              {l.label || l.url}
+              {l.icon_url ? (
+                <span style={{ width: 24, height: 24, borderRadius: 6, background: `center/cover url(${l.icon_url})`, flexShrink: 0 }} />
+              ) : (
+                <span style={{ width: 24, flexShrink: 0 }} />
+              )}
+              <span style={{ flex: 1, textAlign: "center" }}>{l.label || l.url}</span>
+              <span style={{ width: 24, flexShrink: 0 }} />
             </a>
           ))}
         </div>
 
-        <p style={{ marginTop: "var(--space-5)", fontSize: "0.75rem", color: "var(--color-muted)" }}>
+        <p style={{ marginTop: 48, fontSize: "0.75rem", color: theme.muted }}>
           Made with{" "}
-          <a href="https://invoxai.io" style={{ color: "var(--color-primary)" }}>
+          <a href="https://invoxai.io" style={{ color: theme.primary }}>
             invoxai.io
           </a>
         </p>
       </div>
-    </main>
+    </div>
   );
 }
