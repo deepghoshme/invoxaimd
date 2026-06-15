@@ -77,7 +77,20 @@
 - Note: auth cookies are **host-only** by design → each surface (app/admin) has its
   own login; admin session does not leak to seller subdomains.
 
-### Next (still Foundation)
+- [x] **Bio page end-to-end (Phase 1 core)** — first real seller page:
+  - public renderer `app/sites/[domain]/[[...path]]` resolves store by host
+    (subdomain or verified custom domain, service role) → renders published page
+  - `middleware.ts` rewrites seller hosts → `/sites/<host>/<path>`; platform hosts
+    keep the auth-session refresh (note: folder must NOT be `_`-prefixed — Next
+    treats `_name` as private/non-routable)
+  - sunset `BioTemplate` + `PixelInjector` (Meta + Google) on public pages
+  - `generateMetadata` → SEO title/desc/OG/Twitter/canonical/robots from `page.seo`
+  - dashboard editor `/dashboard/pages/bio` (profile, links, SEO, pixels,
+    draft/save/publish; RLS owner-scoped). "Build your bio page" CTA wired.
+  - Verified: claimed subdomain `dmkad.invoxai.io/bio` → 200 ("not published yet"
+    until the seller publishes); unclaimed subdomains get no cert (tls-check denies)
+
+### Next (still Foundation / Phase 1)
 - [ ] **OTP email template** (user, Supabase dashboard): ensure it contains `{{ .Token }}`
 - [ ] **Hosted Supabase auth config** (user, in dashboard): enable Google provider
   (client id/secret) + ensure the OTP email template includes `{{ .Token }}`
