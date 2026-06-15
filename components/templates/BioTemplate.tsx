@@ -5,6 +5,8 @@ import {
   type BioContent,
 } from "@/lib/bioThemes";
 import SocialIcon from "@/components/SocialIcon";
+import BioBackgroundFX from "@/components/BioBackgroundFX";
+import BrandBadge from "@/components/BrandBadge";
 
 export type { BioContent };
 
@@ -30,15 +32,24 @@ export default function BioTemplate({
   return (
     <div
       style={{
+        position: "relative",
         minHeight: "100%",
         background: backgroundCss(content, theme),
         color: theme.text,
-        padding: "56px 20px",
-        display: "flex",
-        justifyContent: "center",
+        overflow: "hidden",
         fontFamily: "var(--font-body), system-ui, sans-serif",
       }}
     >
+      <BioBackgroundFX motion={content.bg_motion} theme={theme} />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "56px 20px",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
       <div
         className={anim}
         style={{ width: "min(480px, 100%)", textAlign: "center" }}
@@ -107,13 +118,9 @@ export default function BioTemplate({
           ))}
         </div>
 
-        <p style={{ marginTop: 48, fontSize: "0.75rem", color: theme.muted }}>
-          Made with{" "}
-          <a href="https://invoxai.io" style={{ color: theme.primary }}>
-            invoxai.io
-          </a>
-        </p>
       </div>
+      </div>
+      <BrandBadge />
     </div>
   );
 }

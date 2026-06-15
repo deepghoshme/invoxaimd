@@ -7,6 +7,7 @@ import BioTemplate from "@/components/templates/BioTemplate";
 import {
   BIO_THEMES,
   ANIMATIONS,
+  BG_MOTIONS,
   type BioContent,
   type BioLink,
   type SocialLink,
@@ -41,6 +42,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
   const [bgColor, setBgColor] = useState(c.background?.color ?? "#FF6A3D");
   const [bgColor2, setBgColor2] = useState(c.background?.color2 ?? "#7B3FE4");
   const [bgImage, setBgImage] = useState(c.background?.image_url ?? "");
+  const [bgMotion, setBgMotion] = useState(c.bg_motion ?? "none");
   const [animation, setAnimation] = useState(c.animation ?? "rise");
   const [buttonStyle, setButtonStyle] = useState(c.button_style ?? "rounded");
   // --- SEO + pixels ---
@@ -67,10 +69,11 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
       links: links.filter((x) => x.url.trim()),
       theme,
       background: { type: bgType, color: bgColor, color2: bgColor2, image_url: bgImage },
+      bg_motion: bgMotion as BioContent["bg_motion"],
       animation: animation as BioContent["animation"],
       button_style: buttonStyle as BioContent["button_style"],
     }),
-    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, animation, buttonStyle],
+    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle],
   );
 
   // --- minimum requirements before publish ---
@@ -225,6 +228,14 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
               {bgType === "gradient" && (<><ColorRow label="From" value={bgColor} onChange={setBgColor} /><ColorRow label="To" value={bgColor2} onChange={setBgColor2} /></>)}
               {bgType === "image" && <Field label="Background image (upload or URL)"><ImageInput value={bgImage} onChange={setBgImage} /></Field>}
               {bgType === "theme" && <span className="hint">Uses the selected theme&apos;s background.</span>}
+            </div>
+            <div className="field" style={{ marginTop: "var(--space-2)" }}>
+              <label className="label">Animated background (loops)</label>
+              <div className="chiprow">
+                {BG_MOTIONS.map((m) => (
+                  <div key={m.id} className={`chip-toggle${bgMotion === m.id ? " on" : ""}`} onClick={() => setBgMotion(m.id)}>{m.name}</div>
+                ))}
+              </div>
             </div>
           </section>
 

@@ -18,9 +18,19 @@ export type BioContent = {
   socials?: SocialLink[];
   theme?: string;
   background?: BioBackground;
+  bg_motion?: "none" | "gradient" | "blobs" | "aurora" | "bubbles" | "glow";
   animation?: "none" | "fade" | "rise" | "pop";
   button_style?: "rounded" | "pill" | "outline";
 };
+
+export const BG_MOTIONS = [
+  { id: "none", name: "None" },
+  { id: "gradient", name: "Gradient flow" },
+  { id: "blobs", name: "Floating blobs" },
+  { id: "aurora", name: "Aurora" },
+  { id: "bubbles", name: "Rising bubbles" },
+  { id: "glow", name: "Pulsing glow" },
+] as const;
 
 export type BioTheme = {
   id: string;
