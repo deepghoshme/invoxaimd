@@ -7,9 +7,12 @@ import { createClient } from "@/lib/supabase/server";
  * and send the user on to onboarding/dashboard.
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams, origin, hostname } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  // Honor an explicit ?next; otherwise default by surface (admin host → /admin).
+  const next =
+    searchParams.get("next") ??
+    (hostname.startsWith("admin.") ? "/admin" : "/dashboard");
 
   if (code) {
     const supabase = await createClient();

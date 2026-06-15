@@ -17,6 +17,12 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Where to land after login, based on which surface we're signing in from.
+  function destination() {
+    if (typeof window === "undefined") return "/dashboard";
+    return window.location.hostname.startsWith("admin.") ? "/admin" : "/dashboard";
+  }
+
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -45,7 +51,7 @@ export default function LoginPage() {
       return setError(error.message);
     }
     // Session cookies are set; the dashboard guard routes to onboarding if needed.
-    router.replace("/dashboard");
+    router.replace(destination());
   }
 
   async function signInWithGoogle() {
@@ -53,7 +59,9 @@ export default function LoginPage() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination())}`,
+      },
     });
     if (error) {
       setBusy(false);
