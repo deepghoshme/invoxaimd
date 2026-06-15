@@ -536,20 +536,42 @@ a:hover {
   50% { transform: scale(1.15); opacity: 0.85; }
 }
 
-/* ---- Highlighted button: looping white shine stripe ---- */
+/* ---- Bio full-height fill (theme always covers; content centers) ---- */
+.bio-root {
+  min-height: 100dvh;
+}
+.device-scroll .bio-root {
+  min-height: 100%;
+}
+
+/* ---- Bio buttons (modern) ---- */
+.bio-btn {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.bio-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.02);
+}
+.bio-btn:active {
+  transform: translateY(0);
+}
+
+/* ---- Highlighted button: looping soft shine ---- */
 .btn-shine {
   position: absolute;
   top: 0;
-  left: -60%;
-  width: 45%;
+  left: -55%;
+  width: 32%;
   height: 100%;
-  transform: skewX(-20deg);
+  transform: skewX(-18deg);
   pointer-events: none;
-  animation: btnshine 2.8s ease-in-out infinite;
+  opacity: 0.55;
+  filter: blur(3px);
+  animation: btnshine 3s ease-in-out infinite;
 }
 @keyframes btnshine {
-  0% { left: -60%; }
-  55%, 100% { left: 150%; }
+  0% { left: -55%; }
+  60%, 100% { left: 160%; }
 }
 
 /* ---- Mobile bottom CTA (highlighted link) ---- */
@@ -572,37 +594,52 @@ a:hover {
 .force-mobile .bio-featured-inlist { display: none !important; }
 .force-mobile.has-cta .bio-content { padding-bottom: 96px; }
 
-/* ---- Brand badge (small, auto-lifts above CTA) ---- */
+/* ---- Brand badge (modern chip, auto-lifts above CTA) ---- */
 .brand-badge {
   position: fixed;
-  right: 12px;
-  bottom: 12px;
+  right: 14px;
+  bottom: 14px;
   z-index: 50;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 9px 4px 6px;
+  gap: 6px;
+  padding: 5px 11px 5px 5px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 22px -10px rgba(20, 10, 25, 0.5);
   text-decoration: none;
-  font-family: var(--font-heading), sans-serif;
-  font-weight: 700;
-  font-size: 0.7rem;
-  color: #2b1b2e;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.brand-badge:hover { color: #2b1b2e; }
-.brand-badge-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
+.brand-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -10px rgba(20, 10, 25, 0.6);
+}
+.brand-badge-mark {
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #ffb23e, #ff6a3d, #ff4d7d, #7b3fe4);
+  box-shadow: 0 2px 6px -2px rgba(255, 77, 125, 0.7);
+}
+.brand-badge-text {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #ff6a3d, #ff4d7d 55%, #7b3fe4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 @media (max-width: 640px) {
-  .has-cta .brand-badge { bottom: 84px; }
+  .has-cta .brand-badge { bottom: 86px; }
 }
-.force-mobile.has-cta .brand-badge { bottom: 84px; }
+.force-mobile.has-cta .brand-badge { bottom: 86px; }
 
 /* ---- Segmented control ---- */
 .segment {

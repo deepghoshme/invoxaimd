@@ -75,12 +75,10 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
     <>
       <PixelInjector pixels={page.pixels} />
       {page.page_type === "bio" ? (
-        <div style={{ minHeight: "100dvh" }}>
-          <BioTemplate
-            content={page.content as BioContent}
-            fallbackName={store.store_name ?? undefined}
-          />
-        </div>
+        <BioTemplate
+          content={page.content as BioContent}
+          fallbackName={store.store_name ?? undefined}
+        />
       ) : (
         <Notice title={page.title || store.store_name || ""} body="Template coming soon." />
       )}

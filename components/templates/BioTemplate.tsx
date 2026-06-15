@@ -67,7 +67,7 @@ function LinkButton({
 
   return (
     <a
-      className={className}
+      className={`bio-btn${hi ? " bio-btn-featured" : ""}${className ? " " + className : ""}`}
       href={l.url}
       target="_blank"
       rel="noreferrer"
@@ -75,20 +75,24 @@ function LinkButton({
         position: "relative",
         overflow: "hidden",
         display: "block",
-        padding: "14px 44px",
+        padding: hi ? "16px 46px" : "14px 44px",
         borderRadius: st.radius,
         background: bg,
         color,
         border,
-        fontWeight: 700,
+        fontWeight: hi ? 800 : 600,
+        letterSpacing: "0.01em",
         fontFamily: "var(--font-heading), sans-serif",
         textDecoration: "none",
+        boxShadow: hi
+          ? `0 14px 34px -12px ${bg}, inset 0 1px 0 rgba(255,255,255,0.25)`
+          : "0 2px 8px -4px rgba(0,0,0,0.22)",
       }}
     >
       {hi && (
         <span
           className="btn-shine"
-          style={{ background: `linear-gradient(90deg, transparent, ${st.stripeColor || "#ffffff"}99, transparent)` }}
+          style={{ background: `linear-gradient(90deg, transparent, ${st.stripeColor || "#ffffff"}, transparent)` }}
         />
       )}
       {inner}
@@ -125,10 +129,11 @@ export default function BioTemplate({
 
   return (
     <div
-      className={rootClass || undefined}
+      className={`bio-root ${rootClass}`.trim()}
       style={{
         position: "relative",
-        minHeight: "100%",
+        display: "flex",
+        flexDirection: "column",
         background: backgroundCss(content, theme),
         color: theme.text,
         overflow: "hidden",
@@ -142,10 +147,10 @@ export default function BioTemplate({
         style={{
           position: "relative",
           zIndex: 1,
-          minHeight: "100%",
+          flex: 1,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "safe center",
+          justifyContent: "center",
           alignItems: "center",
           padding: "48px 20px",
         }}
