@@ -81,5 +81,60 @@ export default function BioBackgroundFX({
     );
   }
 
+  if (motion === "rays") {
+    return (
+      <div style={layer}>
+        <div
+          className="fx-rays"
+          style={{ background: `repeating-conic-gradient(from 0deg at 50% 50%, ${a}24 0deg 7deg, transparent 7deg 22deg)` }}
+        />
+      </div>
+    );
+  }
+
+  if (motion === "waves") {
+    return (
+      <div style={layer}>
+        <div className="fx-wave" style={{ background: `radial-gradient(130% 60% at 50% 118%, ${a}66, transparent 62%)` }} />
+        <div className="fx-wave fx-wave-2" style={{ background: `radial-gradient(130% 60% at 50% 122%, ${b}40, transparent 62%)` }} />
+      </div>
+    );
+  }
+
+  if (motion === "stars") {
+    const stars = [
+      { l: "12%", t: "18%", s: 3, d: "2.4s" }, { l: "28%", t: "62%", s: 2, d: "3.1s" },
+      { l: "44%", t: "26%", s: 4, d: "2.8s" }, { l: "60%", t: "70%", s: 2, d: "2.2s" },
+      { l: "76%", t: "20%", s: 3, d: "3.4s" }, { l: "88%", t: "55%", s: 2, d: "2.6s" },
+      { l: "20%", t: "84%", s: 2, d: "3.0s" }, { l: "52%", t: "48%", s: 3, d: "2.0s" },
+      { l: "70%", t: "40%", s: 2, d: "3.6s" }, { l: "34%", t: "12%", s: 3, d: "2.9s" },
+      { l: "82%", t: "82%", s: 3, d: "2.3s" }, { l: "8%", t: "48%", s: 2, d: "3.2s" },
+    ];
+    return (
+      <div style={layer}>
+        {stars.map((c, i) => (
+          <span
+            key={i}
+            className="fx-star"
+            style={{ left: c.l, top: c.t, width: c.s, height: c.s, background: b, animationDuration: c.d }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (motion === "mesh") {
+    return (
+      <div style={layer}>
+        <div
+          className="fx-mesh"
+          style={{
+            backgroundImage: `radial-gradient(at 22% 24%, ${a}66, transparent 42%), radial-gradient(at 78% 30%, ${b}44, transparent 42%), radial-gradient(at 50% 82%, ${a}55, transparent 46%)`,
+          }}
+        />
+      </div>
+    );
+  }
+
   return null;
 }

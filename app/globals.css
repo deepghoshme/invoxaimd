@@ -535,6 +535,55 @@ a:hover {
   0%, 100% { transform: scale(0.9); opacity: 0.5; }
   50% { transform: scale(1.15); opacity: 0.85; }
 }
+.fx-rays {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.6;
+  animation: fxspin 30s linear infinite;
+}
+.fx-wave {
+  position: absolute;
+  inset: 0;
+  animation: fxwave 7s ease-in-out infinite;
+}
+.fx-wave-2 {
+  animation-duration: 9s;
+  animation-delay: -2s;
+}
+@keyframes fxwave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+.fx-star {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: fxtwinkle ease-in-out infinite;
+}
+@keyframes fxtwinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.7); }
+  50% { opacity: 0.9; transform: scale(1.2); }
+}
+.fx-mesh {
+  position: absolute;
+  inset: -25%;
+  opacity: 0.85;
+  animation: fxmesh 18s ease-in-out infinite;
+}
+@keyframes fxmesh {
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  33% { transform: translate(5%, -4%) scale(1.12); }
+  66% { transform: translate(-4%, 3%) scale(1.0); }
+}
+
+/* Hide preview scrollbar (keeps scroll, removes the right-side line) */
+.device-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.device-scroll::-webkit-scrollbar {
+  display: none;
+}
 
 /* ---- Bio full-height fill (theme always covers; content centers) ---- */
 .bio-root {

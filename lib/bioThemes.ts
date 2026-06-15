@@ -13,12 +13,13 @@ export type BioContent = {
   display_name?: string;
   headline?: string;
   avatar_url?: string;
+  cover_url?: string;
   bio?: string;
   links?: BioLink[];
   socials?: SocialLink[];
   theme?: string;
   background?: BioBackground;
-  bg_motion?: "none" | "gradient" | "blobs" | "aurora" | "bubbles" | "glow";
+  bg_motion?: "none" | "gradient" | "blobs" | "aurora" | "bubbles" | "glow" | "rays" | "waves" | "stars" | "mesh";
   animation?: "none" | "fade" | "rise" | "pop";
   button_style?: "rounded" | "pill" | "outline";
   icon_position?: "left" | "center" | "right";
@@ -41,6 +42,10 @@ export const BG_MOTIONS = [
   { id: "aurora", name: "Aurora" },
   { id: "bubbles", name: "Rising bubbles" },
   { id: "glow", name: "Pulsing glow" },
+  { id: "rays", name: "Rotating rays" },
+  { id: "waves", name: "Waves" },
+  { id: "stars", name: "Twinkling stars" },
+  { id: "mesh", name: "Mesh gradient" },
 ] as const;
 
 export type BioTheme = {
@@ -143,6 +148,72 @@ export const BIO_THEMES: BioTheme[] = [
     muted: "#9A9A9A",
     primary: "#E5B567",
     primaryText: "#1a1400",
+  },
+  {
+    id: "royal",
+    name: "Royal",
+    bg: "#F6F3FF",
+    card: "#FFFFFF",
+    cardBorder: "#E4DAF7",
+    text: "#241046",
+    muted: "#6E5C90",
+    primary: "#7B3FE4",
+    primaryText: "#FFFFFF",
+  },
+  {
+    id: "mint",
+    name: "Mint",
+    bg: "#F0FBF7",
+    card: "#FFFFFF",
+    cardBorder: "#D2EFE4",
+    text: "#0E2E25",
+    muted: "#5A7E73",
+    primary: "#10B981",
+    primaryText: "#FFFFFF",
+  },
+  {
+    id: "rose",
+    name: "Rose Gold",
+    bg: "#FFF5F1",
+    card: "#FFFFFF",
+    cardBorder: "#F4DDD3",
+    text: "#3A1E1A",
+    muted: "#8C6A60",
+    primary: "#E08160",
+    primaryText: "#FFFFFF",
+  },
+  {
+    id: "slate",
+    name: "Slate",
+    bg: "#0F141B",
+    card: "#1A222D",
+    cardBorder: "#2C3947",
+    text: "#E8EEF5",
+    muted: "#9CABBC",
+    primary: "#38BDF8",
+    primaryText: "#06222F",
+  },
+  {
+    id: "cyber",
+    name: "Cyber",
+    bg: "#0B0B1A",
+    card: "#15152E",
+    cardBorder: "#2A2A53",
+    text: "#EDEBFF",
+    muted: "#9D9BC9",
+    primary: "#00E5C0",
+    primaryText: "#04241F",
+  },
+  {
+    id: "sand",
+    name: "Sand",
+    bg: "#FAF6EF",
+    card: "#FFFFFF",
+    cardBorder: "#ECE2D2",
+    text: "#3A3024",
+    muted: "#857a68",
+    primary: "#C99A4B",
+    primaryText: "#2A2114",
   },
 ];
 

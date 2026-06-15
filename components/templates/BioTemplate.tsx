@@ -172,16 +172,33 @@ export default function BioTemplate({
         {/* margin-auto centers when short, but collapses on overflow so the page
             stays scrollable and nothing hides behind the fixed mobile CTA */}
         <div className={anim} style={{ width: "min(480px, 100%)", textAlign: "center", marginTop: "auto", marginBottom: "auto" }}>
-          <div
-            style={{
-              width: 100,
-              height: 100,
-              margin: "0 auto 16px",
-              borderRadius: "50%",
-              background: content.avatar_url ? `center/cover url(${content.avatar_url})` : theme.primary,
-              boxShadow: "0 12px 30px -14px rgba(0,0,0,0.5)",
-            }}
-          />
+          {/* Facebook-style cover banner with the avatar overlapping its bottom */}
+          <div style={{ position: "relative", marginBottom: 54 }}>
+            <div
+              style={{
+                height: 150,
+                borderRadius: 18,
+                background: content.cover_url
+                  ? `center/cover no-repeat url(${content.cover_url})`
+                  : `linear-gradient(135deg, ${theme.primary}, ${theme.bg})`,
+                boxShadow: "0 12px 32px -18px rgba(0,0,0,0.5)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                bottom: -46,
+                transform: "translateX(-50%)",
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                background: content.avatar_url ? `center/cover url(${content.avatar_url})` : theme.primary,
+                border: `4px solid ${theme.bg}`,
+                boxShadow: "0 12px 28px -14px rgba(0,0,0,0.55)",
+              }}
+            />
+          </div>
           <h1 style={{ margin: "0 0 4px", fontSize: "1.6rem", fontFamily: "var(--font-heading), sans-serif", color: theme.text }}>
             {name}
           </h1>

@@ -33,6 +33,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
   const [displayName, setDisplayName] = useState(c.display_name ?? "");
   const [headline, setHeadline] = useState(c.headline ?? "");
   const [avatarUrl, setAvatarUrl] = useState(c.avatar_url ?? "");
+  const [coverUrl, setCoverUrl] = useState(c.cover_url ?? "");
   const [bio, setBio] = useState(c.bio ?? "");
   // --- socials + links ---
   const [socials, setSocials] = useState<SocialLink[]>(c.socials ?? []);
@@ -70,6 +71,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
       display_name: displayName,
       headline,
       avatar_url: avatarUrl,
+      cover_url: coverUrl,
       bio,
       socials: socials.filter((x) => x.url.trim()),
       links: links.filter((x) => x.url.trim()),
@@ -84,7 +86,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
       highlight_size: hiSize as BioContent["highlight_size"],
       highlight_text_size: hiTextSize as BioContent["highlight_text_size"],
     }),
-    [displayName, headline, avatarUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, highlightColor, stripeColor, hiSize, hiTextSize],
+    [displayName, headline, avatarUrl, coverUrl, bio, socials, links, theme, bgType, bgColor, bgColor2, bgImage, bgMotion, animation, buttonStyle, iconPos, highlightColor, stripeColor, hiSize, hiTextSize],
   );
 
   // --- minimum requirements before publish ---
@@ -186,6 +188,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
             <h2 style={{ marginTop: 0 }}>Profile</h2>
             <Field label="Display name *"><input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Jane Doe" /></Field>
             <Field label="Headline"><input className="input" value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Creator · Coach · Founder" /></Field>
+            <Field label="Cover banner (upload or URL)"><ImageInput value={coverUrl} onChange={setCoverUrl} placeholder="https://…/cover.jpg" /></Field>
             <Field label="Avatar (upload or URL)"><ImageInput value={avatarUrl} onChange={setAvatarUrl} placeholder="https://…/photo.jpg" /></Field>
             <Field label="Short bio"><textarea className="input" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} /></Field>
           </section>
@@ -332,9 +335,6 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
               <BioTemplate content={liveContent} fallbackName={displayName || "Your name"} forceMobile={device === "mobile"} />
             </div>
           </div>
-          <p className="muted" style={{ textAlign: "center", fontSize: "0.78rem", marginTop: "var(--space-1)" }}>
-            Live preview — updates as you edit
-          </p>
         </div>
       </div>
     </div>
