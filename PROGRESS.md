@@ -90,6 +90,18 @@
   - Verified: claimed subdomain `dmkad.invoxai.io/bio` → 200 ("not published yet"
     until the seller publishes); unclaimed subdomains get no cert (tls-check denies)
 
+- [x] **Bio page builder COMPLETE** (full feature, not just MVP):
+  - 8 themes (`lib/bioThemes.ts`); backgrounds: theme/solid/gradient/image-upload;
+    entrance animations (fade/rise/pop); button styles (rounded/pill/outline)
+  - social icons (`components/SocialIcon.tsx`, 11 platforms) + per-link custom icon
+  - two-pane builder with **live web/mobile preview** (shared `BioTemplate`)
+  - publish gated by minimum requirements (name + ≥1 link/social)
+  - `ImageInput` (local upload + URL) on avatar / OG / background / link icons
+  - storage `media` bucket + `/api/upload`
+  - **left-sidebar AppShell** (seller + admin), responsive hamburger on mobile
+  - professional full-width layouts (`.page-wrap` / `.wide-wrap`)
+  - 📌 memory: image-upload-everywhere + left-sidebar-responsive saved
+
 ### Next (still Foundation / Phase 1)
 - [ ] **OTP email template** (user, Supabase dashboard): ensure it contains `{{ .Token }}`
 - [ ] **Hosted Supabase auth config** (user, in dashboard): enable Google provider
