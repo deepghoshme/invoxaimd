@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Phead, Kpis, Card, AreaChart } from "@/components/dx/ui";
 
 export const dynamic = "force-dynamic";
+
+const inr = (paise: number) => "₹" + Math.round(paise / 100).toLocaleString("en-IN");
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -12,93 +15,59 @@ export default async function DashboardPage() {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("store_name, subdomain, onboarding_completed, category_id")
+    .select("id, store_name, onboarding_completed")
     .eq("owner_id", user.id)
     .maybeSingle();
-
-  // Block the dashboard until onboarding is finished (resumable).
   if (!store || !store.onboarding_completed) redirect("/onboarding");
 
-  const { data: category } = store.category_id
-    ? await supabase
-        .from("business_categories")
-        .select("name, commission_rate")
-        .eq("id", store.category_id)
-        .maybeSingle()
-    : { data: null };
-
-  const siteUrl = `https://${store.subdomain}.invoxai.io`;
+  const { data: paid } = await supabase
+    .from("orders")
+    .select("amount")
+    .eq("store_id", store.id)
+    .eq("status", "paid");
+  const { count: orderCount } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("store_id", store.id);
+  const revenue = (paid ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
 
   return (
-    <main className="page-wrap">
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "var(--space-4)",
-          flexWrap: "wrap",
-          gap: "var(--space-2)",
-        }}
-      >
+    <>
+      <Phead
+        title={`${store.store_name || "Dashboard"} 👋`}
+        sub="How your store is doing today."
+        action={<a className="btn grad" href="/dashboard/pages/products">+ New page</a>}
+      />
+
+      <Kpis
+        items={[
+          { icon: "rupee", color: "var(--primary)", label: "Revenue (paid)", value: inr(revenue) },
+          { icon: "bag", color: "var(--secondary)", label: "Orders", value: String(orderCount ?? 0) },
+          { icon: "eye", color: "var(--accent)", label: "Visitors", value: "—" },
+          { icon: "wallet", color: "var(--gold)", label: "Wallet", value: "₹0" },
+        ]}
+      />
+
+      <div className="dx-grid dx-cols">
         <div>
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-            Dashboard
-          </p>
-          <h1 style={{ margin: "0.1rem 0 0" }}>{store.store_name}</h1>
+          <Card title="Revenue" link="paid orders">
+            <AreaChart />
+          </Card>
         </div>
-      </header>
-
-      <section
-        className="card"
-        style={{
-          background: "var(--brand-gradient)",
-          color: "#fff",
-          border: "none",
-          marginBottom: "var(--space-3)",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>🎉 You&apos;re all set</h2>
-        <p style={{ marginBottom: "var(--space-2)", opacity: 0.95 }}>
-          Your store is live-ready. Build your first page to start sharing.
-        </p>
-        <a className="btn" href="/dashboard/pages/bio" style={{ background: "#fff", color: "var(--color-primary)" }}>
-          Build your bio page →
-        </a>
-      </section>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "var(--space-2)",
-        }}
-      >
-        <div className="card" style={{ padding: "var(--space-3)" }}>
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-            Your address
-          </p>
-          <a href={siteUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
-            {store.subdomain}.invoxai.io
-          </a>
-        </div>
-        <div className="card" style={{ padding: "var(--space-3)" }}>
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-            Category
-          </p>
-          <p style={{ margin: "0.2rem 0 0", fontWeight: 600 }}>
-            {category?.name ?? "—"}
-          </p>
-        </div>
-        <div className="card" style={{ padding: "var(--space-3)" }}>
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-            Platform fee / sale
-          </p>
-          <p style={{ margin: "0.2rem 0 0", fontWeight: 600 }}>
-            {category ? `${(category.commission_rate * 100).toFixed(1)}%` : "—"}
-          </p>
+        <div>
+          <div className="dx-card" style={{ background: "var(--grad)", color: "#fff", border: 0, marginBottom: 16 }}>
+            <div style={{ fontSize: 12.5, opacity: 0.85 }}>Wallet balance</div>
+            <div style={{ fontFamily: "var(--font-sora), sans-serif", fontSize: 26, fontWeight: 700, marginTop: 3 }}>₹0</div>
+            <div style={{ fontSize: 11.5, opacity: 0.9, marginTop: 8 }}>Commission billed via wallet. Daily invoice 11 PM.</div>
+            <a className="btn" href="/dashboard/wallet" style={{ marginTop: 12, width: "100%", justifyContent: "center", background: "rgba(255,255,255,.95)", color: "#7a2f1c" }}>Recharge</a>
+          </div>
+          <Card title="Quick start">
+            <div className="dx-mrow"><div className="tx"><b>Build your bio page</b><p>Link-in-bio with all your links.</p></div><a className="dx-editbtn" href="/dashboard/pages/bio">Open</a></div>
+            <div className="dx-mrow"><div className="tx"><b>Create a product</b><p>One-page checkout in minutes.</p></div><a className="dx-editbtn" href="/dashboard/pages/products">Open</a></div>
+            <div className="dx-mrow"><div className="tx"><b>Connect payments</b><p>Receive money via Razorpay.</p></div><a className="dx-editbtn" href="/dashboard/settings/payments">Open</a></div>
+          </Card>
         </div>
       </div>
-    </main>
+    </>
   );
 }

@@ -26,3 +26,17 @@ export async function updateCommission(
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/** Global on/off for the "Built with InvoxAI" badge on public seller pages. */
+export async function setBrandBadge(show: boolean): Promise<Result> {
+  // RLS (platform_settings_admin_write -> is_admin()) enforces admin-only writes.
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({ show_brand_badge: show })
+    .eq("id", true);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin");
+  return { ok: true };
+}

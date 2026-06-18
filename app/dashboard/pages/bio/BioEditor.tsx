@@ -24,7 +24,7 @@ type PageData = {
   status: string;
 };
 
-export default function BioEditor({ page, publicUrl }: { page: PageData; publicUrl: string | null }) {
+export default function BioEditor({ page, publicUrl, showBrand = true }: { page: PageData; publicUrl: string | null; showBrand?: boolean }) {
   const c = page.content as BioContent;
   const s = page.seo as Record<string, string>;
   const px = page.pixels as Record<string, string>;
@@ -341,7 +341,7 @@ export default function BioEditor({ page, publicUrl }: { page: PageData; publicU
           </div>
           <div className={`device device-${device}`}>
             <div className="device-scroll" key={`${theme}-${animation}-${device}`}>
-              <BioTemplate content={liveContent} fallbackName={displayName || "Your name"} forceMobile={device === "mobile"} />
+              <BioTemplate content={liveContent} fallbackName={displayName || "Your name"} forceMobile={device === "mobile"} showBrand={showBrand} />
             </div>
           </div>
         </div>

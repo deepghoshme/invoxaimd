@@ -117,10 +117,12 @@ export default function BioTemplate({
   content,
   fallbackName,
   forceMobile,
+  showBrand = true,
 }: {
   content: BioContent;
   fallbackName?: string;
   forceMobile?: boolean;
+  showBrand?: boolean;
 }) {
   const theme = getBioTheme(content.theme);
   const name = content.display_name || fallbackName || "My page";
@@ -144,6 +146,21 @@ export default function BioTemplate({
 
   const avatarPos = content.avatar_position ?? "center";
   const justify = avatarPos === "left" ? "flex-start" : avatarPos === "right" ? "flex-end" : "center";
+  const hasCover = !!content.cover_url;
+  const hasAvatar = !!content.avatar_url;
+
+  const avatarCircle = (
+    <div
+      style={{
+        width: 100,
+        height: 100,
+        borderRadius: "50%",
+        background: hasAvatar ? `center/cover url(${content.avatar_url})` : theme.primary,
+        border: `4px solid ${theme.bg}`,
+        boxShadow: "0 12px 28px -14px rgba(0,0,0,0.55)",
+      }}
+    />
+  );
 
   return (
     <div
@@ -163,44 +180,36 @@ export default function BioTemplate({
       {/* Centered column on web (background fills the sides); full width on mobile */}
       <div className="bio-shell">
 
-      {/* Cover (bottom corners curved) + positioned avatar */}
-      <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
-        <div
-          style={{
-            width: "100%",
-            height: "clamp(140px, 28vw, 210px)",
-            borderRadius: "0 0 28px 28px",
-            background: content.cover_url
-              ? `center/cover no-repeat url(${content.cover_url})`
-              : `linear-gradient(135deg, ${theme.primary}, ${theme.bg})`,
-            boxShadow: "0 16px 36px -24px rgba(0,0,0,0.55)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
-            bottom: -48,
-            width: "min(540px, 100%)",
-            display: "flex",
-            justifyContent: justify,
-            padding: "0 26px",
-            boxSizing: "border-box",
-          }}
-        >
+      {/* Cover banner (bottom corners curved) + overlapping avatar — only when a
+          cover image is set. No cover → a clean, normal bio page (no banner). */}
+      {hasCover && (
+        <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
           <div
             style={{
-              width: 100,
-              height: 100,
-              borderRadius: "50%",
-              background: content.avatar_url ? `center/cover url(${content.avatar_url})` : theme.primary,
-              border: `4px solid ${theme.bg}`,
-              boxShadow: "0 12px 28px -14px rgba(0,0,0,0.55)",
+              width: "100%",
+              height: "clamp(140px, 28vw, 210px)",
+              borderRadius: "0 0 28px 28px",
+              background: `center/cover no-repeat url(${content.cover_url})`,
+              boxShadow: "0 16px 36px -24px rgba(0,0,0,0.55)",
             }}
           />
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              transform: "translateX(-50%)",
+              bottom: -48,
+              width: "min(540px, 100%)",
+              display: "flex",
+              justifyContent: justify,
+              padding: "0 26px",
+              boxSizing: "border-box",
+            }}
+          >
+            {avatarCircle}
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         className="bio-content"
@@ -211,12 +220,18 @@ export default function BioTemplate({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          padding: "66px 20px 48px",
+          padding: hasCover ? "66px 20px 48px" : "44px 20px 48px",
         }}
       >
         {/* margin-auto centers when short, but collapses on overflow so the page
             stays scrollable and nothing hides behind the fixed mobile CTA */}
         <div className={anim} style={{ width: "min(480px, 100%)", textAlign: avatarPos, marginTop: "auto", marginBottom: "auto" }}>
+          {/* No cover → show the avatar inline at the top (if one is set) */}
+          {!hasCover && hasAvatar && (
+            <div style={{ display: "flex", justifyContent: justify, marginBottom: 18 }}>
+              {avatarCircle}
+            </div>
+          )}
           <h1 style={{ margin: "0 0 4px", fontSize: "1.6rem", fontFamily: "var(--font-heading), sans-serif", color: theme.text }}>
             {name}
           </h1>
@@ -248,7 +263,7 @@ export default function BioTemplate({
         </div>
       )}
 
-      <BrandBadge />
+      {showBrand && <BrandBadge theme={theme} />}
     </div>
   );
 }

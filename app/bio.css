@@ -1,0 +1,131 @@
+/* ===== Bio view (preview + public) — namespaced under .bioview ===== */
+/* Self-contained tokens so it renders correctly on public pages too. */
+.bioview {
+  --bg: #FFF9F4; --surface: #FFFFFF; --surface2: #FFF3EC;
+  --primary: #FF6A3D; --secondary: #FF4D7D; --accent: #7B3FE4;
+  --text: #2B1B2E; --muted: #7A6770; --border: #F0E1D6; --green: #1FB57A;
+  --shadow: 0 1px 2px rgba(43,27,46,.04), 0 8px 24px rgba(255,106,61,.07);
+}
+.bioview .bio { position: relative; min-height: 100%; background: var(--bg); overflow: hidden; }
+.bioview .bgfx { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.bioview .bgfx .fx { display: none; position: absolute; border-radius: 50%; filter: blur(40px); }
+.bioview .bg-aurora .fx-a { display: block; width: 160%; height: 65%; left: -30%; top: -12%; background: var(--bioGrad); opacity: .17; border-radius: 45%; animation: bvaur 16s linear infinite; }
+.bioview .bg-blobs .fx { display: block; width: 170px; height: 170px; opacity: .22; }
+.bioview .bg-blobs .fx-a { background: var(--primary); left: -34px; top: 60px; animation: bvfl 9s ease-in-out infinite; }
+.bioview .bg-blobs .fx-b { background: var(--secondary); right: -34px; top: 220px; animation: bvfl 12s ease-in-out infinite reverse; }
+.bioview .bg-blobs .fx-c { background: var(--accent); left: 40px; bottom: 80px; animation: bvfl 14s ease-in-out infinite; }
+.bioview .bg-glow .fx-a { display: block; width: 280px; height: 280px; left: 50%; top: -30px; margin-left: -140px; background: var(--bioGrad); opacity: .18; animation: bvglow 6s ease-in-out infinite; }
+.bioview .bg-gradient::before { content: ""; position: absolute; inset: 0; z-index: 0; background: var(--bioGrad); background-size: 300% 300%; opacity: .16; animation: bvgrad 14s ease infinite; }
+.bioview .bg-bubbles .fx { display: block; width: 60px; height: 60px; opacity: .16; background: var(--bioGrad); }
+.bioview .bg-bubbles .fx-a { left: 12%; bottom: -60px; animation: bvbub 11s linear infinite; }
+.bioview .bg-bubbles .fx-b { left: 54%; bottom: -60px; width: 90px; height: 90px; animation: bvbub 15s linear infinite; }
+.bioview .bg-bubbles .fx-c { left: 80%; bottom: -60px; width: 40px; height: 40px; animation: bvbub 9s linear infinite; }
+.bioview .bg-rays::before { content: ""; position: absolute; left: 50%; top: -40%; width: 200%; height: 200%; margin-left: -100%; z-index: 0; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--primary) 9%, transparent) 0deg 12deg, transparent 12deg 24deg); animation: bvspin 40s linear infinite; }
+.bioview .bg-stars .fx { display: block; width: 4px; height: 4px; filter: none; background: var(--text); opacity: .25; }
+.bioview .bg-stars .fx-a { left: 20%; top: 18%; animation: bvtw 3s ease-in-out infinite; }
+.bioview .bg-stars .fx-b { left: 70%; top: 30%; animation: bvtw 4s ease-in-out infinite; }
+.bioview .bg-stars .fx-c { left: 45%; top: 55%; animation: bvtw 2.6s ease-in-out infinite; }
+@keyframes bvaur { 0% { transform: translate(-6%,-4%) rotate(0); } 50% { transform: translate(6%,4%) rotate(180deg); } 100% { transform: translate(-6%,-4%) rotate(360deg); } }
+@keyframes bvfl { 0%,100% { transform: translate(0,0); } 50% { transform: translate(16px,-26px); } }
+@keyframes bvglow { 0%,100% { opacity: .12; transform: scale(1); } 50% { opacity: .26; transform: scale(1.12); } }
+@keyframes bvgrad { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes bvbub { 0% { transform: translateY(0); opacity: .16; } 100% { transform: translateY(-680px); opacity: 0; } }
+@keyframes bvspin { to { transform: rotate(360deg); } }
+@keyframes bvtw { 0%,100% { opacity: .15; } 50% { opacity: .5; } }
+.bioview .inner { position: relative; z-index: 1; }
+.bioview .anim .cover, .bioview .anim .avatar, .bioview .anim .bioname, .bioview .anim .biohandle, .bioview .anim .biobio, .bioview .anim .socials, .bioview .anim .lbtn, .bioview .anim .feat { animation: bvup .5s ease both; }
+.bioview .anim .lbtn:nth-child(2) { animation-delay: .05s; } .bioview .anim .lbtn:nth-child(3) { animation-delay: .1s; } .bioview .anim .lbtn:nth-child(4) { animation-delay: .15s; }
+@keyframes bvup { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* Public stage: only the BACKGROUND fills the screen; the bio stays mobile-width
+   (cover + content centered in a ~440px column). */
+.bioview.stage .bio { min-height: 100dvh; }
+.bioview.stage .inner { max-width: 440px; margin: 0 auto; }
+.bioview .cover { height: 150px; background: var(--bioGrad); background-size: cover; background-position: center; }
+.bioview .body { max-width: 440px; margin: 0 auto; padding: 0 20px 26px; text-align: center; color: var(--text); }
+.bioview .avatar { width: 94px; height: 94px; border-radius: 50%; margin: -50px auto 0; background: var(--bioGrad); background-size: cover; background-position: center; display: grid; place-items: center; color: #fff; font-family: var(--font-sora), sans-serif; font-weight: 800; font-size: 32px; border: 4px solid var(--surface); box-shadow: var(--shadow); }
+/* No cover image → no blank banner; avatar sits at the top with normal spacing. */
+.bioview .bio.no-cover .avatar { margin-top: 34px; }
+.bioview.stage .bio.no-cover .inner { padding-top: 10px; }
+.bioview .bioname { font-family: var(--font-sora), sans-serif; font-weight: 700; font-size: 21px; margin-top: 13px; letter-spacing: -.01em; }
+/* Meta-style verified badge — fixed blue, does not change with theme. */
+.bioview .bioverif { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 6px; border-radius: 50%; background: #1d9bf0; color: #fff; font-size: 10px; font-weight: 800; vertical-align: middle; box-shadow: 0 0 0 2px var(--surface); }
+.bioview .lhead { text-align: center; font-weight: 700; font-family: var(--font-sora), sans-serif; font-size: 14px; color: var(--muted); margin: 14px 0 6px; letter-spacing: .02em; }
+.bioview .biohandle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.bioview .biobio { font-size: 13.5px; margin: 11px auto 0; max-width: 310px; line-height: 1.5; }
+.bioview .socials { display: flex; justify-content: center; gap: 10px; margin: 16px 0 4px; }
+.bioview .soc { width: 38px; height: 38px; border-radius: 50%; background: var(--surface2, var(--bg)); border: 1px solid var(--border); display: grid; place-items: center; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text); text-decoration: none; }
+.bioview .links { margin-top: 14px; text-align: left; }
+.bioview .lbtn { display: flex; align-items: center; gap: 13px; padding: 15px 16px; border-radius: 15px; font-weight: 600; font-size: 14px; margin-bottom: 11px; cursor: pointer; background: var(--surface); border: 1px solid var(--border); color: var(--text); transition: transform .14s, box-shadow .14s; text-decoration: none; }
+.bioview .lbtn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.bioview .lbtn .em { font-size: 18px; } .bioview .lbtn .ar { margin-left: auto; color: var(--muted); }
+.bioview .lbtn .lthumb { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; flex: none; }
+.bioview .style-grad .lbtn { background: var(--bioGrad); color: #fff; border: 0; } .bioview .style-grad .lbtn .ar { color: rgba(255,255,255,.85); }
+.bioview .style-outline .lbtn { background: transparent; border: 1.5px solid color-mix(in srgb, var(--primary) 55%, var(--border)); }
+.bioview .style-glass .lbtn { background: color-mix(in srgb, var(--surface) 50%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); }
+/* Button shapes */
+.bioview .shape-pill .lbtn { border-radius: 999px; }
+.bioview .shape-square .lbtn { border-radius: 8px; }
+/* Highlighted (featured) link — gradient + looping shine */
+.bioview .lbtn.hi { position: relative; overflow: hidden; background: var(--bioGrad); color: #fff; border: 0; }
+.bioview .lbtn.hi .ar { color: rgba(255,255,255,.85); }
+.bioview .lbtn.hi .lshine { position: absolute; top: 0; left: -55%; width: 32%; height: 100%; transform: skewX(-18deg); pointer-events: none; opacity: .5; filter: blur(3px); background: linear-gradient(90deg, transparent, #fff, transparent); animation: blshine 3s ease-in-out infinite; }
+@keyframes blshine { 0% { left: -55%; } 60%, 100% { left: 160%; } }
+.bioview .feat { margin-top: 6px; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--surface); text-align: left; }
+.bioview .feat .thumb { height: 130px; background: var(--bioGrad); background-size: cover; background-position: center; }
+.bioview .feat .fb { padding: 15px; } .bioview .feat .ft { font-weight: 700; font-family: var(--font-sora), sans-serif; font-size: 15px; }
+.bioview .feat .prc { margin-top: 4px; display: flex; align-items: baseline; gap: 8px; }
+.bioview .feat .off { font-weight: 700; font-size: 16px; color: var(--primary); }
+.bioview .feat .real { color: var(--muted); text-decoration: line-through; font-size: 13px; }
+.bioview .feat .save { font-size: 11px; font-weight: 700; color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); padding: 2px 7px; border-radius: 99px; }
+.bioview .feat .fbtn { margin-top: 12px; width: 100%; display: block; text-align: center; border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 700; color: #fff; background: var(--bioGrad); cursor: pointer; text-decoration: none; }
+.bioview .biofoot { margin-top: 22px; font-size: 11px; color: var(--muted); text-align: center; }
+.bioview .biofoot a { color: var(--muted); } .bioview .biofoot b { color: var(--text); }
+
+/* ===== Bio builder layout (inside .dx) ===== */
+.biobuild { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; max-width: 1060px; margin: 0 auto; }
+.biobuild .sec { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.biobuild .sec h3 { font-size: 14px; margin-bottom: 14px; }
+.biobuild .field { margin-bottom: 13px; }
+.biobuild .field > label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+.biobuild .field input, .biobuild .field textarea, .biobuild .field select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; outline: none; }
+.biobuild .ff { display: flex; gap: 10px; } .biobuild .ff > * { flex: 1; }
+.biobuild .up { display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border); border-radius: 11px; padding: 10px; cursor: pointer; background: var(--bg); margin-bottom: 10px; }
+.biobuild .up .ico { width: 34px; height: 34px; border-radius: 9px; background: var(--surface2, var(--bg)); display: grid; place-items: center; flex: none; }
+.biobuild .up input { display: none; } .biobuild .up .t { font-size: 12.5px; font-weight: 600; } .biobuild .up .s { font-size: 11px; color: var(--muted); }
+.biobuild .up-has { border-style: solid; }
+.biobuild .up-prev { width: 54px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; border: 1px solid var(--border); }
+.biobuild .up-actions { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.biobuild .up-btn { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.biobuild .up-btn input { display: none; }
+.biobuild .up-btn.danger { color: var(--secondary); }
+.biobuild .swatches { display: flex; gap: 9px; flex-wrap: wrap; }
+.biobuild .sw { width: 38px; height: 38px; border-radius: 11px; cursor: pointer; border: 2px solid transparent; }
+.biobuild .sw.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface) inset; }
+.biobuild .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.biobuild .chip { font-size: 12.5px; font-weight: 600; padding: 8px 13px; border-radius: 99px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; }
+.biobuild .chip.on { background: var(--primary); color: #fff; border-color: transparent; }
+.biobuild .lrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.biobuild .lrow select { width: 62px; padding: 9px 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 16px; text-align: center; }
+.biobuild .lrow .ti { flex: 2; min-width: 120px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; }
+.biobuild .lrow .ur { flex: 2; min-width: 120px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--muted); font: inherit; font-size: 12.5px; }
+.biobuild .lrow .del { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; flex: none; }
+.biobuild .addlink { width: 100%; border: 1px dashed var(--border); background: transparent; color: var(--primary); padding: 10px; border-radius: 10px; cursor: pointer; font: inherit; font-weight: 600; }
+.biobuild .previewwrap { position: sticky; top: 76px; display: flex; flex-direction: column; align-items: center; gap: 10px; height: fit-content; }
+.biobuild .plabel { font-size: 12px; color: var(--muted); }
+.biobuild .phone { width: 314px; border: 11px solid #15101e; border-radius: 42px; background: var(--bg); overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
+.biobuild .phone .scr { height: 600px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.biobuild .phone .scr::-webkit-scrollbar { display: none; }
+.biobuild .lrow .mv { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 8px; width: 28px; height: 34px; cursor: pointer; flex: none; font-size: 12px; }
+.biobuild .lrow .mv.on { background: var(--primary); color: #fff; border-color: transparent; }
+@media (max-width: 980px) { .biobuild { grid-template-columns: 1fr; } .biobuild .previewwrap { position: static; order: -1; } }
+
+.biopreview-thumb { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; max-width: 280px; margin: 0 auto; }
+
+/* Builder / Public toggle + public preview */
+.bio-seg { display: flex; background: var(--surface2, var(--bg)); border-radius: 10px; padding: 3px; gap: 2px; }
+.bio-seg button { font: inherit; font-weight: 600; font-size: 13px; border: 0; background: transparent; color: var(--muted); padding: 6px 14px; border-radius: 8px; cursor: pointer; }
+.bio-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.bio-public-view { background: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--primary) 9%, var(--bg)), var(--bg)); border: 1px solid var(--border); border-radius: 18px; padding: 4px 0 40px; }
+.bio-public-view .urlbar { display: flex; justify-content: center; padding: 14px; }
+.bio-public-view .urlbar .u { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 7px 16px; }
+.bio-public-view .publiccol { max-width: 440px; margin: 0 auto; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
