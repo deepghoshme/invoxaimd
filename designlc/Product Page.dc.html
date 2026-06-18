@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes pp-aurora1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(6vw,4vh) scale(1.15); } }
+  @keyframes pp-aurora2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-5vw,5vh) scale(1.1); } }
+  @keyframes pp-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes pp-lp { 0% { box-shadow: 0 0 0 0 rgba(31,181,122,.5); } 70% { box-shadow: 0 0 0 9px rgba(31,181,122,0); } 100% { box-shadow: 0 0 0 0 rgba(31,181,122,0); } }
+  @keyframes pp-spin { to { transform: rotate(360deg); } }
+  @keyframes pp-pop { from { transform: scale(.92); } to { transform: scale(1); } }
+  @keyframes pp-stripe { to { background-position: 28px 0; } }
+
+  .pp {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow-xl: 0 40px 90px -40px rgba(43,27,46,.5);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .pp[data-theme="dark"] {
+    --bg: #0f1115; --card: #1c1f26; --s2: #23262e;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f2f3f5; --muted: #9aa0ab; --border: rgba(255,255,255,.1); --green: #36c98e;
+    --shadow-xl: 0 50px 100px -40px rgba(0,0,0,.85);
+  }
+  .pp h1,.pp h2,.pp h3 { font-family: var(--fh); margin: 0; letter-spacing: -.02em; }
+  .pp p { margin: 0; }
+
+  /* top bar */
+  .pp-top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 12px; padding: 12px 22px; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .pp-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
+  .pp-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); }
+  .pp-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  /* aurora bg */
+  .pp-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .pp-blob { position: absolute; width: 44vmax; height: 44vmax; border-radius: 50%; filter: blur(80px); opacity: .32; }
+  .pp-blob.b1 { background: var(--gold); top: -16vmax; left: -8vmax; animation: pp-aurora1 28s ease-in-out infinite; }
+  .pp-blob.b2 { background: var(--secondary); bottom: -18vmax; right: -8vmax; animation: pp-aurora2 32s ease-in-out infinite; }
+
+  .pp-card { position: relative; z-index: 1; max-width: 1180px; margin: 22px auto 0; background: var(--card); border-radius: 20px 20px 0 0; box-shadow: var(--shadow-xl); overflow: hidden; }
+  .pp-head { padding: 26px 28px 0; }
+  .pp-cat { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .pp-title { font-size: clamp(22px,3vw,30px); font-weight: 800; margin: 8px 0 8px; }
+  .pp-rate { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .pp-rate .st { color: var(--gold); letter-spacing: 1px; }
+  .pp-rate b { color: var(--text); }
+
+  .pp-grid { display: grid; grid-template-columns: 1.85fr 1fr; align-items: start; }
+  .pp-left { padding: 22px 28px 110px; min-width: 0; }
+  .pp-right { align-self: stretch; padding: 22px 24px; background-color: var(--primary);
+    background-image: linear-gradient(155deg, rgba(0,0,0,.06), rgba(0,0,0,.34)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.10' stroke-width='2'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15z'/%3E%3Cpath d='M14 0L1.34 7.32 14 14.66l12.66-7.34L14 0zM14 49l12.66-7.32L14 34.34 1.34 41.68 14 49z'/%3E%3C/g%3E%3C/svg%3E"); }
+  .pp-right-inner { position: sticky; top: 80px; max-width: 360px; margin: 0 auto; }
+
+  /* banner / gallery */
+  .pp-banner { border-radius: 14px; overflow: hidden; margin-bottom: 22px; aspect-ratio: 16/10; background:
+    repeating-linear-gradient(45deg, color-mix(in srgb,var(--primary) 12%, var(--s2)) 0 14px, var(--s2) 14px 28px);
+    display: grid; place-items: center; position: relative; }
+  .pp-banner .ph { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); background: color-mix(in srgb,var(--card) 70%, transparent); padding: 5px 12px; border-radius: 999px; }
+  .pp-thumbs { display: flex; gap: 9px; margin-bottom: 24px; }
+  .pp-th { width: 60px; height: 60px; border-radius: 11px; background: var(--s2); border: 2px solid transparent; cursor: pointer; }
+  .pp-th.on { border-color: var(--primary); }
+
+  .pp-sec { margin-bottom: 26px; }
+  .pp-h2 { font-size: 17px; margin-bottom: 12px; }
+  .pp-desc { color: var(--muted); font-size: 14.5px; }
+  .pp-feats { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 9px; }
+  .pp-feats li { display: flex; gap: 10px; font-size: 14px; } .pp-feats li::before { content: "✓"; color: var(--primary); font-weight: 800; }
+
+  .pp-testis { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .pp-testi { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--bg); }
+  .pp-testi .st { color: var(--gold); font-size: 12px; }
+  .pp-testi p { font-size: 13px; margin: 7px 0 10px; }
+  .pp-testi .who { display: flex; align-items: center; gap: 8px; }
+  .pp-testi .av { width: 28px; height: 28px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 11px; font-family: var(--fh); }
+  .pp-testi .who b { font-size: 12.5px; display: block; } .pp-testi .who span { font-size: 11px; color: var(--muted); }
+
+  .pp-faq { border: 1px solid var(--border); border-radius: 11px; background: var(--bg); padding: 12px 15px; margin-bottom: 8px; }
+  .pp-faq summary { cursor: pointer; font-weight: 700; font-size: 14px; list-style: none; display: flex; justify-content: space-between; }
+  .pp-faq summary::-webkit-details-marker { display: none; }
+  .pp-faq summary::after { content: "+"; color: var(--muted); }
+  .pp-faq[open] summary::after { content: "–"; }
+  .pp-faq p { margin-top: 10px; color: var(--muted); font-size: 13.5px; }
+
+  .pp-footer { border-top: 1px solid var(--border); padding-top: 18px; text-align: center; }
+  .pp-pay { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-bottom: 12px; }
+  .pp-pay span { font-size: 10.5px; font-weight: 800; letter-spacing: .03em; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); }
+  .pp-powered { font-size: 12px; color: var(--muted); }
+  .pp-powered b { background: linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: var(--fh); }
+
+  /* urgency on panel */
+  .pp-urg { margin-bottom: 14px; }
+  .pp-cd-title { font-size: 12.5px; font-weight: 700; color: #fff; margin-bottom: 7px; }
+  .pp-cd-row { display: flex; gap: 7px; }
+  .pp-cd-box { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,.18); color: #fff; }
+  .pp-cd-num { font-family: var(--fh); font-weight: 800; font-size: 19px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .pp-cd-lbl { font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; opacity: .85; margin-top: 4px; }
+  .pp-seats { color: #fff; margin-bottom: 14px; }
+  .pp-seats .lab { font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+  .pp-seats .bar { height: 7px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; }
+  .pp-seats .fill { height: 100%; border-radius: 999px; background: #fff; }
+
+  /* checkout card */
+  .co { background: var(--card); border-radius: 16px; box-shadow: 0 20px 55px -20px rgba(0,0,0,.45); padding: 20px; }
+  .co-price { display: flex; align-items: baseline; gap: 9px; margin-bottom: 4px; }
+  .co-now { font-family: var(--fh); font-weight: 800; font-size: 27px; letter-spacing: -.02em; }
+  .co-was { text-decoration: line-through; color: var(--muted); font-size: 15px; }
+  .co-off { background: var(--secondary); color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 7px; }
+  .co-cap { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .co-label { display: block; font-size: 12px; font-weight: 700; margin: 11px 0 5px; }
+  .co-input { width: 100%; padding: 11px 13px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .co-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent); }
+  .co-input.err { border-color: var(--secondary); }
+  .co-phone { display: flex; gap: 7px; } .co-phone .cc { width: 78px; flex: none; }
+  .co-err { color: var(--secondary); font-size: 11.5px; margin-top: 4px; min-height: 14px; }
+  .co-buy { position: relative; overflow: hidden; width: 100%; margin-top: 14px; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .co-buy:disabled { opacity: .8; cursor: default; }
+  .co-buy .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .4; filter: blur(3px); animation: pp-shine 3s ease-in-out infinite; }
+  .co-spin { width: 17px; height: 17px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: pp-spin .7s linear infinite; }
+  .co-secure { text-align: center; font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .co-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .co-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: var(--bg); color: var(--text); }
+  .co-badge .ic { color: var(--primary); }
+
+  /* checkout step crumbs */
+  .co-steps { display: flex; gap: 6px; margin-bottom: 14px; }
+  .co-steps .s { flex: 1; height: 4px; border-radius: 3px; background: var(--border); }
+  .co-steps .s.on { background: var(--grad); }
+
+  /* success */
+  .co-done { text-align: center; animation: pp-pop .4s ease; }
+  .co-check { width: 56px; height: 56px; border-radius: 50%; background: color-mix(in srgb,var(--green) 18%,transparent); color: var(--green); display: grid; place-items: center; font-size: 26px; margin: 0 auto 12px; }
+  .co-done h3 { font-size: 19px; } .co-done p { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
+  .co-orderid { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; margin: 14px 0; }
+  .co-pixel { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--green); background: color-mix(in srgb,var(--green) 12%,transparent); padding: 6px 12px; border-radius: 999px; }
+  .co-pixel .d { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pp-lp 1.6s infinite; }
+
+  /* live proof */
+  .pp-proof { position: fixed; left: 16px; bottom: 16px; z-index: 44; display: flex; align-items: center; gap: 11px; max-width: 280px; padding: 11px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-xl); transition: transform .4s ease, opacity .4s ease; }
+  .pp-proof.hide { transform: translateY(140%); opacity: 0; }
+  .pp-proof .d { width: 9px; height: 9px; border-radius: 50%; background: var(--green); animation: pp-lp 1.8s infinite; flex: none; }
+  .pp-proof b { font-size: 13px; } .pp-proof .sub { font-size: 11.5px; color: var(--muted); }
+
+  @media (max-width: 860px) {
+    .pp-grid { grid-template-columns: 1fr; }
+    .pp-right { order: -1; margin: 0 16px 4px; border-radius: 16px; align-self: auto; padding: 18px; }
+    .pp-right-inner { position: static; max-width: 100%; }
+    .pp-left { padding: 18px 16px 90px; }
+    .pp-testis { grid-template-columns: 1fr; }
+    .pp-card { margin-top: 14px; border-radius: 16px 16px 0 0; }
+  }
+</style>
+</helmet>
+
+<div class="pp" data-theme="{{ theme }}">
+  <div class="pp-aurora"><div class="pp-blob b1"></div><div class="pp-blob b2"></div></div>
+
+  <div class="pp-top">
+    <div class="pp-brand"><span class="pp-logo"></span>Studio Aanya</div>
+    <button class="pp-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+  </div>
+
+  <div class="pp-card">
+    <div class="pp-head">
+      <div class="pp-cat">Courses · Music production</div>
+      <h1 class="pp-title">Mixing Masterclass — Mix Like a Pro in 12 Lessons</h1>
+      <div class="pp-rate"><span class="st">★★★★★</span><b>4.9</b><span>· 2,140 students · lifetime access</span></div>
+    </div>
+
+    <div class="pp-grid">
+      <!-- LEFT: content -->
+      <div class="pp-left">
+        <div class="pp-banner"><span class="ph">PRODUCT SHOT · 1600×1000</span></div>
+        <div class="pp-thumbs">
+          <div class="pp-th on"></div><div class="pp-th"></div><div class="pp-th"></div><div class="pp-th"></div>
+        </div>
+
+        <div class="pp-sec">
+          <h2 class="pp-h2">What you'll learn</h2>
+          <p class="pp-desc">Twelve studio-grade lessons that take you from a muddy mix to a release-ready master. Real sessions, real plugins, lifetime updates.</p>
+          <ul class="pp-feats">
+            <li>EQ, compression, saturation &amp; the art of space</li>
+            <li>Vocal chains that cut through any beat</li>
+            <li>Mastering loud, clean and streaming-safe</li>
+            <li>12 project files + 30+ mixing presets included</li>
+          </ul>
+        </div>
+
+        <div class="pp-sec">
+          <h2 class="pp-h2">Loved by students</h2>
+          <div class="pp-testis">
+            <figure class="pp-testi"><div class="st">★★★★★</div><p>“My mixes finally sound like the references. Worth ten times the price.”</p><div class="who"><span class="av">R</span><div><b>Rohan M.</b><span>Producer</span></div></div></figure>
+            <figure class="pp-testi"><div class="st">★★★★★</div><p>“The vocal chain lesson alone changed everything for my releases.”</p><div class="who"><span class="av">P</span><div><b>Priya S.</b><span>Singer-songwriter</span></div></div></figure>
+          </div>
+        </div>
+
+        <div class="pp-sec">
+          <h2 class="pp-h2">Questions</h2>
+          <details class="pp-faq" open><summary>Do I get lifetime access?</summary><p>Yes — buy once, watch forever, including all future lesson updates.</p></details>
+          <details class="pp-faq"><summary>Which software do I need?</summary><p>Any DAW works. Examples use stock plugins so you can follow along on any setup.</p></details>
+          <details class="pp-faq"><summary>Is there a refund policy?</summary><p>7-day no-questions refund. If it's not for you, we'll return every rupee.</p></details>
+        </div>
+
+        <div class="pp-footer">
+          <div class="pp-pay"><span>VISA</span><span>UPI</span><span>RuPay</span><span>Mastercard</span><span>Razorpay</span></div>
+          <div class="pp-powered">Built with <b>invoxai</b> · secure checkout</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: urgency + checkout -->
+      <div class="pp-right">
+        <div class="pp-right-inner">
+          <div class="pp-urg">
+            <div class="pp-cd-title">⏳ Launch price ends in</div>
+            <div class="pp-cd-row">
+              <div class="pp-cd-box"><span class="pp-cd-num">{{ cdH }}</span><span class="pp-cd-lbl">Hrs</span></div>
+              <div class="pp-cd-box"><span class="pp-cd-num">{{ cdM }}</span><span class="pp-cd-lbl">Min</span></div>
+              <div class="pp-cd-box"><span class="pp-cd-num">{{ cdS }}</span><span class="pp-cd-lbl">Sec</span></div>
+            </div>
+          </div>
+          <div class="pp-seats">
+            <div class="lab">🔥 Only {{ seatsLeft }} of 50 seats left at this price</div>
+            <div class="bar"><div class="fill" style="width: {{ seatsPct }}"></div></div>
+          </div>
+
+          <div class="co">
+            <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+              <div class="co-price"><span class="co-now">₹1,499</span><span class="co-was">₹2,499</span><span class="co-off">40% OFF</span></div>
+              <div class="co-cap">One-time payment · instant access · GST incl.</div>
+              <div class="co-steps"><span class="s on"></span><span class="s {{ step2 }}"></span></div>
+
+              <label class="co-label">Email address</label>
+              <input class="co-input {{ emailErr }}" type="email" placeholder="you@email.com" value="{{ email }}" onInput="{{ onEmail }}" />
+              <div class="co-err">{{ emailMsg }}</div>
+
+              <label class="co-label">Full name</label>
+              <input class="co-input" placeholder="Your name" value="{{ name }}" onInput="{{ onName }}" />
+
+              <label class="co-label">Phone (for order updates)</label>
+              <div class="co-phone">
+                <select class="co-input cc"><option>+91</option><option>+1</option><option>+44</option><option>+971</option></select>
+                <input class="co-input" placeholder="98765 43210" value="{{ phone }}" onInput="{{ onPhone }}" />
+              </div>
+
+              <button class="co-buy" onClick="{{ pay }}" disabled="{{ paying }}">
+                <sc-if value="{{ paying }}" hint-placeholder-val="{{ false }}"><span class="co-spin"></span>Processing payment…</sc-if>
+                <sc-if value="{{ notPaying }}" hint-placeholder-val="{{ true }}">🔒 Pay ₹1,499 securely<span class="sh"></span></sc-if>
+              </button>
+              <div class="co-secure">Powered by Razorpay · 256-bit encrypted</div>
+              <div class="co-badges">
+                <span class="co-badge"><span class="ic">✓</span>Secure</span>
+                <span class="co-badge"><span class="ic">↺</span>7-day refund</span>
+                <span class="co-badge"><span class="ic">⚡</span>Instant access</span>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+              <div class="co-done">
+                <div class="co-check">✓</div>
+                <h3>Payment successful!</h3>
+                <p>Check {{ paidEmail }} for your access link &amp; invoice.</p>
+                <div class="co-orderid">Order #{{ orderId }}</div>
+                <div class="co-pixel"><span class="d"></span>Purchase event fired · Meta + Google</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- live social proof -->
+  <div class="pp-proof {{ proofClass }}">
+    <span class="d"></span>
+    <div><b>{{ proofName }}</b><div class="sub">just enrolled · {{ proofAgo }}</div></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", email: "", name: "", phone: "",
+    emailTouched: false, paying: false, done: false, orderId: "", paidEmail: "",
+    t: 5 * 3600 + 12 * 60 + 44, seatsLeft: 8,
+    proofIdx: 0, proofVisible: true
+  };
+
+  componentDidMount() {
+    this._iv = setInterval(() => this.setState(s => ({ t: s.t > 0 ? s.t - 1 : 0 })), 1000);
+    // rotating social proof
+    this._names = [
+      ["Priya from Mumbai", "2 min ago"], ["Dev from Bengaluru", "just now"],
+      ["Sara from Pune", "5 min ago"], ["Arjun from Delhi", "1 min ago"], ["Meera from Kochi", "just now"]
+    ];
+    this._proof = setInterval(() => {
+      this.setState(s => ({ proofVisible: false }));
+      setTimeout(() => this.setState(s => ({ proofIdx: (s.proofIdx + 1) % this._names.length, proofVisible: true })), 500);
+    }, 4500);
+  }
+  componentWillUnmount() { clearInterval(this._iv); clearInterval(this._proof); }
+
+  pad(n) { return String(n).padStart(2, "0"); }
+  validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+  pay() {
+    if (this.state.paying || this.state.done) return;
+    if (!this.validEmail(this.state.email)) { this.setState({ emailTouched: true }); return; }
+    // simulate: create order → Razorpay → verify signature → mark paid → fire pixels
+    this.setState({ paying: true });
+    setTimeout(() => {
+      const id = Math.random().toString(36).slice(2, 8).toUpperCase();
+      this.setState(s => ({
+        paying: false, done: true, orderId: id, paidEmail: s.email || "your email",
+        seatsLeft: Math.max(0, s.seatsLeft - 1)
+      }));
+    }, 1900);
+  }
+
+  renderVals() {
+    const t = this.state.t;
+    const names = this._names || [["Priya from Mumbai", "2 min ago"]];
+    const cur = names[this.state.proofIdx % names.length];
+    const emailBad = this.state.emailTouched && !this.validEmail(this.state.email);
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      cdH: this.pad(Math.floor(t / 3600)), cdM: this.pad(Math.floor((t % 3600) / 60)), cdS: this.pad(t % 60),
+      seatsLeft: this.state.seatsLeft,
+      seatsPct: Math.round((this.state.seatsLeft / 50) * 100) + "%",
+      email: this.state.email, name: this.state.name, phone: this.state.phone,
+      onEmail: (e) => this.setState({ email: e.target.value }),
+      onName: (e) => this.setState({ name: e.target.value }),
+      onPhone: (e) => this.setState({ phone: e.target.value.replace(/[^0-9 ]/g, "") }),
+      emailErr: emailBad ? "err" : "",
+      emailMsg: emailBad ? "Enter a valid email to continue" : "",
+      step2: (this.state.email && this.state.name) ? "on" : "",
+      pay: () => this.pay(),
+      paying: this.state.paying, notPaying: !this.state.paying,
+      done: this.state.done, notDone: !this.state.done,
+      orderId: this.state.orderId, paidEmail: this.state.paidEmail,
+      proofClass: this.state.proofVisible ? "" : "hide",
+      proofName: cur[0], proofAgo: cur[1]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes nt-in { from { opacity: .4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .nt {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a; --red: #e5476f;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .nt[data-theme="dark"] { --bg: #16101f; --card: #221833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --red: #ff6f93; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6); }
+  .nt h1,.nt h2 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .nt p { margin: 0; }
+  .nt-wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+  .nt-nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--bg) 86%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .nt-nav-in { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .nt-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; } .nt-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); } .nt-crumb { font-size: 13px; color: var(--muted); } .nt-crumb b { color: var(--text); }
+  .nt-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .nt-main { padding: 24px 0 60px; }
+  .nt-phead { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; } .nt-phead h1 { font-size: 22px; } .nt-badge { background: var(--secondary); color: #fff; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; } .nt-read { margin-left: auto; font: inherit; font-weight: 600; font-size: 13px; color: var(--primary); background: none; border: 0; cursor: pointer; }
+  .nt-tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; scrollbar-width: none; } .nt-tabs::-webkit-scrollbar { display: none; }
+  .nt-tab { font: inherit; font-size: 12.5px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; white-space: nowrap; } .nt-tab.on { background: var(--primary); color: #fff; border-color: transparent; }
+
+  .nt-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .nt-item { display: flex; gap: 13px; padding: 14px 16px; border-top: 1px solid var(--border); cursor: pointer; animation: nt-in .3s ease; position: relative; } .nt-item:first-child { border-top: 0; } .nt-item:hover { background: var(--s2); }
+  .nt-item.unread { background: color-mix(in srgb,var(--primary) 5%,transparent); } .nt-item.unread:hover { background: color-mix(in srgb,var(--primary) 8%,transparent); }
+  .nt-ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font-size: 18px; flex: none; }
+  .nt-bd { flex: 1; min-width: 0; } .nt-bd .t { font-size: 13.5px; } .nt-bd .t b { font-weight: 700; } .nt-bd .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .nt-time { font-size: 11.5px; color: var(--muted); flex: none; white-space: nowrap; }
+  .nt-dot { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
+  .nt-empty { text-align: center; color: var(--muted); padding: 50px 20px; } .nt-empty .e { font-size: 34px; }
+
+  .nt-cta { font: inherit; font-weight: 600; font-size: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 6px 11px; border-radius: 8px; cursor: pointer; margin-top: 8px; }
+</style>
+</helmet>
+
+<div class="nt" data-theme="{{ theme }}">
+  <nav class="nt-nav">
+    <div class="nt-wrap nt-nav-in">
+      <div class="nt-brand"><span class="nt-logo"></span>invoxai</div>
+      <span class="nt-crumb">Dashboard / <b>Notifications</b></span>
+      <button class="nt-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+    </div>
+  </nav>
+
+  <main class="nt-wrap nt-main">
+    <div class="nt-phead">
+      <h1>Notifications</h1>
+      <sc-if value="{{ hasUnread }}" hint-placeholder-val="{{ true }}"><span class="nt-badge">{{ unread }} new</span></sc-if>
+      <button class="nt-read" onClick="{{ markAll }}">Mark all read</button>
+    </div>
+
+    <div class="nt-tabs">
+      <button class="nt-tab {{ fAll }}" onClick="{{ setAll }}">All</button>
+      <button class="nt-tab {{ fOrders }}" onClick="{{ setOrders }}">Orders</button>
+      <button class="nt-tab {{ fMoney }}" onClick="{{ setMoney }}">Money</button>
+      <button class="nt-tab {{ fReviews }}" onClick="{{ setReviews }}">Reviews</button>
+      <button class="nt-tab {{ fSystem }}" onClick="{{ setSystem }}">System</button>
+    </div>
+
+    <div class="nt-card">
+      <sc-for list="{{ shown }}" as="n" hint-placeholder-count="6">
+        <div class="nt-item {{ n.unreadCls }}" onClick="{{ n.read }}">
+          <sc-if value="{{ n.unread }}" hint-placeholder-val="{{ false }}"><span class="nt-dot"></span></sc-if>
+          <span class="nt-ic" style="background: {{ n.bg }}; color: {{ n.fg }}">{{ n.e }}</span>
+          <div class="nt-bd"><div class="t">{{ n.title }}</div><div class="s">{{ n.sub }}</div></div>
+          <span class="nt-time">{{ n.time }}</span>
+        </div>
+      </sc-for>
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+        <div class="nt-empty"><div class="e">🔔</div><p>You're all caught up.</p></div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:720,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", filter: "all",
+    items: [
+      { id: 1, cat: "orders", e: "🛒", title: "New order · Mixing Masterclass", sub: "Rohan Mehta paid ₹1,499", time: "2m", unread: true },
+      { id: 2, cat: "money", e: "⚠", title: "Wallet running low", sub: "Balance ₹420 — recharge to keep selling", time: "1h", unread: true, warn: true },
+      { id: 3, cat: "reviews", e: "★", title: "New 5-star review", sub: "“Worth ten times the price” — Priya S.", time: "3h", unread: true },
+      { id: 4, cat: "orders", e: "🎟️", title: "Workshop seat sold", sub: "8 of 50 seats left", time: "5h", unread: false },
+      { id: 5, cat: "money", e: "₹", title: "Payout settled", sub: "₹18,400 sent to your bank", time: "1d", unread: false },
+      { id: 6, cat: "system", e: "🌐", title: "Custom domain verified", sub: "studioaanya.com is live with SSL", time: "1d", unread: false },
+      { id: 7, cat: "orders", e: "🛒", title: "Abandoned cart recovered", sub: "Sara completed checkout · ₹399", time: "2d", unread: false },
+      { id: 8, cat: "system", e: "✨", title: "New feature: Block Canvas", sub: "Build pages block by block", time: "3d", unread: false }
+    ]
+  };
+  read(id) { this.setState(s => ({ items: s.items.map(i => i.id === id ? { ...i, unread: false } : i) })); }
+  renderVals() {
+    const s = this.state, on = (k) => (s.filter === k ? "on" : "");
+    const list = s.items.filter(i => s.filter === "all" || i.cat === s.filter);
+    const bgfg = (i) => i.warn ? ["color-mix(in srgb,var(--red) 14%,transparent)", "var(--red)"]
+      : i.cat === "money" ? ["color-mix(in srgb,var(--green) 14%,transparent)", "var(--green)"]
+      : i.cat === "reviews" ? ["color-mix(in srgb,var(--gold) 18%,transparent)", "#9a6b00"]
+      : i.cat === "system" ? ["color-mix(in srgb,var(--accent) 14%,transparent)", "var(--accent)"]
+      : ["color-mix(in srgb,var(--primary) 12%,transparent)", "var(--primary)"];
+    const shown = list.map(i => { const [bg, fg] = bgfg(i); return { e: i.e, title: i.title, sub: i.sub, time: i.time, unread: i.unread, unreadCls: i.unread ? "unread" : "", bg, fg, read: () => this.read(i.id) }; });
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      unread: s.items.filter(i => i.unread).length, hasUnread: s.items.some(i => i.unread),
+      markAll: () => this.setState(st => ({ items: st.items.map(i => ({ ...i, unread: false })) })),
+      fAll: on("all"), fOrders: on("orders"), fMoney: on("money"), fReviews: on("reviews"), fSystem: on("system"),
+      setAll: () => this.setState({ filter: "all" }), setOrders: () => this.setState({ filter: "orders" }), setMoney: () => this.setState({ filter: "money" }), setReviews: () => this.setState({ filter: "reviews" }), setSystem: () => this.setState({ filter: "system" }),
+      shown, empty: shown.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes sp-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(7%,6%) scale(1.2); } }
+  @keyframes sp-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  .sp {
+    --bg: #fff9f4; --card: #fff;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; position: relative; display: grid; place-items: center; padding: 28px 22px; -webkit-font-smoothing: antialiased; line-height: 1.6;
+  }
+  .sp[data-theme="dark"] { --bg: #16101f; --card: #221833; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; }
+  .sp h1,.sp h2 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .sp p { margin: 0; }
+
+  .sp-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; } .sp-blob { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(95px); opacity: .3; background: var(--grad); top: -18vmax; right: -10vmax; animation: sp-a1 28s ease-in-out infinite; }
+  .sp-bar { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10; display: inline-flex; background: color-mix(in srgb,var(--card) 80%,transparent); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; } .sp-bar button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 7px 14px; border-radius: 999px; cursor: pointer; } .sp-bar button.on { background: var(--grad); color: #fff; }
+  .sp-tgl { position: fixed; top: 16px; right: 16px; z-index: 10; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: color-mix(in srgb,var(--card) 80%,transparent); backdrop-filter: blur(8px); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .sp-box { position: relative; z-index: 1; text-align: center; max-width: 460px; }
+  .sp-art { width: 92px; height: 92px; border-radius: 26px; background: var(--grad); display: grid; place-items: center; font-size: 44px; margin: 0 auto 24px; box-shadow: 0 22px 50px -16px rgba(255,77,125,.5); animation: sp-float 5s ease-in-out infinite; }
+  .sp-404 { font-family: var(--fh); font-weight: 800; font-size: 96px; line-height: 1; letter-spacing: -.04em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 8px; }
+  .sp-box h1 { font-size: 28px; } .sp-box p { color: var(--muted); font-size: 16px; margin-top: 12px; }
+  .sp-cta { display: inline-flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; justify-content: center; } .sp-btn { font: inherit; font-family: var(--fh); font-weight: 700; font-size: 14.5px; padding: 13px 24px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; text-decoration: none; } .sp-btn.grad { background: var(--grad); color: #fff; border-color: transparent; }
+  .sp-meta { margin-top: 26px; font-size: 12.5px; color: var(--muted); } .sp-meta b { background: linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: var(--fh); }
+  .sp-eta { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--border); padding: 9px 16px; border-radius: 999px; } .sp-eta .d { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+</style>
+</helmet>
+
+<div class="sp" data-theme="{{ theme }}">
+  <div class="sp-bg"><div class="sp-blob"></div></div>
+  <div class="sp-bar"><button class="{{ m404 }}" onClick="{{ set404 }}">404</button><button class="{{ mMaint }}" onClick="{{ setMaint }}">Maintenance</button></div>
+  <button class="sp-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+
+  <sc-if value="{{ is404 }}" hint-placeholder-val="{{ true }}">
+    <div class="sp-box">
+      <div class="sp-404">404</div>
+      <h1>This page wandered off</h1>
+      <p>The link may be broken, or the page was moved or unpublished.</p>
+      <div class="sp-cta"><a class="sp-btn grad">← Back home</a><a class="sp-btn">Browse the store</a></div>
+      <div class="sp-meta">aanya.invoxai.io · powered by <b>invoxai</b></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isMaint }}" hint-placeholder-val="{{ false }}">
+    <div class="sp-box">
+      <div class="sp-art">🛠️</div>
+      <h1>We'll be right back</h1>
+      <p>invoxai is getting a quick upgrade. Your store &amp; data are safe — this won't take long.</p>
+      <div class="sp-eta"><span class="d"></span>Estimated back by 2:30 PM IST</div>
+      <div class="sp-meta" style="margin-top:24px">Questions? <b>status.invoxai.io</b></div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:620}}">
+class Component extends DCLogic {
+  state = { theme: "light", view: "404" };
+  renderVals() {
+    return {
+      theme: this.state.theme, themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      is404: this.state.view === "404", isMaint: this.state.view === "maint",
+      m404: this.state.view === "404" ? "on" : "", mMaint: this.state.view === "maint" ? "on" : "",
+      set404: () => this.setState({ view: "404" }), setMaint: () => this.setState({ view: "maint" })
+    };
+  }
+}
+</script>
+</body>
+</html>

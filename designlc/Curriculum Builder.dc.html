@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes cb-in { from { opacity: .4; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  @keyframes cb-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+  .cb {
+    --bg: #f3eee9; --panel: #fff; --p2: #faf6f1; --line: #e7dccf; --ink: #2b1b2e; --mut: #7a6770;
+    --primary: #ff6a3d; --green: #1fb57a;
+    --brand: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --fh: "Sora", sans-serif; --fb: "Inter", sans-serif;
+    background: var(--bg); color: var(--ink); font-family: var(--fb); min-height: 100dvh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; font-size: 14px;
+  }
+  .cb.dark { --bg: #14101c; --panel: #1d1730; --p2: #241c3a; --line: #322843; --ink: #f6eef2; --mut: #b9a8bc; --primary: #ff7e55; }
+  .cb h1,.cb h2,.cb h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .cb p { margin: 0; }
+
+  .cb-top { display: flex; align-items: center; gap: 12px; padding: 11px 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  .cb-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; } .cb-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--brand); } .cb-crumb { font-size: 12.5px; color: var(--mut); } .cb-crumb b { color: var(--ink); }
+  .cb-r { margin-left: auto; display: flex; gap: 9px; align-items: center; } .cb-ico { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font-size: 14px; display: grid; place-items: center; } .cb-pub { font: inherit; font-family: var(--fh); font-weight: 700; font-size: 13px; padding: 9px 18px; border-radius: 9px; border: 0; background: var(--brand); color: #fff; cursor: pointer; }
+
+  .cb-stage { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; min-height: 0; }
+  .cb-edit { overflow-y: auto; padding: 22px; border-right: 1px solid var(--line); }
+  .cb-eh { display: flex; align-items: center; margin-bottom: 16px; } .cb-eh h1 { font-size: 20px; } .cb-eh p { font-size: 12.5px; color: var(--mut); margin-top: 3px; } .cb-eh .meta { margin-left: auto; font-size: 12px; color: var(--mut); }
+
+  .cb-mod { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 12px; overflow: hidden; animation: cb-in .25s ease; }
+  .cb-mh { display: flex; align-items: center; gap: 10px; padding: 13px 15px; background: var(--p2); }
+  .cb-mh .ord { display: flex; flex-direction: column; } .cb-mh .ord button { border: 0; background: none; color: var(--mut); cursor: pointer; font-size: 9px; line-height: 1; padding: 1px; } .cb-mh .ord button:hover { color: var(--primary); }
+  .cb-mh input { flex: 1; border: 0; background: transparent; font: inherit; font-family: var(--fh); font-weight: 700; font-size: 14.5px; color: var(--ink); outline: none; }
+  .cb-mh .ct { font-size: 11.5px; color: var(--mut); } .cb-mh .x { border: 0; background: none; color: var(--mut); cursor: pointer; font-size: 13px; }
+  .cb-lessons { padding: 6px 15px 12px; }
+  .cb-les { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); } .cb-les:first-child { border-top: 0; } .cb-les .ic { color: var(--mut); font-size: 13px; } .cb-les input { flex: 1; border: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--ink); outline: none; } .cb-les .dur { width: 54px; text-align: right; border: 1px solid var(--line); border-radius: 7px; background: var(--p2); font: inherit; font-size: 12px; color: var(--ink); padding: 4px 6px; outline: none; }
+  .cb-free { font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); color: var(--mut); } .cb-free.on { background: color-mix(in srgb,var(--green) 16%,transparent); color: var(--green); border-color: transparent; }
+  .cb-lx { border: 0; background: none; color: var(--mut); cursor: pointer; font-size: 12px; }
+  .cb-addles { border: 0; background: none; color: var(--primary); font: inherit; font-weight: 600; font-size: 12.5px; cursor: pointer; padding: 6px 0 2px; }
+  .cb-addmod { width: 100%; border: 1.5px dashed var(--line); border-radius: 12px; padding: 13px; background: none; color: var(--primary); font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+
+  /* preview */
+  .cb-prev { overflow-y: auto; padding: 22px; background: var(--bg); }
+  .cb-pcard { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .cb-pbanner { height: 90px; background: linear-gradient(135deg,#7b3fe4,#ff4d7d); }
+  .cb-pbody { padding: 18px; } .cb-pbody h2 { font-size: 18px; } .cb-pmeta { font-size: 12px; color: var(--mut); margin: 6px 0 14px; }
+  .cb-pmod { border: 1px solid var(--line); border-radius: 11px; margin-bottom: 9px; overflow: hidden; } .cb-pmh { display: flex; align-items: center; gap: 9px; padding: 11px 13px; background: var(--p2); font-family: var(--fh); font-weight: 700; font-size: 13.5px; } .cb-pmh .ct { margin-left: auto; font-family: var(--fb); font-weight: 500; font-size: 11.5px; color: var(--mut); }
+  .cb-ple { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border-top: 1px solid var(--line); font-size: 13px; } .cb-ple .ic { color: var(--mut); font-size: 12px; } .cb-ple .nm { flex: 1; } .cb-ple .fp { font-size: 10px; font-weight: 700; color: var(--green); } .cb-ple .dur { font-size: 11.5px; color: var(--mut); }
+
+  .cb-toastbox { position: fixed; left: 50%; bottom: 24px; z-index: 60; background: #18121f; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 9px; animation: cb-toast .4s ease; } .cb-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+  @media (max-width: 860px) { .cb-stage { grid-template-columns: 1fr; } .cb-edit { border-right: 0; border-bottom: 1px solid var(--line); } }
+</style>
+</helmet>
+
+<div class="cb {{ darkClass }}">
+  <div class="cb-top">
+    <div class="cb-brand"><span class="cb-logo"></span>Curriculum</div>
+    <span class="cb-crumb">Courses / <b>Mixing Masterclass</b></span>
+    <div class="cb-r"><button class="cb-ico" onClick="{{ toggle }}">{{ themeIcon }}</button><button class="cb-pub" onClick="{{ publish }}">Publish ↗</button></div>
+  </div>
+
+  <div class="cb-stage">
+    <!-- editor -->
+    <div class="cb-edit">
+      <div class="cb-eh"><div><h1>Course curriculum</h1><p>Organise modules &amp; lessons. Mark a few as free previews.</p></div><span class="meta">{{ totalMods }} modules · {{ totalLes }} lessons</span></div>
+      <sc-for list="{{ modules }}" as="m" hint-placeholder-count="2">
+        <div class="cb-mod">
+          <div class="cb-mh">
+            <span class="ord"><button onClick="{{ m.up }}">▲</button><button onClick="{{ m.down }}">▼</button></span>
+            <input value="{{ m.title }}" onInput="{{ m.rename }}" />
+            <span class="ct">{{ m.count }}</span>
+            <button class="x" onClick="{{ m.remove }}">✕</button>
+          </div>
+          <div class="cb-lessons">
+            <sc-for list="{{ m.lessons }}" as="l" hint-placeholder-count="2">
+              <div class="cb-les"><span class="ic">▶</span><input value="{{ l.title }}" onInput="{{ l.rename }}" /><span class="cb-free {{ l.freeCls }}" onClick="{{ l.toggleFree }}">Free</span><input class="dur" value="{{ l.dur }}" onInput="{{ l.setDur }}" /><button class="cb-lx" onClick="{{ l.remove }}">✕</button></div>
+            </sc-for>
+            <button class="cb-addles" onClick="{{ m.addLesson }}">＋ Add lesson</button>
+          </div>
+        </div>
+      </sc-for>
+      <button class="cb-addmod" onClick="{{ addModule }}">＋ Add module</button>
+    </div>
+
+    <!-- preview -->
+    <div class="cb-prev">
+      <div class="cb-pcard">
+        <div class="cb-pbanner"></div>
+        <div class="cb-pbody">
+          <h2>Mixing Masterclass</h2>
+          <div class="cb-pmeta">{{ totalMods }} modules · {{ totalLes }} lessons · {{ totalDur }}</div>
+          <sc-for list="{{ modules }}" as="m" hint-placeholder-count="2">
+            <div class="cb-pmod">
+              <div class="cb-pmh">{{ m.title }}<span class="ct">{{ m.count }}</span></div>
+              <sc-for list="{{ m.lessons }}" as="l" hint-placeholder-count="2">
+                <div class="cb-ple"><span class="ic">{{ l.icon }}</span><span class="nm">{{ l.title }}</span><sc-if value="{{ l.free }}" hint-placeholder-val="{{ false }}"><span class="fp">Preview</span></sc-if><span class="dur">{{ l.dur }}</span></div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="cb-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", nextId: 100,
+    modules: [
+      { id: 1, title: "1 · Foundations", lessons: [ { id: 11, title: "Welcome & the mixing mindset", dur: "8:12", free: true }, { id: 12, title: "Gain staging your session", dur: "21:40", free: false } ] },
+      { id: 2, title: "2 · The core toolkit", lessons: [ { id: 21, title: "EQ — carving space", dur: "28:30", free: false }, { id: 22, title: "Compression that breathes", dur: "31:15", free: false } ] }
+    ],
+    toast: false, toastMsg: ""
+  };
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 1700); }
+  componentWillUnmount() { clearTimeout(this._t); }
+  nid() { const n = this.state.nextId; this.setState(s => ({ nextId: s.nextId + 1 })); return n; }
+  setMods(fn) { this.setState(s => ({ modules: fn(s.modules) })); }
+  addModule() { this.setMods(m => [...m, { id: this.nid(), title: (m.length + 1) + " · New module", lessons: [] }]); }
+  moveMod(i, d) { this.setMods(m => { const a = [...m]; const j = i + d; if (j < 0 || j >= a.length) return m; [a[i], a[j]] = [a[j], a[i]]; return a; }); }
+  renderVals() {
+    const s = this.state;
+    let totalLes = 0;
+    const modules = s.modules.map((m, mi) => {
+      totalLes += m.lessons.length;
+      return {
+        title: m.title, count: m.lessons.length + " lessons",
+        rename: (e) => this.setMods(ms => ms.map(x => x.id === m.id ? { ...x, title: e.target.value } : x)),
+        remove: () => { this.setMods(ms => ms.filter(x => x.id !== m.id)); this.fire("Module removed"); },
+        up: () => this.moveMod(mi, -1), down: () => this.moveMod(mi, 1),
+        addLesson: () => this.setMods(ms => ms.map(x => x.id === m.id ? { ...x, lessons: [...x.lessons, { id: this.nid(), title: "New lesson", dur: "0:00", free: false }] } : x)),
+        lessons: m.lessons.map(l => ({
+          title: l.title, dur: l.dur, free: l.free, freeCls: l.free ? "on" : "", icon: l.free ? "▶" : "🔒",
+          rename: (e) => this.setMods(ms => ms.map(x => x.id === m.id ? { ...x, lessons: x.lessons.map(y => y.id === l.id ? { ...y, title: e.target.value } : y) } : x)),
+          setDur: (e) => this.setMods(ms => ms.map(x => x.id === m.id ? { ...x, lessons: x.lessons.map(y => y.id === l.id ? { ...y, dur: e.target.value } : y) } : x)),
+          toggleFree: () => this.setMods(ms => ms.map(x => x.id === m.id ? { ...x, lessons: x.lessons.map(y => y.id === l.id ? { ...y, free: !y.free } : y) } : x)),
+          remove: () => this.setMods(ms => ms.map(x => x.id === m.id ? { ...x, lessons: x.lessons.filter(y => y.id !== l.id) } : x))
+        }))
+      };
+    });
+    return {
+      darkClass: s.theme === "dark" ? "dark" : "", themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      modules, totalMods: s.modules.length, totalLes, totalDur: "6h 40m",
+      addModule: () => this.addModule(), publish: () => this.fire("🎉 Curriculum published"),
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes tm-in { from { transform: translateY(10px); opacity: .5; } to { transform: none; opacity: 1; } }
+  @keyframes tm-pop { from { transform: scale(.95); } to { transform: scale(1); } }
+  @keyframes tm-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+
+  .tm {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.3);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .tm[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6);
+  }
+  .tm h1,.tm h2,.tm h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .tm p { margin: 0; }
+  .tm-wrap { max-width: 1180px; margin: 0 auto; padding: 0 26px; }
+
+  .tm-head { position: relative; overflow: hidden; padding: 40px 0 24px; }
+  .tm-blob { position: absolute; width: 30vmax; height: 30vmax; border-radius: 50%; filter: blur(85px); opacity: .26; background: var(--grad); top: -16vmax; right: -6vmax; pointer-events: none; }
+  .tm-head .in { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .tm-kick { font-size: 12.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--primary); }
+  .tm-head h1 { font-size: clamp(28px,3.6vw,40px); font-weight: 800; margin: 10px 0 8px; }
+  .tm-head p { color: var(--muted); font-size: 15px; max-width: 52ch; }
+  .tm-hr { display: flex; align-items: center; gap: 10px; }
+  .tm-wallet { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
+  .tm-tgl { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 15px; }
+
+  .tm-bar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 13px 0; }
+  .tm-bar-in { display: flex; align-items: center; gap: 12px; }
+  .tm-seg { display: inline-flex; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; }
+  .tm-seg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 13px; color: var(--muted); padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+  .tm-seg button.on { background: var(--grad); color: #fff; }
+  .tm-search { margin-left: auto; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 9px 15px; color: var(--muted); min-width: 200px; }
+  .tm-search input { border: 0; background: transparent; outline: 0; font: inherit; color: var(--text); width: 100%; }
+
+  .tm-cats { display: flex; gap: 8px; overflow-x: auto; padding: 16px 0 4px; scrollbar-width: none; }
+  .tm-cats::-webkit-scrollbar { display: none; }
+  .tm-cat { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+  .tm-cat.on { background: var(--primary); color: #fff; border-color: transparent; }
+
+  .tm-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; padding: 18px 0 60px; }
+  .tm-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s; animation: tm-in .4s ease; display: flex; flex-direction: column; }
+  .tm-card:hover { transform: translateY(-5px); box-shadow: 0 24px 50px -28px rgba(43,27,46,.4); }
+  .tm-thumb { aspect-ratio: 4/3; position: relative; cursor: pointer; display: grid; place-items: center; overflow: hidden; }
+  .tm-thumb .mock { position: absolute; inset: 12px; border-radius: 8px; background: rgba(255,255,255,.92); display: flex; flex-direction: column; gap: 5px; padding: 12px; }
+  .tm-thumb .mock .l { height: 5px; border-radius: 3px; background: rgba(43,27,46,.18); } .tm-thumb .mock .btn { margin-top: auto; height: 13px; width: 50%; border-radius: 5px; }
+  .tm-tag { position: absolute; top: 10px; left: 10px; z-index: 3; font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 999px; text-transform: uppercase; }
+  .tm-tag.free { background: rgba(255,255,255,.92); color: #2b1b2e; }
+  .tm-tag.prem { background: var(--grad); color: #fff; }
+  .tm-tag.owned { background: var(--green); color: #fff; }
+  .tm-meta { padding: 14px; display: flex; flex-direction: column; flex: 1; }
+  .tm-meta .pt { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+  .tm-meta b { font-family: var(--fh); font-size: 14.5px; margin: 5px 0 4px; }
+  .tm-meta .rt { font-size: 11.5px; color: var(--muted); } .tm-meta .rt .s { color: var(--gold); }
+  .tm-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .tm-price { font-family: var(--fh); font-weight: 800; font-size: 16px; } .tm-price.free { color: var(--green); }
+  .tm-get { margin-left: auto; font: inherit; font-family: var(--fh); font-weight: 700; font-size: 12.5px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 8px 14px; border-radius: 9px; cursor: pointer; }
+  .tm-get.buy { background: var(--grad); color: #fff; border-color: transparent; }
+  .tm-get.owned { background: color-mix(in srgb,var(--green) 14%,transparent); color: var(--green); border-color: transparent; }
+
+  .tm-empty { text-align: center; padding: 60px 20px; color: var(--muted); } .tm-empty .e { font-size: 40px; } .tm-empty h3 { font-size: 18px; margin: 12px 0 6px; color: var(--text); }
+
+  /* preview modal */
+  .tm-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(20,12,25,.5); backdrop-filter: blur(3px); }
+  .tm-modal { position: fixed; z-index: 61; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(720px,94vw); max-height: 90vh; overflow: auto; background: var(--card); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 40px 90px -40px rgba(0,0,0,.6); animation: tm-pop .3s cubic-bezier(.2,.8,.2,1); }
+  .tm-modal .big { aspect-ratio: 16/9; position: relative; display: grid; place-items: center; }
+  .tm-modal .big .mock { position: absolute; inset: 24px; border-radius: 12px; background: rgba(255,255,255,.94); display: flex; flex-direction: column; gap: 9px; padding: 22px; }
+  .tm-modal .big .mock .l { height: 8px; border-radius: 4px; background: rgba(43,27,46,.16); } .tm-modal .big .mock .btn { margin-top: auto; height: 22px; width: 40%; border-radius: 7px; }
+  .tm-mbody { padding: 22px 24px 24px; }
+  .tm-mbody .pt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+  .tm-mbody h2 { font-size: 24px; margin: 6px 0 8px; }
+  .tm-mbody p { color: var(--muted); font-size: 14px; }
+  .tm-feats { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .tm-feats span { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--s2); }
+  .tm-mfoot { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border); padding-top: 18px; }
+  .tm-mprice { font-family: var(--fh); font-weight: 800; font-size: 26px; } .tm-mprice small { font-size: 13px; color: var(--muted); font-weight: 500; text-decoration: line-through; margin-left: 8px; }
+  .tm-buy { margin-left: auto; font: inherit; font-family: var(--fh); font-weight: 800; font-size: 15px; border: 0; border-radius: 12px; padding: 13px 26px; cursor: pointer; background: var(--grad); color: #fff; }
+  .tm-buy.ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .tm-mx { position: absolute; top: 14px; right: 14px; z-index: 5; width: 34px; height: 34px; border: 0; background: rgba(0,0,0,.4); color: #fff; border-radius: 9px; cursor: pointer; font-size: 15px; }
+
+  .tm-toastbox { position: fixed; left: 50%; bottom: 26px; z-index: 70; background: #18121f; color: #fff; padding: 13px 20px; border-radius: 12px; font-size: 13.5px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 10px; animation: tm-toast .4s cubic-bezier(.2,.8,.2,1); }
+  .tm-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+
+  @media (max-width: 980px) { .tm-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 560px) { .tm-grid { grid-template-columns: 1fr; } .tm-search { display: none; } }
+</style>
+</helmet>
+
+<div class="tm" data-theme="{{ theme }}">
+  <header class="tm-head">
+    <div class="tm-blob"></div>
+    <div class="tm-wrap in">
+      <div>
+        <div class="tm-kick">Template marketplace</div>
+        <h1>Premium designs, ready to publish</h1>
+        <p>Browse flagship templates for every page type. Buy once, use forever — they drop straight into your builder.</p>
+      </div>
+      <div class="tm-hr">
+        <span class="tm-wallet">👛 ₹6,420</span>
+        <button class="tm-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="tm-bar">
+    <div class="tm-wrap tm-bar-in">
+      <div class="tm-seg"><button class="{{ vBrowse }}" onClick="{{ goBrowse }}">Browse</button><button class="{{ vMine }}" onClick="{{ goMine }}">My templates · {{ ownedCount }}</button></div>
+      <div class="tm-search">🔍<input placeholder="Search templates" value="{{ query }}" onInput="{{ onQuery }}" /></div>
+    </div>
+  </div>
+
+  <div class="tm-wrap">
+    <sc-if value="{{ isBrowse }}" hint-placeholder-val="{{ true }}">
+      <div class="tm-cats">
+        <button class="tm-cat {{ cAll }}" onClick="{{ setAll }}">All</button>
+        <button class="tm-cat {{ cBio }}" onClick="{{ setBio }}">Bio</button>
+        <button class="tm-cat {{ cStore }}" onClick="{{ setStore }}">Store</button>
+        <button class="tm-cat {{ cOpp }}" onClick="{{ setOpp }}">Product</button>
+        <button class="tm-cat {{ cCourses }}" onClick="{{ setCourses }}">Courses</button>
+        <button class="tm-cat {{ cLanding }}" onClick="{{ setLanding }}">Landing</button>
+        <button class="tm-cat {{ cEvent }}" onClick="{{ setEvent }}">Event</button>
+      </div>
+    </sc-if>
+
+    <div class="tm-grid">
+      <sc-for list="{{ shown }}" as="t" hint-placeholder-count="8">
+        <div class="tm-card">
+          <div class="tm-thumb" style="background: {{ t.thumb }}" onClick="{{ t.open }}">
+            <span class="tm-tag {{ t.tagCls }}">{{ t.tag }}</span>
+            <div class="mock"><div class="l" style="width:60%"></div><div class="l" style="width:90%"></div><div class="l" style="width:80%"></div><div class="btn" style="background: {{ t.thumb }}"></div></div>
+          </div>
+          <div class="tm-meta">
+            <div class="pt">{{ t.type }}</div>
+            <b>{{ t.name }}</b>
+            <div class="rt"><span class="s">★</span> {{ t.rating }} · {{ t.sales }} sales</div>
+            <div class="tm-foot">
+              <span class="tm-price {{ t.priceCls }}">{{ t.priceLabel }}</span>
+              <button class="tm-get {{ t.btnCls }}" onClick="{{ t.action }}">{{ t.btnLabel }}</button>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+      <div class="tm-empty"><div class="e">🧩</div><h3>{{ emptyTitle }}</h3><p>{{ emptyMsg }}</p></div>
+    </sc-if>
+  </div>
+
+  <!-- preview modal -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="tm-scrim" onClick="{{ closeModal }}"></div>
+    <div class="tm-modal">
+      <div class="big" style="background: {{ mThumb }}">
+        <button class="tm-mx" onClick="{{ closeModal }}">✕</button>
+        <div class="mock"><div class="l" style="width:50%"></div><div class="l" style="width:85%"></div><div class="l" style="width:75%"></div><div class="l" style="width:60%"></div><div class="btn" style="background: {{ mThumb }}"></div></div>
+      </div>
+      <div class="tm-mbody">
+        <div class="pt">{{ mType }}</div>
+        <h2>{{ mName }}</h2>
+        <p>A premium, conversion-focused template with animated backgrounds, mobile-perfect layout, and built-in SEO &amp; pixel fields.</p>
+        <div class="tm-feats"><span>Animated background</span><span>Mobile-perfect</span><span>SEO ready</span><span>Pixel fields</span><span>1-click apply</span></div>
+        <div class="tm-mfoot">
+          <div class="tm-mprice">{{ mPriceLabel }}<sc-if value="{{ mHasCompare }}" hint-placeholder-val="{{ false }}"><small>₹999</small></sc-if></div>
+          <sc-if value="{{ mOwned }}" hint-placeholder-val="{{ false }}"><button class="tm-buy" onClick="{{ useTpl }}">✓ Owned · Use in builder ↗</button></sc-if>
+          <sc-if value="{{ mBuyable }}" hint-placeholder-val="{{ true }}"><button class="tm-buy ghost" onClick="{{ closeModal }}">Close</button><button class="tm-buy" onClick="{{ buyModal }}">{{ mBuyLabel }}</button></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="tm-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = { theme: "light", view: "browse", cat: "all", query: "", owned: { m3: true, m9: true }, modal: null, toast: false, toastMsg: "" };
+
+  TPL = [
+    { id: "m1", name: "Aurora Bio", type: "bio", rating: "4.9", sales: "1.2k", price: 0, ac: "#ff6a3d" },
+    { id: "m2", name: "Midnight Links", type: "bio", rating: "4.8", sales: "840", price: 499, ac: "#a06bff" },
+    { id: "m3", name: "Atelier Store", type: "store", rating: "5.0", sales: "2.1k", price: 499, ac: "#7b3fe4" },
+    { id: "m4", name: "Marketplace Pro", type: "store", rating: "4.7", sales: "960", price: 0, ac: "#ff4d7d" },
+    { id: "m5", name: "Spotlight PDP", type: "opp", rating: "4.9", sales: "3.4k", price: 499, ac: "#ff6a3d" },
+    { id: "m6", name: "Launch Product", type: "opp", rating: "4.8", sales: "1.5k", price: 0, ac: "#16a34a" },
+    { id: "m7", name: "Scholar Academy", type: "courses", rating: "4.9", sales: "780", price: 699, ac: "#2a6fdb" },
+    { id: "m8", name: "Cohort Course", type: "courses", rating: "4.6", sales: "410", price: 0, ac: "#0ea5e9" },
+    { id: "m9", name: "High-Convert Landing", type: "landing", rating: "5.0", sales: "4.2k", price: 699, ac: "#ff4d7d" },
+    { id: "m10", name: "Ad Funnel", type: "landing", rating: "4.8", sales: "1.9k", price: 499, ac: "#f59e0b" },
+    { id: "m11", name: "Showtime Event", type: "event", rating: "4.9", sales: "620", price: 499, ac: "#db2777" },
+    { id: "m12", name: "Ticket Hall", type: "event", rating: "4.7", sales: "300", price: 0, ac: "#6d28d9" },
+    { id: "m13", name: "Luxe Bio Noir", type: "bio", rating: "5.0", sales: "510", price: 699, ac: "#ffb23e" },
+    { id: "m14", name: "Boutique Store", type: "store", rating: "4.8", sales: "1.1k", price: 699, ac: "#e5476f" },
+    { id: "m15", name: "Mastermind Course", type: "courses", rating: "5.0", sales: "260", price: 999, ac: "#7b3fe4" },
+    { id: "m16", name: "Evergreen Funnel", type: "landing", rating: "4.9", sales: "2.7k", price: 499, ac: "#1f9b8e" }
+  ];
+  AC2 = { "#ff6a3d": "#ff4d7d", "#ff4d7d": "#7b3fe4", "#7b3fe4": "#ff4d7d", "#a06bff": "#ff6aa0", "#16a34a": "#0ea5e9", "#2a6fdb": "#7b3fe4", "#0ea5e9": "#7b3fe4", "#f59e0b": "#e5476f", "#db2777": "#7b3fe4", "#6d28d9": "#ff4d7d", "#ffb23e": "#ff6a3d", "#e5476f": "#7b3fe4", "#1f9b8e": "#2a6fdb" };
+  TYPE_LABEL = { bio: "Link-in-bio", store: "Store", opp: "Product", courses: "Courses", landing: "Landing", event: "Event" };
+
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 2200); }
+  componentWillUnmount() { clearTimeout(this._t); }
+  thumb(t) { return "linear-gradient(135deg," + t.ac + "," + (this.AC2[t.ac] || "#ff4d7d") + ")"; }
+  money(n) { return n === 0 ? "Free" : "₹" + n.toLocaleString("en-IN"); }
+  buy(t) { this.setState(s => ({ owned: { ...s.owned, [t.id]: true } })); this.fire("🎉 " + t.name + " purchased — added to My templates"); }
+
+  renderVals() {
+    const s = this.state, on = (b) => (b ? "on" : "");
+    let list = this.TPL.filter(t => {
+      if (s.view === "mine" && !s.owned[t.id]) return false;
+      if (s.view === "browse" && s.cat !== "all" && t.type !== s.cat) return false;
+      if (s.query && !t.name.toLowerCase().includes(s.query.toLowerCase())) return false;
+      return true;
+    });
+    const card = (t) => {
+      const owned = !!s.owned[t.id], free = t.price === 0;
+      return {
+        name: t.name, type: this.TYPE_LABEL[t.type], rating: t.rating, sales: t.sales, thumb: this.thumb(t),
+        tag: owned ? "Owned" : (free ? "Free" : "Premium"), tagCls: owned ? "owned" : (free ? "free" : "prem"),
+        priceLabel: this.money(t.price), priceCls: free ? "free" : "",
+        btnLabel: owned ? "Use ↗" : (free ? "Get" : "Buy"), btnCls: owned ? "owned" : (free ? "" : "buy"),
+        action: owned ? (() => this.fire("✓ Opening in builder…")) : (free ? (() => this.buy(t)) : (() => this.setState({ modal: t.id }))),
+        open: () => this.setState({ modal: t.id })
+      };
+    };
+    const shown = list.map(card);
+    const m = s.modal ? this.TPL.find(t => t.id === s.modal) : null;
+    const mOwned = m ? !!s.owned[m.id] : false, mFree = m ? m.price === 0 : false;
+
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      vBrowse: on(s.view === "browse"), vMine: on(s.view === "mine"),
+      goBrowse: () => this.setState({ view: "browse" }), goMine: () => this.setState({ view: "mine" }),
+      isBrowse: s.view === "browse",
+      ownedCount: Object.values(s.owned).filter(Boolean).length,
+      query: s.query, onQuery: (e) => this.setState({ query: e.target.value }),
+      cAll: on(s.cat === "all"), cBio: on(s.cat === "bio"), cStore: on(s.cat === "store"), cOpp: on(s.cat === "opp"), cCourses: on(s.cat === "courses"), cLanding: on(s.cat === "landing"), cEvent: on(s.cat === "event"),
+      setAll: () => this.setState({ cat: "all" }), setBio: () => this.setState({ cat: "bio" }), setStore: () => this.setState({ cat: "store" }), setOpp: () => this.setState({ cat: "opp" }), setCourses: () => this.setState({ cat: "courses" }), setLanding: () => this.setState({ cat: "landing" }), setEvent: () => this.setState({ cat: "event" }),
+      shown,
+      showEmpty: shown.length === 0,
+      emptyTitle: s.view === "mine" ? "No templates yet" : "Nothing matches",
+      emptyMsg: s.view === "mine" ? "Buy a premium template and it appears here." : "Try another category or search.",
+      modalOpen: !!m,
+      mThumb: m ? this.thumb(m) : "", mName: m ? m.name : "", mType: m ? this.TYPE_LABEL[m.type] : "",
+      mPriceLabel: m ? this.money(m.price) : "", mHasCompare: m ? (m.price > 0) : false,
+      mOwned, mBuyable: !mOwned, mBuyLabel: m ? ("Buy · " + this.money(m.price)) : "",
+      closeModal: () => this.setState({ modal: null }),
+      buyModal: () => { if (m) { this.buy(m); this.setState({ modal: null }); } },
+      useTpl: () => { this.setState({ modal: null }); this.fire("✓ Opening in builder…"); },
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

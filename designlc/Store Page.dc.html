@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes st-marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes st-cart { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  @keyframes st-slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+  .st {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 32px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .st[data-theme="dark"] {
+    --bg: #0f1115; --card: #1c1f26; --s2: #23262e;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f2f3f5; --muted: #9aa0ab; --border: rgba(255,255,255,.1); --green: #36c98e;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6);
+  }
+  .st h1,.st h2,.st h3 { font-family: var(--fh); margin: 0; letter-spacing: -.02em; }
+  .st p { margin: 0; }
+  .st-wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  .st-announce { background: var(--grad); color: #fff; text-align: center; font-size: 12.5px; font-weight: 600; padding: 8px 16px; }
+  .st-nav { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .st-nav-in { display: flex; align-items: center; gap: 14px; height: 62px; }
+  .st-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+  .st-logo { width: 28px; height: 28px; border-radius: 8px; background: var(--grad); }
+  .st-search { flex: 1; max-width: 320px; margin-left: 10px; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 9px 14px; color: var(--muted); }
+  .st-search input { border: 0; background: transparent; outline: 0; font: inherit; color: var(--text); width: 100%; }
+  .st-nav-r { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .st-icon { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 15px; display: grid; place-items: center; position: relative; }
+  .st-icon:hover { border-color: var(--muted); }
+  .st-cartcount { position: absolute; top: -5px; right: -5px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--secondary); color: #fff; font-size: 10.5px; font-weight: 800; display: grid; place-items: center; font-family: var(--fh); }
+
+  .st-banner { position: relative; overflow: hidden; border-radius: 20px; margin: 24px 0; padding: 40px 36px; background: var(--grad); color: #fff; }
+  .st-banner::after { content: ""; position: absolute; inset: 0; background: radial-gradient(55% 120% at 82% 10%, rgba(255,255,255,.32), transparent 60%); }
+  .st-banner > * { position: relative; z-index: 1; }
+  .st-banner .eb { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .9; }
+  .st-banner h1 { font-size: clamp(26px,3.4vw,38px); font-weight: 800; margin: 10px 0 8px; max-width: 16ch; }
+  .st-banner p { font-size: 15px; opacity: .92; max-width: 40ch; }
+  .st-banner .b { display: inline-flex; margin-top: 18px; background: #fff; color: var(--primary); font-family: var(--fh); font-weight: 700; font-size: 14px; padding: 11px 20px; border-radius: 11px; cursor: pointer; }
+
+  .st-marq { overflow: hidden; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 16px 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+  .st-marq-tr { display: flex; gap: 40px; width: max-content; animation: st-marq 26s linear infinite; }
+  .st-marq-tr span { font-family: var(--fh); font-weight: 700; font-size: 15px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+
+  .st-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 30px 0 16px; }
+  .st-head h2 { font-size: 22px; }
+  .st-cats { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 0; }
+  .st-cats::-webkit-scrollbar { display: none; }
+  .st-cat { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+  .st-cat.on { background: var(--primary); color: #fff; border-color: transparent; }
+
+  .st-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; padding-bottom: 40px; }
+  .st-prod { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s; display: flex; flex-direction: column; }
+  .st-prod:hover { transform: translateY(-5px); box-shadow: 0 24px 50px -28px rgba(43,27,46,.4); }
+  .st-prod .im { aspect-ratio: 4/3; position: relative; display: grid; place-items: center; font-size: 40px;
+    background: repeating-linear-gradient(45deg, color-mix(in srgb,var(--primary) 10%, var(--s2)) 0 12px, var(--s2) 12px 24px); }
+  .st-prod .badge { position: absolute; top: 10px; left: 10px; font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 999px; background: var(--secondary); color: #fff; }
+  .st-prod .bd { padding: 14px; display: flex; flex-direction: column; flex: 1; }
+  .st-prod .cat { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+  .st-prod .nm { font-family: var(--fh); font-weight: 700; font-size: 14.5px; margin: 5px 0 4px; }
+  .st-prod .rt { font-size: 11.5px; color: var(--muted); } .st-prod .rt .s { color: var(--gold); }
+  .st-prod .pr { display: flex; align-items: baseline; gap: 7px; margin: 10px 0 12px; }
+  .st-prod .now { font-family: var(--fh); font-weight: 800; font-size: 17px; } .st-prod .was { text-decoration: line-through; color: var(--muted); font-size: 12.5px; }
+  .st-add { margin-top: auto; font: inherit; font-family: var(--fh); font-weight: 600; font-size: 13px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 10px; border-radius: 10px; cursor: pointer; transition: color .15s, border-color .15s; }
+  .st-add:hover { border-color: var(--primary); color: var(--primary); }
+  .st-add.added { background: var(--green); color: #fff; border-color: transparent; }
+
+  .st-foot { border-top: 1px solid var(--border); padding: 30px 0; text-align: center; }
+  .st-pay { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-bottom: 12px; }
+  .st-pay span { font-size: 10.5px; font-weight: 800; letter-spacing: .03em; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); }
+  .st-powered { font-size: 12px; color: var(--muted); }
+  .st-powered b { background: linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: var(--fh); }
+
+  /* cart drawer */
+  .st-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(20,12,25,.45); backdrop-filter: blur(2px); }
+  .st-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 61; width: min(380px, 92vw); background: var(--bg); border-left: 1px solid var(--border); box-shadow: -20px 0 60px -30px rgba(0,0,0,.6); animation: st-slide .3s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; }
+  .st-dhead { display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .st-dhead h3 { font-size: 17px; } .st-dclose { margin-left: auto; width: 32px; height: 32px; border-radius: 9px; border: 0; background: var(--s2); color: var(--text); cursor: pointer; font-size: 15px; }
+  .st-dbody { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .st-citem { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .st-citem .ci { width: 44px; height: 44px; border-radius: 10px; background: var(--s2); display: grid; place-items: center; font-size: 20px; flex: none; }
+  .st-citem .cn { font-family: var(--fh); font-weight: 600; font-size: 13.5px; } .st-citem .cp { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .st-citem .cx { margin-left: auto; font-family: var(--fh); font-weight: 700; font-size: 13.5px; }
+  .st-dempty { text-align: center; color: var(--muted); padding: 50px 10px; }
+  .st-dempty .e { font-size: 36px; }
+  .st-dfoot { padding: 18px 20px; border-top: 1px solid var(--border); }
+  .st-drow { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+  .st-dtotal { font-family: var(--fh); font-weight: 800; font-size: 18px; }
+  .st-checkout { width: 100%; margin-top: 14px; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15px; cursor: pointer; }
+
+  @media (max-width: 860px) { .st-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 560px) { .st-grid { grid-template-columns: 1fr; } .st-search { display: none; } }
+</style>
+</helmet>
+
+<div class="st" data-theme="{{ theme }}">
+  <div class="st-announce">🎉 Monsoon sale — up to 40% off everything · free updates for life</div>
+
+  <nav class="st-nav">
+    <div class="st-wrap st-nav-in">
+      <div class="st-brand"><span class="st-logo"></span>Studio Aanya</div>
+      <div class="st-search">🔍<input placeholder="Search products" /></div>
+      <div class="st-nav-r">
+        <button class="st-icon" onClick="{{ toggle }}">{{ themeIcon }}</button>
+        <button class="st-icon" onClick="{{ openCart }}">🛒<sc-if value="{{ hasItems }}" hint-placeholder-val="{{ false }}"><span class="st-cartcount" key="{{ count }}">{{ count }}</span></sc-if></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="st-wrap">
+    <div class="st-banner">
+      <div class="eb">Studio Aanya · music production</div>
+      <h1>Mix like a pro. Tools &amp; courses from a working producer.</h1>
+      <p>Courses, preset packs and project files — instant access, lifetime updates.</p>
+      <span class="b" onClick="{{ openCart }}">Shop the sale →</span>
+    </div>
+  </div>
+
+  <div class="st-marq"><div class="st-marq-tr">
+    <span>⚡ Instant delivery</span><span>🔒 Secure checkout</span><span>↺ 7-day refund</span><span>★ 4.9 from 2,140 students</span><span>🇮🇳 UPI · Cards · Razorpay</span>
+    <span>⚡ Instant delivery</span><span>🔒 Secure checkout</span><span>↺ 7-day refund</span><span>★ 4.9 from 2,140 students</span><span>🇮🇳 UPI · Cards · Razorpay</span>
+  </div></div>
+
+  <div class="st-wrap">
+    <div class="st-head">
+      <h2>All products</h2>
+      <div class="st-cats">
+        <button class="st-cat {{ cAll }}" onClick="{{ goAll }}">All</button>
+        <button class="st-cat {{ cCourses }}" onClick="{{ goCourses }}">Courses</button>
+        <button class="st-cat {{ cPacks }}" onClick="{{ goPacks }}">Packs</button>
+        <button class="st-cat {{ cEvents }}" onClick="{{ goEvents }}">Events</button>
+      </div>
+    </div>
+
+    <div class="st-grid">
+      <sc-for list="{{ shown }}" as="p" hint-placeholder-count="6">
+        <div class="st-prod">
+          <div class="im"><sc-if value="{{ p.badge }}" hint-placeholder-val="{{ false }}"><span class="badge">{{ p.badge }}</span></sc-if>{{ p.emoji }}</div>
+          <div class="bd">
+            <div class="cat">{{ p.cat }}</div>
+            <div class="nm">{{ p.name }}</div>
+            <div class="rt"><span class="s">★</span> {{ p.rating }} · {{ p.sold }} sold</div>
+            <div class="pr"><span class="now">{{ p.price }}</span><span class="was">{{ p.was }}</span></div>
+            <button class="st-add" onClick="{{ p.add }}">Add to cart</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <footer class="st-foot">
+    <div class="st-wrap">
+      <div class="st-pay"><span>VISA</span><span>UPI</span><span>RuPay</span><span>Mastercard</span><span>Razorpay</span></div>
+      <div class="st-powered">Built with <b>invoxai</b> · © 2026 Studio Aanya</div>
+    </div>
+  </footer>
+
+  <!-- cart drawer -->
+  <sc-if value="{{ cartOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="st-scrim" onClick="{{ closeCart }}"></div>
+    <aside class="st-drawer">
+      <div class="st-dhead"><h3>Your cart</h3><button class="st-dclose" onClick="{{ closeCart }}">✕</button></div>
+      <div class="st-dbody">
+        <sc-if value="{{ hasItems }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ cartItems }}" as="i" hint-placeholder-count="2">
+            <div class="st-citem"><span class="ci">{{ i.emoji }}</span><div><div class="cn">{{ i.name }}</div><div class="cp">{{ i.qty }} × {{ i.price }}</div></div><span class="cx">{{ i.line }}</span></div>
+          </sc-for>
+        </sc-if>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+          <div class="st-dempty"><div class="e">🛒</div><p>Your cart is empty.<br>Add something from the store.</p></div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ hasItems }}" hint-placeholder-val="{{ false }}">
+        <div class="st-dfoot">
+          <div class="st-drow"><span style="color:var(--muted)">Subtotal</span><span class="st-dtotal">{{ total }}</span></div>
+          <button class="st-checkout">Checkout · {{ total }} →</button>
+        </div>
+      </sc-if>
+    </aside>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { theme: "light", cat: "all", cart: {}, cartOpen: false };
+
+  PRODUCTS = [
+    { id: "p1", emoji: "🎧", cat: "Courses", catKey: "courses", name: "Mixing Masterclass", rating: "4.9", sold: "2.1k", price: 1499, was: 2499, badge: "40% OFF" },
+    { id: "p2", emoji: "🎚️", cat: "Courses", catKey: "courses", name: "Vocal Chain Deep-Dive", rating: "4.8", sold: "860", price: 999, was: 1499, badge: "" },
+    { id: "p3", emoji: "📦", cat: "Packs", catKey: "packs", name: "Preset Pack Vol. 2", rating: "4.9", sold: "1.4k", price: 599, was: 999, badge: "BESTSELLER" },
+    { id: "p4", emoji: "🎹", cat: "Packs", catKey: "packs", name: "Project Files Bundle", rating: "4.7", sold: "540", price: 799, was: 1299, badge: "" },
+    { id: "p5", emoji: "🎟️", cat: "Events", catKey: "events", name: "Live Mixing Workshop", rating: "5.0", sold: "120", price: 799, was: 1199, badge: "8 LEFT" },
+    { id: "p6", emoji: "🥁", cat: "Packs", catKey: "packs", name: "Drum Loops · Lo-fi", rating: "4.8", sold: "980", price: 399, was: 699, badge: "" }
+  ];
+
+  money(n) { return "₹" + n.toLocaleString("en-IN"); }
+
+  add(id) {
+    this.setState(s => ({ cart: { ...s.cart, [id]: (s.cart[id] || 0) + 1 } }));
+  }
+
+  renderVals() {
+    const cat = this.state.cat;
+    const shownList = this.PRODUCTS.filter(p => cat === "all" || p.catKey === cat).map(p => ({
+      emoji: p.emoji, cat: p.cat, name: p.name, rating: p.rating, sold: p.sold,
+      price: this.money(p.price), was: this.money(p.was), badge: p.badge,
+      add: () => this.add(p.id)
+    }));
+
+    const cart = this.state.cart;
+    const ids = Object.keys(cart).filter(id => cart[id] > 0);
+    const count = ids.reduce((a, id) => a + cart[id], 0);
+    let total = 0;
+    const cartItems = ids.map(id => {
+      const p = this.PRODUCTS.find(x => x.id === id);
+      const qty = cart[id]; total += p.price * qty;
+      return { emoji: p.emoji, name: p.name, qty, price: this.money(p.price), line: this.money(p.price * qty) };
+    });
+
+    const on = (k) => (cat === k ? "on" : "");
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      cAll: on("all"), cCourses: on("courses"), cPacks: on("packs"), cEvents: on("events"),
+      goAll: () => this.setState({ cat: "all" }), goCourses: () => this.setState({ cat: "courses" }),
+      goPacks: () => this.setState({ cat: "packs" }), goEvents: () => this.setState({ cat: "events" }),
+      shown: shownList,
+      count, hasItems: count > 0, empty: count === 0,
+      cartItems, total: this.money(total),
+      cartOpen: this.state.cartOpen,
+      openCart: () => this.setState({ cartOpen: true }),
+      closeCart: () => this.setState({ cartOpen: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

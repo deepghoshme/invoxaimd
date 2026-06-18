@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes dx-bar { from { height: 6%; } }
+  @keyframes dx-fade { from { transform: translateY(8px); } to { transform: none; } }
+
+  .dx {
+    --bg: #fff9f4; --surface: #fff; --surface2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6;
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 8px 24px rgba(255,106,61,.07);
+    --green: #1fb57a; --greenbg: #e5f7ef; --red: #e5476f; --redbg: #fde9ee;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 68%,#7b3fe4);
+    background: var(--bg); color: var(--text);
+    font-family: "Inter", system-ui, sans-serif; font-size: 14px; line-height: 1.45; min-height: 100dvh;
+    display: grid; grid-template-columns: 244px 1fr;
+  }
+  .dx.dark {
+    --bg: #16101f; --surface: #211833; --surface2: #2a2040;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #322843;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    --greenbg: #15301f; --redbg: #3a1822;
+  }
+  .dx h1,.dx h2,.dx h3,.dx h4 { font-family: "Sora", sans-serif; margin: 0; }
+
+  /* sidebar */
+  .dx-side { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 12px 10px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; overflow: hidden; }
+  .dx-logo { flex: none; display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; font-weight: 800; font-size: 18px; letter-spacing: -.02em; font-family: "Sora", sans-serif; color: var(--text); }
+  .dx-dot { width: 28px; height: 28px; border-radius: 9px; background: var(--grad); flex: none; box-shadow: 0 5px 13px -5px rgba(255,77,125,.6); }
+  .dx-navscroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; scrollbar-width: none; }
+  .dx-navscroll::-webkit-scrollbar { display: none; }
+  .dx-navlbl { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 700; padding: 12px 9px 4px; opacity: .75; }
+  .dx-nav { position: relative; display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 9px; color: var(--muted); font-weight: 500; cursor: pointer; font-size: 13.5px; border: 0; background: none; width: 100%; text-align: left; font-family: inherit; }
+  .dx-nav .ic { font-size: 15px; width: 18px; text-align: center; flex: none; }
+  .dx-nav:hover { background: var(--surface2); color: var(--text); }
+  .dx-nav.act { background: var(--surface2); color: var(--primary); font-weight: 600; }
+  .dx-nav.act::before { content: ""; position: absolute; left: 2px; top: 9px; width: 3px; height: 19px; border-radius: 9px; background: var(--grad); }
+  .dx-side-foot { flex: none; padding-top: 10px; margin-top: 6px; border-top: 1px solid var(--border); }
+  .dx-profile { display: flex; align-items: center; gap: 9px; width: 100%; background: none; border: 0; cursor: pointer; padding: 7px 8px; border-radius: 10px; color: var(--text); text-align: left; font-family: inherit; }
+  .dx-profile:hover { background: var(--surface2); }
+  .dx-avatar-i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: #fff; font-weight: 800; font-size: 13px; font-family: "Sora", sans-serif; flex: none; }
+  .dx-profile-id { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .dx-profile-id b { font-size: 13px; }
+  .dx-profile-id span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dx-chev { margin-left: auto; color: var(--muted); font-size: 11px; }
+
+  /* content column */
+  .dx-col { min-width: 0; display: flex; flex-direction: column; }
+  .dx-top { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 26px; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  .dx-top-title { font-family: "Sora", sans-serif; font-weight: 700; font-size: 16px; }
+  .dx-top-r { margin-left: auto; display: flex; align-items: center; gap: 11px; }
+  .dx-view { font-size: 12.5px; color: var(--muted); font-weight: 500; border: 1px solid var(--border); padding: 6px 12px; border-radius: 99px; cursor: pointer; }
+  .dx-view:hover { border-color: var(--muted); }
+  .dx-wallet { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 7px 13px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; color: var(--text); }
+  .dx-wallet .d { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .dx-icon-btn { width: 38px; height: 38px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 15px; display: grid; place-items: center; color: var(--text); }
+  .dx-icon-btn:hover { border-color: var(--muted); }
+
+  .dx-main { flex: 1; min-width: 0; padding: 24px 26px 50px; animation: dx-fade .4s ease; }
+  .dx-phead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .dx-phead h1 { font-size: 22px; letter-spacing: -.02em; }
+  .dx-phead p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .dx .btn { font: inherit; font-weight: 600; font-size: 13px; border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; color: #fff; background: var(--primary); display: inline-flex; align-items: center; gap: 6px; }
+  .dx .btn:hover { background: var(--primaryh); }
+  .dx .btn.grad { background: var(--grad); }
+  .dx .btn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .dx .btn.ghost:hover { border-color: var(--muted); }
+
+  .dx-grid { display: grid; gap: 16px; }
+  .dx-kpis { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 16px; }
+  .dx-cols { grid-template-columns: 1.7fr 1fr; align-items: start; }
+  .dx-g2 { grid-template-columns: 1fr 1fr; }
+  .dx-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+  .dx-kpi .ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 12px; color: #fff; font-size: 16px; font-weight: 800; }
+  .dx-kpi .lbl { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  .dx-kpi .val { font-family: "Sora", sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-top: 3px; }
+  .dx-delta { font-size: 11.5px; font-weight: 600; margin-top: 8px; display: inline-flex; gap: 4px; align-items: center; }
+  .dx-up { color: var(--green); } .dx-down { color: var(--red); }
+  .dx-ctitle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .dx-ctitle h3 { font-size: 15px; letter-spacing: -.01em; }
+  .dx-ctitle a { font-size: 12.5px; color: var(--primary); font-weight: 600; cursor: pointer; }
+
+  /* chart */
+  .dx-chart { display: flex; align-items: flex-end; gap: 9px; height: 168px; padding-top: 8px; }
+  .dx-chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .dx-chart .bar { width: 100%; max-width: 30px; border-radius: 7px 7px 0 0; background: var(--grad); animation: dx-bar .7s ease both; }
+  .dx-chart .bar.dim { background: var(--surface2); }
+  .dx-chart .lab { font-size: 11px; color: var(--muted); }
+
+  /* donut */
+  .dx-donut-row { display: flex; align-items: center; gap: 18px; }
+  .dx-donut { width: 132px; height: 132px; border-radius: 50%; position: relative; flex: none; }
+  .dx-donut::after { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: var(--surface); }
+  .dx-donut .ctr { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; text-align: center; }
+  .dx-donut .ctr b { font-family: "Sora", sans-serif; font-size: 19px; } .dx-donut .ctr span { font-size: 10.5px; color: var(--muted); display: block; }
+  .dx-legend { display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; color: var(--muted); }
+  .dx-legend span { display: flex; align-items: center; gap: 8px; }
+  .dx-lk { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  /* table */
+  .dx table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .dx th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; padding: 0 10px 11px; }
+  .dx td { padding: 12px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+  .dx-tg { display: flex; align-items: center; gap: 10px; }
+  .dx-sq { width: 32px; height: 32px; border-radius: 9px; background: var(--surface2); display: grid; place-items: center; font-size: 15px; flex: none; }
+  .dx-pilltag { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+  .t-paid { background: var(--greenbg); color: var(--green); }
+  .t-pend { background: var(--redbg); color: var(--red); }
+  .dx-cat { font-size: 11px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+
+  /* pages list */
+  .dx-pagerow { display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 13px; padding: 13px 15px; background: var(--surface); transition: border-color .15s, transform .15s; }
+  .dx-pagerow:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); transform: translateX(2px); }
+  .dx-pagerow .pic { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; font-size: 19px; background: var(--surface2); flex: none; }
+  .dx-pagerow .nm { font-weight: 600; font-size: 14px; }
+  .dx-pagerow .pth { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .dx-pagerow .r { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .dx-live { font-size: 11px; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 5px; }
+  .dx-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .dx-draft { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 99px; }
+
+  /* toolbar */
+  .dx-toolbar { display: flex; gap: 9px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .dx-fchip { font: inherit; font-size: 12.5px; font-weight: 600; padding: 8px 14px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .dx-fchip.on { background: var(--primary); color: #fff; border-color: transparent; }
+  .dx-search { flex: 1; min-width: 140px; max-width: 300px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px; color: var(--muted); }
+  .dx-search input { border: 0; background: transparent; outline: 0; font: inherit; color: var(--text); width: 100%; }
+
+  /* wallet page */
+  .dx-walletbig { background: var(--grad); color: #fff; border-radius: 18px; padding: 24px; position: relative; overflow: hidden; }
+  .dx-walletbig::after { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 100% at 85% 0%, rgba(255,255,255,.28), transparent 60%); }
+  .dx-walletbig > * { position: relative; z-index: 1; }
+  .dx-walletbig .bal { font-family: "Sora", sans-serif; font-weight: 800; font-size: 40px; letter-spacing: -.02em; margin: 6px 0 14px; }
+  .dx-walletbig .btn-w { background: #fff; color: var(--primary); border: 0; border-radius: 10px; padding: 11px 18px; font-family: "Sora", sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .dx-ledrow { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .dx-ledrow:first-child { border-top: 0; }
+  .dx-ledrow .lic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+  .dx-ledrow .am { margin-left: auto; font-weight: 700; font-family: "Sora", sans-serif; }
+
+  @media (max-width: 900px) {
+    .dx { grid-template-columns: 1fr; }
+    .dx-side { flex-direction: row; align-items: center; overflow: visible; position: sticky; top: 0; z-index: 55; height: auto; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--border); }
+    .dx-logo { padding: 0 8px 0 0; font-size: 16px; }
+    .dx-navscroll { flex-direction: row; overflow-x: auto; gap: 4px; }
+    .dx-navlbl, .dx-side-foot { display: none; }
+    .dx-nav { white-space: nowrap; padding: 9px 12px; } .dx-nav.act::before { display: none; }
+    .dx-cols, .dx-g2 { grid-template-columns: 1fr; }
+    .dx-view { display: none; }
+  }
+  /* form + tool helpers for the extended pages */
+  .dx-field { margin-bottom: 13px; }
+  .dx-field > label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  .dx-field input, .dx-field select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; outline: none; }
+  .dx-field input:focus, .dx-field select:focus { border-color: var(--primary); }
+  .dx-ff { display: flex; gap: 12px; } .dx-ff > * { flex: 1; }
+  .dx-switch2 { position: relative; width: 46px; height: 26px; border-radius: 99px; background: var(--border); cursor: pointer; flex: none; border: 0; transition: background .18s; }
+  .dx-switch2 i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .dx-switch2.on { background: var(--grad); } .dx-switch2.on i { transform: translateX(20px); }
+  .dx-srow { display: flex; align-items: center; gap: 13px; padding: 13px 0; border-top: 1px solid var(--border); }
+  .dx-srow:first-child { border-top: 0; } .dx-srow .tx { flex: 1; } .dx-srow .tx b { font-size: 13.5px; } .dx-srow .tx p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .dx-seg2 { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; margin-bottom: 14px; }
+  .dx-seg2 button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 7px 15px; border-radius: 999px; cursor: pointer; }
+  .dx-seg2 button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+  .dx-cpn { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 9px; }
+  .dx-cpn .code { font-family: ui-monospace, Menlo, monospace; font-weight: 700; font-size: 14px; color: var(--primary); background: color-mix(in srgb,var(--primary) 10%,transparent); padding: 5px 11px; border-radius: 8px; }
+  .dx-cpn .meta { font-size: 12px; color: var(--muted); } .dx-cpn .st { margin-left: auto; }
+  .dx-code { font-family: ui-monospace, Menlo, monospace; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--text); word-break: break-all; }
+  .dx-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 80; background: #18121f; color: #fff; padding: 13px 20px; border-radius: 12px; font-size: 13.5px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 10px; }
+  .dx-toast .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+</style>
+</helmet>
+
+<div class="dx {{ darkClass }}">
+  <!-- SIDEBAR -->
+  <aside class="dx-side">
+    <div class="dx-logo"><span class="dx-dot"></span>invoxai</div>
+    <div class="dx-navscroll">
+      <div class="dx-navlbl">Overview</div>
+      <button class="dx-nav {{ navHome }}" onClick="{{ goHome }}"><span class="ic">⊞</span>Dashboard</button>
+      <button class="dx-nav {{ navAnalytics }}" onClick="{{ goAnalytics }}"><span class="ic">📈</span>Analytics</button>
+      <div class="dx-navlbl">Build &amp; sell</div>
+      <button class="dx-nav" onClick="{{ openCreate }}" style="color:var(--primary);font-weight:600"><span class="ic">＋</span>Create page</button>
+      <button class="dx-nav {{ navPages }}" onClick="{{ goPages }}"><span class="ic">▤</span>All pages</button>
+      <button class="dx-nav {{ navWebsite }}" onClick="{{ goWebsite }}"><span class="ic">🌐</span>Website</button>
+      <button class="dx-nav {{ navBio }}" onClick="{{ goBio }}"><span class="ic">🔗</span>Bio page</button>
+      <button class="dx-nav {{ navProducts }}" onClick="{{ goProducts }}"><span class="ic">📦</span>One-page products</button>
+      <button class="dx-nav {{ navStore }}" onClick="{{ goStore }}"><span class="ic">🛍️</span>Store</button>
+      <button class="dx-nav {{ navCourses }}" onClick="{{ goCourses }}"><span class="ic">🎓</span>Courses</button>
+      <button class="dx-nav {{ navBooking }}" onClick="{{ goBooking }}"><span class="ic">📅</span>Booking</button>
+      <button class="dx-nav {{ navEvents }}" onClick="{{ goEvents }}"><span class="ic">🎟️</span>Events</button>
+      <button class="dx-nav {{ navPayment }}" onClick="{{ goPayment }}"><span class="ic">💳</span>Payment pages</button>
+      <button class="dx-nav {{ navLeadform }}" onClick="{{ goLeadform }}"><span class="ic">📝</span>Lead forms</button>
+      <button class="dx-nav {{ navVip }}" onClick="{{ goVip }}"><span class="ic">⭐</span>VIP channel</button>
+      <button class="dx-nav {{ navLanding }}" onClick="{{ goLanding }}"><span class="ic">🚀</span>Landing pages</button>
+      <button class="dx-nav {{ navCheckout }}" onClick="{{ goCheckout }}"><span class="ic">🧾</span>Checkout</button>
+      <button class="dx-nav {{ navSeo }}" onClick="{{ goSeo }}"><span class="ic">🔍</span>Pixels &amp; SEO</button>
+      <div class="dx-navlbl">Grow</div>
+      <button class="dx-nav {{ navOrders }}" onClick="{{ goOrders }}"><span class="ic">👥</span>Customers · CRM</button>
+      <button class="dx-nav {{ navCoupons }}" onClick="{{ goCoupons }}"><span class="ic">🎯</span>Coupons</button>
+      <button class="dx-nav {{ navUpsell }}" onClick="{{ goUpsell }}"><span class="ic">⬆️</span>Upsell</button>
+      <button class="dx-nav {{ navAband }}" onClick="{{ goAband }}"><span class="ic">🛒</span>Abandoned cart</button>
+      <button class="dx-nav {{ navEmail }}" onClick="{{ goEmail }}"><span class="ic">✉️</span>Email marketing</button>
+      <div class="dx-navlbl">Money</div>
+      <button class="dx-nav {{ navWallet }}" onClick="{{ goWallet }}"><span class="ic">👛</span>Wallet</button>
+      <button class="dx-nav {{ navPay }}" onClick="{{ goPay }}"><span class="ic">💳</span>Payments</button>
+      <button class="dx-nav {{ navBilling }}" onClick="{{ goBilling }}"><span class="ic">📑</span>Plan &amp; billing</button>
+      <div class="dx-navlbl">Account</div>
+      <button class="dx-nav {{ navDomains }}" onClick="{{ goDomains }}"><span class="ic">🌐</span>Domains</button>
+      <button class="dx-nav {{ navSettings }}" onClick="{{ goSettings }}"><span class="ic">⚙</span>Settings</button>
+    </div>
+    <div class="dx-side-foot">
+      <button class="dx-profile"><span class="dx-avatar-i">A</span><span class="dx-profile-id"><b>Aanya Sharma</b><span><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ef8e8e81968eaf9c9b9a8b8680c18681">[email&#160;protected]</a></span></span><span class="dx-chev">▾</span></button>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="dx-col">
+    <div class="dx-top">
+      <span class="dx-top-title">{{ pageTitle }}</span>
+      <div class="dx-top-r">
+        <span class="dx-view">↗ View site</span>
+        <button class="dx-wallet" onClick="{{ goWallet }}"><span class="d"></span>₹6,420</button>
+        <button class="dx-icon-btn" onClick="{{ toggleTheme }}">{{ themeIcon }}</button>
+        <button class="dx-profile" style="width:auto;padding:0"><span class="dx-avatar-i">A</span></button>
+      </div>
+    </div>
+
+    <main class="dx-main" key="{{ page }}">
+
+      <!-- ===== OVERVIEW ===== -->
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+        <div class="dx-phead">
+          <div><h1>Welcome back, Aanya 👋</h1><p>Here's how Studio Aanya performed this week.</p></div>
+          <button class="btn grad" onClick="{{ openCreate }}">＋ Create page</button>
+        </div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">₹</div><div class="lbl">Revenue (7d)</div><div class="val">₹48,900</div><div class="dx-delta dx-up">▲ 18.2% vs last week</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">◎</div><div class="lbl">Orders</div><div class="val">312</div><div class="dx-delta dx-up">▲ 9.4%</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">◔</div><div class="lbl">Conversion</div><div class="val">3.9%</div><div class="dx-delta dx-down">▼ 0.6%</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">👛</div><div class="lbl">Wallet balance</div><div class="val">₹6,420</div><div class="dx-delta dx-up">Healthy</div></div>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Revenue · last 7 days</h3><a>This week ▾</a></div>
+            <div class="dx-chart">
+              <div class="col"><div class="bar dim" style="height:42%"></div><span class="lab">Mon</span></div>
+              <div class="col"><div class="bar dim" style="height:60%"></div><span class="lab">Tue</span></div>
+              <div class="col"><div class="bar dim" style="height:48%"></div><span class="lab">Wed</span></div>
+              <div class="col"><div class="bar dim" style="height:74%"></div><span class="lab">Thu</span></div>
+              <div class="col"><div class="bar dim" style="height:56%"></div><span class="lab">Fri</span></div>
+              <div class="col"><div class="bar" style="height:100%"></div><span class="lab">Sat</span></div>
+              <div class="col"><div class="bar dim" style="height:80%"></div><span class="lab">Sun</span></div>
+            </div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Sales by category</h3></div>
+            <div class="dx-donut-row">
+              <div class="dx-donut" style="background:conic-gradient(var(--primary) 0 46%, var(--accent) 46% 74%, var(--gold) 74% 100%)"><div class="ctr"><b>312</b><span>orders</span></div></div>
+              <div class="dx-legend">
+                <span><span class="dx-lk" style="background:var(--primary)"></span>Courses · 46%</span>
+                <span><span class="dx-lk" style="background:var(--accent)"></span>Digital · 28%</span>
+                <span><span class="dx-lk" style="background:var(--gold)"></span>Events · 26%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dx-card" style="margin-top:16px">
+          <div class="dx-ctitle"><h3>Recent orders</h3><a onClick="{{ goOrders }}">View CRM →</a></div>
+          <table>
+            <thead><tr><th>Customer</th><th>Product</th><th>Category</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎧</div><div><div style="font-weight:600">Rohan Mehta</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8efce1e6efe0cee9e3efe7e2a0ede1e3">[email&#160;protected]</a></div></div></div></td><td>Mixing Masterclass</td><td><span class="dx-cat">Courses</span></td><td style="font-weight:700">₹1,499</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">📘</div><div><div style="font-weight:600">Sara Iyer</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c6b5a7b4a786a9b3b2aaa9a9ade8a5a9ab">[email&#160;protected]</a></div></div></div></td><td>Notion Templates Pack</td><td><span class="dx-cat">Digital</span></td><td style="font-weight:700">₹399</td><td><span class="dx-pilltag t-pend">Pending</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎟️</div><div><div style="font-weight:600">Dev Kapoor</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4327263503242e222a2f6d202c2e">[email&#160;protected]</a></div></div></div></td><td>Live Workshop · Seat</td><td><span class="dx-cat">Events</span></td><td style="font-weight:700">₹799</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎧</div><div><div style="font-weight:600">Meera Nair</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="88e5ededfae9c8efe5e9e1e4a6ebe7e5">[email&#160;protected]</a></div></div></div></td><td>Mixing Masterclass</td><td><span class="dx-cat">Courses</span></td><td style="font-weight:700">₹1,499</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+
+      <!-- ===== ANALYTICS ===== -->
+      <sc-if value="{{ isAnalytics }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead">
+          <div><h1>Analytics</h1><p>Traffic, sources and devices across all your pages.</p></div>
+          <button class="btn ghost">Last 30 days ▾</button>
+        </div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">👁</div><div class="lbl">Page views</div><div class="val">28,410</div><div class="dx-delta dx-up">▲ 22%</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">🖱</div><div class="lbl">Link clicks</div><div class="val">9,120</div><div class="dx-delta dx-up">▲ 14%</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">↗</div><div class="lbl">CTR</div><div class="val">32.1%</div><div class="dx-delta dx-up">▲ 2.4%</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">📱</div><div class="lbl">Mobile</div><div class="val">78%</div><div class="dx-delta">of all visits</div></div>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Visitors · last 7 days</h3></div>
+            <div class="dx-chart">
+              <div class="col"><div class="bar dim" style="height:55%"></div><span class="lab">Mon</span></div>
+              <div class="col"><div class="bar dim" style="height:70%"></div><span class="lab">Tue</span></div>
+              <div class="col"><div class="bar dim" style="height:62%"></div><span class="lab">Wed</span></div>
+              <div class="col"><div class="bar" style="height:100%"></div><span class="lab">Thu</span></div>
+              <div class="col"><div class="bar dim" style="height:84%"></div><span class="lab">Fri</span></div>
+              <div class="col"><div class="bar dim" style="height:76%"></div><span class="lab">Sat</span></div>
+              <div class="col"><div class="bar dim" style="height:68%"></div><span class="lab">Sun</span></div>
+            </div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Top sources</h3></div>
+            <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span style="font-weight:600">Instagram ads</span><span style="color:var(--muted)">42%</span></div><div style="height:8px;border-radius:99px;background:var(--surface2)"><div style="height:100%;width:42%;border-radius:99px;background:var(--grad)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span style="font-weight:600">Google organic</span><span style="color:var(--muted)">28%</span></div><div style="height:8px;border-radius:99px;background:var(--surface2)"><div style="height:100%;width:28%;border-radius:99px;background:var(--accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span style="font-weight:600">Direct / bio</span><span style="color:var(--muted)">19%</span></div><div style="height:8px;border-radius:99px;background:var(--surface2)"><div style="height:100%;width:19%;border-radius:99px;background:var(--secondary)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span style="font-weight:600">WhatsApp</span><span style="color:var(--muted)">11%</span></div><div style="height:8px;border-radius:99px;background:var(--surface2)"><div style="height:100%;width:11%;border-radius:99px;background:var(--gold)"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PAGES ===== -->
+      <sc-if value="{{ isPages }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead">
+          <div><h1>Pages</h1><p>Everything you've published on aanya.invoxai.io.</p></div>
+          <button class="btn grad" onClick="{{ openCreate }}">＋ Create page</button>
+        </div>
+        <div class="dx-toolbar">
+          <button class="dx-fchip on">All</button>
+          <button class="dx-fchip">Published</button>
+          <button class="dx-fchip">Drafts</button>
+          <div class="dx-search">🔍<input placeholder="Search pages" /></div>
+        </div>
+        <div class="dx-grid" style="gap:10px">
+          <div class="dx-pagerow"><span class="pic">🌐</span><div><div class="nm">Studio Aanya — Home</div><div class="pth">aanya.invoxai.io/</div></div><div class="r"><span class="dx-live">Live</span><a class="btn ghost" href="Page Builder.dc.html" style="padding:7px 12px">Edit</a><button class="btn ghost" style="padding:7px 12px" onClick="{{ toastDelete }}">Delete</button></div></div>
+          <div class="dx-pagerow"><span class="pic">🛍️</span><div><div class="nm">Digital Store</div><div class="pth">aanya.invoxai.io/store</div></div><div class="r"><span class="dx-live">Live</span><a class="btn ghost" href="Page Builder.dc.html" style="padding:7px 12px">Edit</a><button class="btn ghost" style="padding:7px 12px" onClick="{{ toastDelete }}">Delete</button></div></div>
+          <div class="dx-pagerow"><span class="pic">🔗</span><div><div class="nm">Link in bio</div><div class="pth">aanya.invoxai.io/bio</div></div><div class="r"><span class="dx-live">Live</span><a class="btn ghost" href="Page Builder.dc.html" style="padding:7px 12px">Edit</a><button class="btn ghost" style="padding:7px 12px" onClick="{{ toastDelete }}">Delete</button></div></div>
+          <div class="dx-pagerow"><span class="pic">📦</span><div><div class="nm">Mixing Masterclass</div><div class="pth">aanya.invoxai.io/opp/a7Bx9KmQ</div></div><div class="r"><span class="dx-live">Live</span><a class="btn ghost" href="Page Builder.dc.html" style="padding:7px 12px">Edit</a><button class="btn ghost" style="padding:7px 12px" onClick="{{ toastDelete }}">Delete</button></div></div>
+          <div class="dx-pagerow"><span class="pic">🎟️</span><div><div class="nm">Live Workshop · June</div><div class="pth">aanya.invoxai.io/env/Kp2mZ</div></div><div class="r"><span class="dx-draft">Draft</span><a class="btn ghost" href="Page Builder.dc.html" style="padding:7px 12px">Edit</a><button class="btn ghost" style="padding:7px 12px" onClick="{{ toastDelete }}">Delete</button></div></div>
+          <div class="dx-pagerow"><span class="pic">📝</span><div><div class="nm">Waitlist lead form</div><div class="pth">aanya.invoxai.io/ldf/9QxLr</div></div><div class="r"><span class="dx-draft">Draft</span><a class="btn ghost" href="Page Builder.dc.html" style="padding:7px 12px">Edit</a><button class="btn ghost" style="padding:7px 12px" onClick="{{ toastDelete }}">Delete</button></div></div>
+        </div>
+      </sc-if>
+
+      <!-- ===== CRM / ORDERS ===== -->
+      <sc-if value="{{ isOrders }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead">
+          <div><h1>Customers &amp; orders</h1><p>Every buyer, transaction and pending payment in one CRM.</p></div>
+          <button class="btn ghost">⤓ Export CSV</button>
+        </div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">👥</div><div class="lbl">Customers</div><div class="val">1,084</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">✓</div><div class="lbl">Paid orders</div><div class="val">312</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">⏳</div><div class="lbl">Pending payment</div><div class="val">27</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">₹</div><div class="lbl">Lifetime spend</div><div class="val">₹3.2L</div></div>
+        </div>
+        <div class="dx-toolbar">
+          <button class="dx-fchip on">All</button>
+          <button class="dx-fchip">Paid</button>
+          <button class="dx-fchip">Pending</button>
+          <button class="dx-fchip">Courses</button>
+          <button class="dx-fchip">Digital</button>
+          <div class="dx-search">🔍<input placeholder="Search customers" /></div>
+        </div>
+        <div class="dx-card">
+          <table>
+            <thead><tr><th>Customer</th><th>Product</th><th>Category</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎧</div><div><div style="font-weight:600">Rohan Mehta</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="40322f28212e00272d21292c6e232f2d">[email&#160;protected]</a></div></div></div></td><td>Mixing Masterclass</td><td><span class="dx-cat">Courses</span></td><td style="color:var(--muted)">18 Jun</td><td style="font-weight:700">₹1,499</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">📘</div><div><div style="font-weight:600">Sara Iyer</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fc8f9d8e9dbc93898890939397d29f9391">[email&#160;protected]</a></div></div></div></td><td>Notion Templates Pack</td><td><span class="dx-cat">Digital</span></td><td style="color:var(--muted)">18 Jun</td><td style="font-weight:700">₹399</td><td><span class="dx-pilltag t-pend">Pending</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎟️</div><div><div style="font-weight:600">Dev Kapoor</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2f4b4a596f48424e4643014c4042">[email&#160;protected]</a></div></div></div></td><td>Live Workshop · Seat</td><td><span class="dx-cat">Events</span></td><td style="color:var(--muted)">17 Jun</td><td style="font-weight:700">₹799</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎧</div><div><div style="font-weight:600">Meera Nair</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="87eae2e2f5e6c7e0eae6eeeba9e4e8ea">[email&#160;protected]</a></div></div></div></td><td>Mixing Masterclass</td><td><span class="dx-cat">Courses</span></td><td style="color:var(--muted)">17 Jun</td><td style="font-weight:700">₹1,499</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">📘</div><div><div style="font-weight:600">Arjun Pillai</div><div style="color:var(--muted);font-size:12px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff9e8d958a91bf98929e9693d19c9092">[email&#160;protected]</a></div></div></div></td><td>Notion Templates Pack</td><td><span class="dx-cat">Digital</span></td><td style="color:var(--muted)">16 Jun</td><td style="font-weight:700">₹399</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+
+      <!-- ===== WALLET ===== -->
+      <sc-if value="{{ isWallet }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead">
+          <div><h1>Commission wallet</h1><p>A small per-category commission is deducted from your prepaid balance on each sale.</p></div>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div>
+            <div class="dx-walletbig">
+              <div style="font-size:13px;opacity:.92;font-weight:600">Available balance</div>
+              <div class="bal">₹6,420.00</div>
+              <button class="btn-w">＋ Recharge wallet</button>
+            </div>
+            <div class="dx-card" style="margin-top:16px">
+              <div class="dx-ctitle"><h3>Ledger</h3><a>Download invoices →</a></div>
+              <div class="dx-ledrow"><span class="lic" style="background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)">↓</span><div><div style="font-weight:600">Sale · Mixing Masterclass</div><div style="color:var(--muted);font-size:12px">Courses · 6% commission · 18 Jun</div></div><span class="am" style="color:var(--green)">−₹90</span></div>
+              <div class="dx-ledrow"><span class="lic" style="background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)">↓</span><div><div style="font-weight:600">Sale · Notion Pack</div><div style="color:var(--muted);font-size:12px">Digital · 4% commission · 18 Jun</div></div><span class="am" style="color:var(--green)">−₹16</span></div>
+              <div class="dx-ledrow"><span class="lic" style="background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)">↑</span><div><div style="font-weight:600">Wallet recharge</div><div style="color:var(--muted);font-size:12px">Razorpay · 18 Jun</div></div><span class="am">+₹2,000</span></div>
+              <div class="dx-ledrow"><span class="lic" style="background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)">↓</span><div><div style="font-weight:600">Sale · Live Workshop seat</div><div style="color:var(--muted);font-size:12px">Events · 5% commission · 17 Jun</div></div><span class="am" style="color:var(--green)">−₹40</span></div>
+            </div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Auto-recharge</h3></div>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Keep your wallet topped up so selling never pauses. We email a daily invoice of all deductions.</p>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--border)"><span style="font-weight:600">Low-balance alert</span><span class="dx-live">On · ₹500</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--border)"><span style="font-weight:600">Daily invoice email</span><span class="dx-live">On</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--border)"><span style="font-weight:600">This month's commission</span><span style="font-weight:700;font-family:'Sora',sans-serif">₹1,284</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== WEBSITE ===== -->
+      <sc-if value="{{ isWebsite }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Website</h1><p>Your multi-section homepage at aanya.invoxai.io.</p></div><a class="btn grad" href="Website Builder.dc.html">Open builder ↗</a></div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card"><div class="dx-ctitle"><h3>Home page</h3><span class="dx-live">Live</span></div><div class="dx-kv"><span class="dx-fw6" style="font-family:ui-monospace,Menlo,monospace">aanya.invoxai.io/</span><span class="dx-muted">11 sections</span></div><div style="display:flex;gap:9px;margin-top:14px"><a class="btn ghost" href="Website Builder.dc.html">Edit</a><button class="btn ghost" onClick="{{ goSeo }}">SEO &amp; pixels</button><button class="btn ghost" onClick="{{ toastDelete }}">Unpublish</button></div></div>
+          <div class="dx-card"><div class="dx-ctitle"><h3>Sub-pages</h3></div><div class="dx-kv"><span>/about</span><span class="dx-live">Live</span></div><div class="dx-kv"><span>/contact</span><span class="dx-live">Live</span></div><div class="dx-kv"><span>Legal · /privacy /terms /refund</span><span class="dx-live">Live</span></div></div>
+        </div>
+      </sc-if>
+
+      <!-- ===== BIO ===== -->
+      <sc-if value="{{ isBio }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Bio page</h1><p>Link-in-bio at aanya.invoxai.io/bio.</p></div><a class="btn grad" href="Page Builder.dc.html">Open builder ↗</a></div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">🔗</div><div class="lbl">Links</div><div class="val">7</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">✨</div><div class="lbl">Socials</div><div class="val">5</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">👁</div><div class="lbl">Views (7d)</div><div class="val">1,840</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">🔗</div><div class="lbl">Click-through</div><div class="val">32%</div></div>
+        </div>
+        <div class="dx-card"><div class="dx-ctitle"><h3>Your bio page</h3><span class="dx-live">Live</span></div><div class="dx-kv"><span class="dx-fw6" style="font-family:ui-monospace,Menlo,monospace">aanya.invoxai.io/bio</span></div><div style="display:flex;gap:9px;margin-top:14px"><a class="btn ghost" href="Page Builder.dc.html">Edit</a><a class="btn ghost" href="Bio Page.dc.html">Preview</a><button class="btn ghost" onClick="{{ toastDelete }}">Delete</button></div></div>
+      </sc-if>
+
+      <!-- ===== ONE-PAGE PRODUCTS ===== -->
+      <sc-if value="{{ isProducts }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>One-page products</h1><p>Landing + checkout pages — create from scratch or a store product.</p></div><button class="btn grad" onClick="{{ openCreate }}">＋ New product</button></div>
+        <div class="dx-card"><table><thead><tr><th>Product</th><th>URL</th><th>Price</th><th>Sold</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+          <tr><td><div class="dx-tg"><div class="dx-sq">🎧</div><div style="font-weight:600">Mixing Masterclass</div></div></td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/opp/a7Bx9KmQ</td><td style="font-weight:700">₹1,499</td><td>2,140</td><td><span class="dx-pilltag t-paid">Live</span></td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+          <tr><td><div class="dx-tg"><div class="dx-sq">🎹</div><div style="font-weight:600">Preset Pack Vol.2</div></div></td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/opp/Kp2mZ8</td><td style="font-weight:700">₹599</td><td>1,420</td><td><span class="dx-pilltag t-paid">Live</span></td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+          <tr><td><div class="dx-tg"><div class="dx-sq">🥁</div><div style="font-weight:600">Lo-fi Drum Loops</div></div></td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/opp/9QxLr3</td><td style="font-weight:700">₹399</td><td>0</td><td><span class="dx-pilltag t-pend">Draft</span></td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+        </tbody></table></div>
+      </sc-if>
+
+      <!-- ===== PAYMENT PAGES ===== -->
+      <sc-if value="{{ isPayment }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Payment pages</h1><p>Standalone “pay me” links — fixed or custom amount.</p></div><button class="btn grad" onClick="{{ openCreate }}">＋ New payment page</button></div>
+        <div class="dx-card"><table><thead><tr><th>Page</th><th>URL</th><th>Amount</th><th>Paid</th><th>Actions</th></tr></thead><tbody>
+          <tr><td style="font-weight:600">Consultation invoice</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/pay/Tk83mD</td><td style="font-weight:700">₹2,500</td><td>14</td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+          <tr><td style="font-weight:600">Custom “pay what you want”</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/pay/Wm21Qa</td><td style="font-weight:700">Custom</td><td>58</td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+        </tbody></table></div>
+      </sc-if>
+
+      <!-- ===== LEAD FORMS ===== -->
+      <sc-if value="{{ isLeadform }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Lead forms</h1><p>Capture leads (no payment) — straight into your CRM.</p></div><button class="btn grad" onClick="{{ openCreate }}">＋ New lead form</button></div>
+        <div class="dx-card"><table><thead><tr><th>Form</th><th>URL</th><th>Fields</th><th>Leads</th><th>Actions</th></tr></thead><tbody>
+          <tr><td style="font-weight:600">Cohort waitlist</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/ldf/9QxLr</td><td>4</td><td style="font-weight:700">312</td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+        </tbody></table></div>
+      </sc-if>
+
+      <!-- ===== VIP CHANNEL ===== -->
+      <sc-if value="{{ isVip }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>VIP channel</h1><p>Paid Telegram / WhatsApp access — auto-grant after payment.</p></div><button class="btn grad" onClick="{{ openCreate }}">＋ New community</button></div>
+        <div class="dx-card"><table><thead><tr><th>Community</th><th>Platform</th><th>Price</th><th>Members</th><th>Actions</th></tr></thead><tbody>
+          <tr><td style="font-weight:600">Inner Circle</td><td>Telegram</td><td style="font-weight:700">₹499/mo</td><td>312</td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <a class="btn ghost" href="VIP Channel.dc.html" style="padding:6px 11px">Preview</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+        </tbody></table></div>
+      </sc-if>
+
+      <!-- ===== LANDING PAGES ===== -->
+      <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Landing pages</h1><p>Campaign pages for your ads.</p></div><button class="btn grad" onClick="{{ openCreate }}">＋ New landing page</button></div>
+        <div class="dx-card"><table><thead><tr><th>Page</th><th>URL</th><th>Visitors</th><th>Conversion</th><th>Actions</th></tr></thead><tbody>
+          <tr><td style="font-weight:600">Masterclass — Meta ad</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">/led/Bz92Kd</td><td>8,420</td><td style="font-weight:700;color:var(--green)">4.8%</td><td><a class="btn ghost" href="Page Builder.dc.html" style="padding:6px 11px">Edit</a> <a class="btn ghost" href="Landing Page.dc.html" style="padding:6px 11px">Preview</a> <button class="btn ghost" style="padding:6px 11px" onClick="{{ toastDelete }}">Delete</button></td></tr>
+        </tbody></table></div>
+      </sc-if>
+
+      <!-- ===== STORE ===== -->
+      <sc-if value="{{ isStore }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Store</h1><p>Products that power your storefront at aanya.invoxai.io/store.</p></div><button class="btn grad" onClick="{{ toastAdd }}">＋ Add product</button></div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">📦</div><div class="lbl">Products</div><div class="val">6</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">🟢</div><div class="lbl">Published</div><div class="val">5</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">🛒</div><div class="lbl">Units sold</div><div class="val">1,284</div></div>
+        </div>
+        <div class="dx-card">
+          <div class="dx-ctitle"><h3>All products</h3><a onClick="{{ goPages }}">Open builder →</a></div>
+          <table>
+            <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Sold</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎧</div><div style="font-weight:600">Mixing Masterclass</div></div></td><td><span class="dx-cat">Courses</span></td><td style="font-weight:700">₹1,499</td><td>2,140</td><td><span class="dx-pilltag t-paid">Live</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">📦</div><div style="font-weight:600">Preset Pack Vol.2</div></div></td><td><span class="dx-cat">Digital</span></td><td style="font-weight:700">₹599</td><td>1,420</td><td><span class="dx-pilltag t-paid">Live</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🥁</div><div style="font-weight:600">Lo-fi Drum Loops</div></div></td><td><span class="dx-cat">Digital</span></td><td style="font-weight:700">₹399</td><td>980</td><td><span class="dx-pilltag t-paid">Live</span></td></tr>
+              <tr><td><div class="dx-tg"><div class="dx-sq">🎹</div><div style="font-weight:600">Project Files Bundle</div></div></td><td><span class="dx-cat">Digital</span></td><td style="font-weight:700">₹799</td><td>540</td><td><span class="dx-pilltag t-pend">Draft</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+
+      <!-- ===== COURSES ===== -->
+      <sc-if value="{{ isCourses }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Courses</h1><p>Modules, lessons, video hosting &amp; purchase-gated access.</p></div><button class="btn grad" onClick="{{ toastAdd }}">＋ New course</button></div>
+        <div class="dx-grid dx-g2">
+          <div class="dx-card"><div class="dx-tg" style="margin-bottom:12px"><div class="dx-sq" style="width:46px;height:46px;font-size:22px">🎧</div><div><div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px">Mixing Masterclass</div><div style="color:var(--muted);font-size:12.5px">4 modules · 12 lessons · 6h 40m</div></div><span class="dx-live" style="margin-left:auto">Live</span></div><div style="height:7px;border-radius:99px;background:var(--surface2);overflow:hidden"><div style="height:100%;width:100%;background:var(--grad)"></div></div><div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px;color:var(--muted)"><span>2,140 students</span><button class="btn ghost" style="padding:6px 12px" onClick="{{ goCourses }}">Edit course</button></div></div>
+          <div class="dx-card"><div class="dx-tg" style="margin-bottom:12px"><div class="dx-sq" style="width:46px;height:46px;font-size:22px">🎚️</div><div><div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px">Vocal Chain Deep-Dive</div><div style="color:var(--muted);font-size:12.5px">2 modules · 6 lessons · 2h 10m</div></div><span class="dx-draft" style="margin-left:auto">Draft</span></div><div style="height:7px;border-radius:99px;background:var(--surface2);overflow:hidden"><div style="height:100%;width:60%;background:var(--grad)"></div></div><div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12.5px;color:var(--muted)"><span>60% built</span><button class="btn ghost" style="padding:6px 12px" onClick="{{ goCourses }}">Continue</button></div></div>
+        </div>
+      </sc-if>
+
+      <!-- ===== 1-TO-1 BOOKING ===== -->
+      <sc-if value="{{ isBooking }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>1-to-1 booking</h1><p>Services, availability, time-zones &amp; confirmations.</p></div><button class="btn grad" onClick="{{ toastAdd }}">＋ New service</button></div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">📅</div><div class="lbl">Bookings (30d)</div><div class="val">34</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">⏱</div><div class="lbl">Hours booked</div><div class="val">28</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">🧾</div><div class="lbl">Services</div><div class="val">3</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">₹</div><div class="lbl">Revenue</div><div class="val">₹29,400</div></div>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div>
+            <div class="dx-card" style="margin-bottom:16px"><div class="dx-ctitle"><h3>Your services</h3></div>
+              <div class="dx-srow"><div class="tx"><b>Mix review · 60 min</b><p>Live track feedback &amp; action plan</p></div><span style="font-weight:700;color:var(--primary)">₹999</span></div>
+              <div class="dx-srow"><div class="tx"><b>Quick consult · 30 min</b><p>Ask-me-anything call</p></div><span style="font-weight:700;color:var(--primary)">₹499</span></div>
+              <div class="dx-srow"><div class="tx"><b>Demo teardown · 45 min</b><p>Full mix critique</p></div><span style="font-weight:700;color:var(--primary)">₹799</span></div>
+            </div>
+            <div class="dx-card"><div class="dx-ctitle"><h3>Upcoming bookings</h3></div>
+              <table><thead><tr><th>Client</th><th>Service</th><th>When</th><th>Status</th></tr></thead><tbody>
+                <tr><td><div class="dx-tg"><div class="dx-sq">🧑</div><div style="font-weight:600">Rohan M.</div></div></td><td>Mix review</td><td style="color:var(--muted)">Thu 2:00pm</td><td><span class="dx-pilltag t-paid">Confirmed</span></td></tr>
+                <tr><td><div class="dx-tg"><div class="dx-sq">🧑</div><div style="font-weight:600">Priya S.</div></div></td><td>Quick consult</td><td style="color:var(--muted)">Fri 11:00am</td><td><span class="dx-pilltag t-paid">Confirmed</span></td></tr>
+                <tr><td><div class="dx-tg"><div class="dx-sq">🧑</div><div style="font-weight:600">Dev K.</div></div></td><td>Demo teardown</td><td style="color:var(--muted)">Mon 5:00pm</td><td><span class="dx-pilltag t-pend">Pending pay</span></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+          <div>
+            <div class="dx-card" style="margin-bottom:16px"><div class="dx-ctitle"><h3>Weekly availability</h3></div>
+              <div class="dx-field"><label>Time zone</label><select><option>Asia/Kolkata (IST)</option><option>America/New_York</option><option>Europe/London</option></select></div>
+              <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:6px">
+                <button class="dx-fchip on">Mon</button><button class="dx-fchip on">Tue</button><button class="dx-fchip">Wed</button><button class="dx-fchip on">Thu</button><button class="dx-fchip on">Fri</button>
+              </div>
+              <div class="dx-field" style="margin-top:12px"><label>Hours</label><div class="dx-ff"><input value="10:00" /><input value="18:00" /></div></div>
+              <button class="btn grad" onClick="{{ toastSave }}">Save availability</button>
+            </div>
+            <div class="dx-card"><div class="dx-ctitle"><h3>Confirmations</h3></div>
+              <div class="dx-srow"><div class="tx"><b>Email + calendar invite</b><p>Sent on payment</p></div><button class="dx-switch2 on"><i></i></button></div>
+              <div class="dx-srow"><div class="tx"><b>Reminder 1h before</b></div><button class="dx-switch2 on"><i></i></button></div>
+              <div class="dx-srow"><div class="tx"><b>Buffer between calls</b><p>15 min</p></div><button class="dx-switch2 on"><i></i></button></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== EVENTS ===== -->
+      <sc-if value="{{ isEvents }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Events</h1><p>Ticketed events — seats inventory, tiers &amp; attendees.</p></div><button class="btn grad" onClick="{{ toastAdd }}">＋ New event</button></div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">🎟️</div><div class="lbl">Events</div><div class="val">2</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">🎫</div><div class="lbl">Tickets sold</div><div class="val">54</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--secondary)">👥</div><div class="lbl">Attendees</div><div class="val">54</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">₹</div><div class="lbl">Revenue</div><div class="val">₹39,546</div></div>
+        </div>
+        <div class="dx-card" style="margin-bottom:16px"><div class="dx-ctitle"><h3>Your events</h3></div>
+          <table><thead><tr><th>Event</th><th>Date</th><th>Seats</th><th>Revenue</th><th>Status</th></tr></thead><tbody>
+            <tr><td><div class="dx-tg"><div class="dx-sq">🎟️</div><div style="font-weight:600">Live Mixing Workshop</div></div></td><td>28 Jun · 6pm</td><td>42 / 50</td><td style="font-weight:700">₹33,558</td><td><span class="dx-pilltag t-paid">Selling</span></td></tr>
+            <tr><td><div class="dx-tg"><div class="dx-sq">🎤</div><div style="font-weight:600">Vocal Recording AMA</div></div></td><td>5 Jul · 7pm</td><td>12 / 30</td><td style="font-weight:700">₹5,988</td><td><span class="dx-pilltag t-paid">Selling</span></td></tr>
+          </tbody></table>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card"><div class="dx-ctitle"><h3>Attendees · Live Mixing Workshop</h3><a onClick="{{ toastSave }}">Export list →</a></div>
+            <table><thead><tr><th>Name</th><th>Email</th><th>Ticket</th><th>Check-in</th></tr></thead><tbody>
+              <tr><td style="font-weight:600">Rohan Mehta</td><td style="color:var(--muted)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0f7d60676e614f68626e6663216c6062">[email&#160;protected]</a></td><td><span class="dx-cat">VIP</span></td><td><span class="dx-live">Ready</span></td></tr>
+              <tr><td style="font-weight:600">Sara Iyer</td><td style="color:var(--muted)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2457455645644b5150484b4b4f0a474b49">[email&#160;protected]</a></td><td><span class="dx-cat">General</span></td><td><span class="dx-live">Ready</span></td></tr>
+              <tr><td style="font-weight:600">Meera Nair</td><td style="color:var(--muted)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d9b4bcbcabb899beb4b8b0b5f7bab6b4">[email&#160;protected]</a></td><td><span class="dx-cat">General</span></td><td><span class="dx-live">Ready</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="dx-card"><div class="dx-ctitle"><h3>Ticket tiers</h3></div>
+            <div class="dx-srow"><div class="tx"><b>General</b><p>Live access + recording</p></div><span style="font-weight:700;color:var(--primary)">₹799</span></div>
+            <div class="dx-srow"><div class="tx"><b>VIP · Q&amp;A</b><p>+ live Q&amp;A &amp; project files</p></div><span style="font-weight:700;color:var(--primary)">₹1,499</span></div>
+            <div class="dx-field" style="margin-top:12px"><label>Total seats</label><input value="50" /></div>
+            <div class="dx-srow"><div class="tx"><b>Sold-out disables buy</b></div><button class="dx-switch2 on"><i></i></button></div>
+            <button class="btn grad" onClick="{{ toastSave }}">Save event</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== COUPONS ===== -->
+      <sc-if value="{{ isCoupons }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Coupons &amp; discount links</h1><p>Codes auto-apply across every paid page &amp; checkout.</p></div></div>
+        <div class="dx-grid dx-cols">
+          <div>
+            <div class="dx-card">
+              <div class="dx-ctitle"><h3>Active codes</h3></div>
+              <sc-for list="{{ coupons }}" as="c" hint-placeholder-count="3">
+                <div class="dx-cpn"><span class="code">{{ c.code }}</span><div><div style="font-weight:600;font-size:13px">{{ c.off }}</div><div class="meta">{{ c.scope }} · {{ c.used }} used</div></div><span class="dx-live st">Active</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Create coupon</h3></div>
+            <div class="dx-field"><label>Code</label><input value="{{ ncCode }}" onInput="{{ onNcCode }}" placeholder="SUMMER25" /></div>
+            <div class="dx-ff"><div class="dx-field"><label>Type</label><select><option>Percent %</option><option>Flat ₹</option></select></div><div class="dx-field"><label>Value</label><input value="{{ ncVal }}" onInput="{{ onNcVal }}" placeholder="25" /></div></div>
+            <button class="btn grad" style="width:100%" onClick="{{ addCoupon }}">Create coupon</button>
+            <div class="dx-code" style="margin-top:14px">aanya.invoxai.io/opp/a7Bx9KmQ?coupon={{ ncCodePrev }}</div>
+            <p style="color:var(--muted);font-size:12px;margin-top:8px">Share this link — the coupon auto-applies at checkout.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== EMAIL ===== -->
+      <sc-if value="{{ isEmail }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Email marketing</h1><p>Connect your own brand email and run campaigns &amp; automations.</p></div></div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Sending account</h3></div>
+            <div class="dx-seg2"><button class="{{ emGmail }}" onClick="{{ setGmail }}">Google Mail</button><button class="{{ emSmtp }}" onClick="{{ setSmtp }}">Custom SMTP</button></div>
+            <sc-if value="{{ isGmail }}" hint-placeholder-val="{{ true }}">
+              <div class="dx-field"><label>Google email</label><input placeholder="studio@gmail.com" /></div>
+              <div class="dx-field"><label>App password (16-char)</label><input placeholder="xxxx xxxx xxxx xxxx" /></div>
+            </sc-if>
+            <sc-if value="{{ isSmtp }}" hint-placeholder-val="{{ false }}">
+              <div class="dx-ff"><div class="dx-field"><label>Host</label><input placeholder="smtp.domain.com" /></div><div class="dx-field"><label>Port</label><input placeholder="587" /></div></div>
+              <div class="dx-field"><label>Username</label><input placeholder="postmaster@brand.com" /></div>
+            </sc-if>
+            <div style="display:flex;gap:9px;margin-top:6px"><button class="btn ghost" onClick="{{ toastTest }}">Send test email</button><button class="btn grad" onClick="{{ toastSave }}">Save &amp; verify</button></div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Campaigns</h3><a onClick="{{ toastAdd }}">＋ New</a></div>
+            <div class="dx-srow"><div class="tx"><b>Abandoned-cart recovery</b><p>Auto · 1h after drop-off</p></div><span class="dx-live">On</span></div>
+            <div class="dx-srow"><div class="tx"><b>New-product announce</b><p>Sent 18 Jun · 41% open</p></div><span class="dx-pilltag t-paid">Sent</span></div>
+            <div class="dx-srow"><div class="tx"><b>Welcome sequence</b><p>3 emails · automation</p></div><span class="dx-live">On</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PAYMENTS ===== -->
+      <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Payments</h1><p>Connect your own gateway — buyers pay you directly.</p></div></div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Razorpay</h3><span class="{{ gwLive }}">{{ gwStatus }}</span></div>
+            <div class="dx-field"><label>Key ID</label><input placeholder="rzp_live_xxxxxxxx" value="{{ gwKey }}" onInput="{{ onGwKey }}" /></div>
+            <div class="dx-field"><label>Key secret</label><input type="password" placeholder="••••••••••••" /></div>
+            <div class="dx-srow"><div class="tx"><b>Accept payments</b><p>Route checkout through these keys</p></div><button class="dx-switch2 {{ gwOnClass }}" onClick="{{ toggleGw }}"><i></i></button></div>
+            <button class="btn grad" style="margin-top:6px" onClick="{{ toastSave }}">Save gateway</button>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Other gateways</h3></div>
+            <div class="dx-srow"><div class="tx"><b>Cashfree</b><p>UPI · cards · netbanking</p></div><button class="btn ghost" onClick="{{ toastAdd }}">Connect</button></div>
+            <div class="dx-srow"><div class="tx"><b>Stripe</b><p>International cards</p></div><button class="btn ghost" onClick="{{ toastAdd }}">Connect</button></div>
+            <div class="dx-srow"><div class="tx"><b>PhonePe</b><p>UPI-first</p></div><button class="btn ghost" onClick="{{ toastAdd }}">Connect</button></div>
+            <div class="dx-srow"><div class="tx"><b>PayU</b><p>Cards · UPI · EMI</p></div><button class="btn ghost" onClick="{{ toastAdd }}">Connect</button></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== DOMAINS ===== -->
+      <sc-if value="{{ isDomains }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Domains</h1><p>1 free subdomain + 1 custom domain included.</p></div></div>
+        <div class="dx-grid dx-cols">
+          <div>
+            <div class="dx-card" style="margin-bottom:16px">
+              <div class="dx-ctitle"><h3>Subdomain</h3><span class="dx-live">Active</span></div>
+              <div class="dx-code">aanya.invoxai.io</div>
+              <p style="color:var(--muted);font-size:12.5px;margin-top:10px">Free · included on every plan. Need more? Extra subdomains are a paid add-on.</p>
+            </div>
+            <div class="dx-card">
+              <div class="dx-ctitle"><h3>Custom domain</h3><span class="{{ domLive }}">{{ domStatus }}</span></div>
+              <div class="dx-field"><label>Your domain</label><input placeholder="studioaanya.com" value="{{ domVal }}" onInput="{{ onDom }}" /></div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Add this CNAME at your registrar:</div>
+              <div class="dx-code">CNAME · @ → cname.invoxai.io</div>
+              <button class="btn grad" style="width:100%;margin-top:12px" onClick="{{ verifyDom }}">Verify &amp; issue SSL</button>
+            </div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>On connect</h3></div>
+            <div class="dx-srow"><div class="tx"><b>Pages auto-shift</b><p>Every page moves to your domain</p></div><span class="dx-live">Auto</span></div>
+            <div class="dx-srow"><div class="tx"><b>301 redirects</b><p>Old subdomain URLs forward</p></div><span class="dx-live">Auto</span></div>
+            <div class="dx-srow"><div class="tx"><b>SSL certificate</b><p>Issued automatically via Caddy</p></div><span class="dx-live">Auto</span></div>
+            <div class="dx-srow"><div class="tx"><b>Canonical tags</b><p>Point to the custom domain</p></div><span class="dx-live">Auto</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== SETTINGS ===== -->
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Settings</h1><p>Store profile &amp; account.</p></div><button class="btn grad" onClick="{{ toastSave }}">Save changes</button></div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Store profile</h3></div>
+            <div class="dx-field"><label>Store name</label><input value="Studio Aanya" /></div>
+            <div class="dx-field"><label>Business category</label><select><option>Courses — 6% commission</option><option>Digital products — 4%</option><option>Services — 5%</option></select></div>
+            <div class="dx-field"><label>Support email</label><input value="hello@studioaanya.com" /></div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Preferences</h3></div>
+            <div class="dx-srow"><div class="tx"><b>“Built with invoxai” badge</b><p>Show on public pages</p></div><button class="dx-switch2 {{ badgeClass }}" onClick="{{ toggleBadge }}"><i></i></button></div>
+            <div class="dx-srow"><div class="tx"><b>Order email notifications</b><p>Email me on every sale</p></div><button class="dx-switch2 on"><i></i></button></div>
+            <div class="dx-srow"><div class="tx"><b>Dark dashboard</b><p>Use the Twilight theme</p></div><button class="dx-switch2 {{ darkPref }}" onClick="{{ toggleTheme }}"><i></i></button></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== CHECKOUT SETTINGS ===== -->
+      <sc-if value="{{ isCheckout }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Checkout</h1><p>Page-type-aware checkout — bumps, coupons, custom fields, pixels.</p></div></div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Checkout options</h3></div>
+            <div class="dx-srow"><div class="tx"><b>Coupon field</b><p>Let buyers enter a code</p></div><button class="dx-switch2 on"><i></i></button></div>
+            <div class="dx-srow"><div class="tx"><b>Order bump</b><p>One-click add-on before pay</p></div><button class="dx-switch2 on"><i></i></button></div>
+            <div class="dx-srow"><div class="tx"><b>Custom fields</b><p>Collect extra info at checkout</p></div><button class="dx-switch2 {{ ckCustomCls }}" onClick="{{ tglCkCustom }}"><i></i></button></div>
+            <div class="dx-srow"><div class="tx"><b>Ad pixels on checkout</b><p>Fire Purchase events</p></div><button class="dx-switch2 on"><i></i></button></div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Order bump offer</h3></div>
+            <div class="dx-field"><label>Title</label><input value="Add the Preset Pack" /></div>
+            <div class="dx-ff"><div class="dx-field"><label>Price ₹</label><input value="299" /></div><div class="dx-field"><label>Compare ₹</label><input value="599" /></div></div>
+            <button class="btn grad" onClick="{{ toastSave }}">Save checkout</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PIXELS & SEO ===== -->
+      <sc-if value="{{ isSeo }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Pixels &amp; SEO</h1><p>Store-wide defaults — per-page settings live inside each builder.</p></div><button class="btn grad" onClick="{{ toastSave }}">Save</button></div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>SEO defaults</h3></div>
+            <div class="dx-field"><label>Default meta title</label><input placeholder="Studio Aanya — music production" /></div>
+            <div class="dx-field"><label>Default meta description</label><input placeholder="Courses, packs &amp; coaching" /></div>
+            <div class="dx-srow"><div class="tx"><b>Index on Google</b><p>Auto sitemap.xml + robots.txt</p></div><button class="dx-switch2 on"><i></i></button></div>
+          </div>
+          <div class="dx-card">
+            <div class="dx-ctitle"><h3>Ad pixels</h3></div>
+            <div class="dx-field"><label>Meta Pixel ID</label><input placeholder="123456789012345" /></div>
+            <div class="dx-field"><label>Google Ads tag</label><input placeholder="AW-XXXXXXXX" /></div>
+            <p class="dx-muted" style="font-size:12px;margin-top:8px">Events fire on every public page incl. checkout.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== UPSELL ===== -->
+      <sc-if value="{{ isUpsell }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Upsell</h1><p>Offer add-ons at &amp; after checkout to lift order value.</p></div><button class="btn grad" onClick="{{ toastAdd }}">＋ New offer</button></div>
+        <div class="dx-card">
+          <div class="dx-ctitle"><h3>Upsell offers</h3></div>
+          <table>
+            <thead><tr><th>Trigger product</th><th>Offer</th><th>Discount</th><th>Conversion</th></tr></thead>
+            <tbody>
+              <tr><td>Mixing Masterclass</td><td>Preset Pack Vol.2</td><td>₹299 (50% off)</td><td style="font-weight:700;color:var(--green)">18%</td></tr>
+              <tr><td>Vocal Chain Course</td><td>1-to-1 review</td><td>₹699</td><td style="font-weight:700;color:var(--green)">9%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+
+      <!-- ===== ABANDONED CART ===== -->
+      <sc-if value="{{ isAband }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Abandoned cart</h1><p>Recover unfinished checkouts with an automatic email.</p></div></div>
+        <div class="dx-grid dx-kpis">
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--grad)">🛒</div><div class="lbl">Abandoned (30d)</div><div class="val">38</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--accent)">↩️</div><div class="lbl">Recovered</div><div class="val">11</div></div>
+          <div class="dx-card dx-kpi"><div class="ic" style="background:var(--gold)">₹</div><div class="lbl">Recovered value</div><div class="val">₹14,300</div></div>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card"><div class="dx-ctitle"><h3>Recent abandoned</h3></div><table><thead><tr><th>Buyer</th><th>Product</th><th>Amount</th><th>Stage</th></tr></thead><tbody><tr><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c6b4a7aeb3aa86a1aba7afaae8a5a9ab">[email&#160;protected]</a></td><td>Mixing Masterclass</td><td style="font-weight:700">₹1,499</td><td><span class="dx-pilltag t-pend">Email sent</span></td></tr><tr><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fa8e9b889bba9d979b9396d4999597">[email&#160;protected]</a></td><td>Preset Pack</td><td style="font-weight:700">₹599</td><td><span class="dx-pilltag t-neu">Detected</span></td></tr></tbody></table></div>
+          <div class="dx-card"><div class="dx-ctitle"><h3>Recovery email</h3></div><div class="dx-srow"><div class="tx"><b>Auto recovery</b><p>Send via your brand email</p></div><button class="dx-switch2 {{ abandCls }}" onClick="{{ tglAband }}"><i></i></button></div><div class="dx-field" style="margin-top:10px"><label>Delay after abandonment</label><select><option>1 hour</option><option>3 hours</option><option>24 hours</option></select></div><button class="btn grad" onClick="{{ toastSave }}">Save</button></div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PLAN & BILLING ===== -->
+      <sc-if value="{{ isBilling }}" hint-placeholder-val="{{ false }}">
+        <div class="dx-phead"><div><h1>Plan &amp; billing</h1><p>Your subscription and invoices.</p></div></div>
+        <div class="dx-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+          <div class="dx-card"><div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px">Starter</div><div style="font-family:'Sora',sans-serif;font-weight:800;font-size:26px;margin:6px 0 2px">Free</div><div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--muted);margin:12px 0"><span>✓ 1 subdomain</span><span>✓ Bio + 1 product</span><span>✓ 6% commission</span></div><button class="btn ghost" style="width:100%;justify-content:center" onClick="{{ toastSave }}">Downgrade</button></div>
+          <div class="dx-card" style="border-color:var(--primary)"><div style="font-size:10px;font-weight:700;color:#fff;background:var(--grad);display:inline-block;padding:3px 10px;border-radius:99px">Current</div><div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px;margin-top:8px">Growth</div><div style="font-family:'Sora',sans-serif;font-weight:800;font-size:26px;margin:6px 0 2px">₹899 <small style="font-size:12px;color:var(--muted);font-weight:500">/mo</small></div><div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--muted);margin:12px 0"><span>✓ Custom domain</span><span>✓ Store, courses &amp; events</span><span>✓ 3% commission</span><span>✓ Abandoned cart</span></div><button class="btn ghost" style="width:100%;justify-content:center" disabled>Current plan</button></div>
+          <div class="dx-card"><div style="font-family:'Sora',sans-serif;font-weight:700;font-size:16px">Scale</div><div style="font-family:'Sora',sans-serif;font-weight:800;font-size:26px;margin:6px 0 2px">₹2,499 <small style="font-size:12px;color:var(--muted);font-weight:500">/mo</small></div><div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--muted);margin:12px 0"><span>✓ 5 custom domains</span><span>✓ Premium templates</span><span>✓ 1.5% commission</span><span>✓ Brand email</span></div><button class="btn grad" style="width:100%;justify-content:center" onClick="{{ toastSave }}">Upgrade</button></div>
+        </div>
+        <div class="dx-grid dx-cols">
+          <div class="dx-card"><div class="dx-ctitle"><h3>Invoices</h3></div><table><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead><tbody><tr><td>#INV-0042</td><td>1 Jun</td><td style="font-weight:700">₹899</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr><tr><td>#INV-0031</td><td>1 May</td><td style="font-weight:700">₹899</td><td><span class="dx-pilltag t-paid">Paid</span></td></tr></tbody></table></div>
+          <div class="dx-card" style="border-color:var(--primary)"><div style="font-size:11px;font-weight:700;color:#fff;background:var(--grad);display:inline-block;padding:3px 10px;border-radius:99px">Current</div><div style="font-family:'Sora',sans-serif;font-weight:700;font-size:17px;margin-top:10px">Growth</div><div style="font-family:'Sora',sans-serif;font-weight:800;font-size:28px;margin:6px 0 2px">₹899 <small style="font-size:13px;color:var(--muted);font-weight:500">/mo</small></div><div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);margin:14px 0"><span>✓ Custom domain</span><span>✓ 3% commission</span><span>✓ Store, courses &amp; events</span></div><button class="btn grad" onClick="{{ toastSave }}">Upgrade to Scale</button></div>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+  <sc-if value="{{ createOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeCreate }}" style="position:fixed;inset:0;z-index:90;background:rgba(20,12,25,.5);backdrop-filter:blur(2px)"></div>
+    <div style="position:fixed;z-index:91;left:50%;top:50%;transform:translate(-50%,-50%);width:min(580px,92vw);background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 30px 80px -30px rgba(0,0,0,.5);overflow:hidden">
+      <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)"><h3 style="font-size:17px">Create a page</h3><button onClick="{{ closeCreate }}" style="margin-left:auto;width:30px;height:30px;border:0;background:var(--surface2);color:var(--text);border-radius:8px;cursor:pointer">✕</button></div>
+      <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:60vh;overflow-y:auto">
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">📦</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">One-page product</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/opp</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">🎯</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Landing page</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/led</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">🛍️</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Store</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/store</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">🎓</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Courses</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/courses</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">📅</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">1-to-1 booking</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/book</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">🎟️</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Event</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/env</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">💳</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Payment page</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/pay</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">📝</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Lead form</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/ldf</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">⭐</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">VIP channel</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/vpc</span></a>
+        <a href="Page Builder.dc.html" style="text-decoration:none;color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:7px"><span style="font-size:22px">🔗</span><b style="font-family:'Sora',sans-serif;font-size:13.5px">Link-in-bio</b><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)">/bio</span></a>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+    <div class="dx-toast"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", page: "home",
+    createOpen: false, ckCustom: true, aband: true,
+    gw: true, gwKey: "rzp_live_8Kd92mQ", emailMethod: "gmail",
+    badge: true, domVal: "", domVerified: false,
+    ncCode: "", ncVal: "",
+    coupons: [
+      { code: "LAUNCH20", off: "20% off", scope: "All products", used: "142" },
+      { code: "WELCOME10", off: "₹100 off", scope: "First order", used: "58" },
+      { code: "COURSE50", off: "50% off", scope: "Courses", used: "23" }
+    ],
+    toast: false, toastMsg: ""
+  };
+
+  fire(msg) {
+    this.setState({ toast: true, toastMsg: msg });
+    clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 2200);
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  addCoupon() {
+    const code = (this.state.ncCode || "NEWCODE").toUpperCase();
+    const off = (this.state.ncVal || "10") + "% off";
+    this.setState(s => ({ coupons: [{ code, off, scope: "All products", used: "0" }, ...s.coupons], ncCode: "", ncVal: "" }));
+    this.fire("✓ Coupon " + code + " created — link ready to share");
+  }
+
+  renderVals() {
+    const p = this.state.page;
+    const titles = {
+      home: "Dashboard", analytics: "Analytics", pages: "Pages", store: "Store", courses: "Courses",
+      website: "Website", bio: "Bio page", products: "One-page products", payment: "Payment pages", leadform: "Lead forms", vip: "VIP channel", landing: "Landing pages",
+      booking: "Booking", events: "Events", checkout: "Checkout", seo: "Pixels & SEO",
+      orders: "Customers · CRM", coupons: "Coupons", upsell: "Upsell", aband: "Abandoned cart", email: "Email marketing",
+      wallet: "Wallet", pay: "Payments", billing: "Plan & billing", domains: "Domains", settings: "Settings"
+    };
+    const set = (page) => () => this.setState({ page });
+    const nav = (k) => (p === k ? "act" : "");
+    const dark = this.state.theme === "dark";
+    return {
+      darkClass: dark ? "dark" : "",
+      themeIcon: dark ? "☀" : "☾",
+      toggleTheme: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      page: p, pageTitle: titles[p] || "Dashboard",
+
+      isHome: p === "home", isAnalytics: p === "analytics", isPages: p === "pages",
+      isStore: p === "store", isCourses: p === "courses", isBooking: p === "booking", isEvents: p === "events",
+      isOrders: p === "orders", isCoupons: p === "coupons", isEmail: p === "email",
+      isWallet: p === "wallet", isPay: p === "pay", isDomains: p === "domains", isSettings: p === "settings",
+
+      navHome: nav("home"), navAnalytics: nav("analytics"), navPages: nav("pages"),
+      navStore: nav("store"), navCourses: nav("courses"), navBooking: nav("booking"), navEvents: nav("events"),
+      navOrders: nav("orders"), navCoupons: nav("coupons"), navEmail: nav("email"),
+      navWallet: nav("wallet"), navPay: nav("pay"), navDomains: nav("domains"), navSettings: nav("settings"),
+
+      goHome: set("home"), goAnalytics: set("analytics"), goPages: set("pages"),
+      goStore: set("store"), goCourses: set("courses"), goBooking: set("booking"), goEvents: set("events"),
+      goOrders: set("orders"), goCoupons: set("coupons"), goEmail: set("email"),
+      goWallet: set("wallet"), goPay: set("pay"), goDomains: set("domains"), goSettings: set("settings"),
+
+      isCheckout: p === "checkout", isSeo: p === "seo", isUpsell: p === "upsell", isAband: p === "aband", isBilling: p === "billing",
+      navCheckout: nav("checkout"), navSeo: nav("seo"), navUpsell: nav("upsell"), navAband: nav("aband"), navBilling: nav("billing"),
+      goCheckout: set("checkout"), goSeo: set("seo"), goUpsell: set("upsell"), goAband: set("aband"), goBilling: set("billing"),
+      createOpen: this.state.createOpen, openCreate: () => this.setState({ createOpen: true }), closeCreate: () => this.setState({ createOpen: false }),
+      ckCustomCls: this.state.ckCustom ? "on" : "", tglCkCustom: () => this.setState(st => ({ ckCustom: !st.ckCustom })),
+      abandCls: this.state.aband ? "on" : "", tglAband: () => this.setState(st => ({ aband: !st.aband })),
+      isWebsite: p === "website", isBio: p === "bio", isProducts: p === "products", isPayment: p === "payment", isLeadform: p === "leadform", isVip: p === "vip", isLanding: p === "landing",
+      navWebsite: nav("website"), navBio: nav("bio"), navProducts: nav("products"), navPayment: nav("payment"), navLeadform: nav("leadform"), navVip: nav("vip"), navLanding: nav("landing"),
+      goWebsite: set("website"), goBio: set("bio"), goProducts: set("products"), goPayment: set("payment"), goLeadform: set("leadform"), goVip: set("vip"), goLanding: set("landing"),
+      toastDelete: () => this.fire("🗑 Deleted"),
+
+      // payments
+      gwOnClass: this.state.gw ? "on" : "", gwLive: this.state.gw ? "dx-live" : "dx-draft",
+      gwStatus: this.state.gw ? "Connected" : "Off", gwKey: this.state.gwKey,
+      onGwKey: (e) => this.setState({ gwKey: e.target.value }),
+      toggleGw: () => { const on = !this.state.gw; this.setState({ gw: on }); this.fire(on ? "✓ Razorpay connected — checkout is live" : "Payments paused"); },
+
+      // email
+      emGmail: this.state.emailMethod === "gmail" ? "on" : "", emSmtp: this.state.emailMethod === "smtp" ? "on" : "",
+      isGmail: this.state.emailMethod === "gmail", isSmtp: this.state.emailMethod === "smtp",
+      setGmail: () => this.setState({ emailMethod: "gmail" }), setSmtp: () => this.setState({ emailMethod: "smtp" }),
+      toastTest: () => this.fire("✓ Test email sent — check your inbox"),
+
+      // coupons
+      coupons: this.state.coupons,
+      ncCode: this.state.ncCode, ncVal: this.state.ncVal,
+      ncCodePrev: (this.state.ncCode || "SUMMER25").toUpperCase(),
+      onNcCode: (e) => this.setState({ ncCode: e.target.value.toUpperCase() }),
+      onNcVal: (e) => this.setState({ ncVal: e.target.value.replace(/[^0-9]/g, "") }),
+      addCoupon: () => this.addCoupon(),
+
+      // domains
+      domVal: this.state.domVal, onDom: (e) => this.setState({ domVal: e.target.value }),
+      domLive: this.state.domVerified ? "dx-live" : "dx-draft",
+      domStatus: this.state.domVerified ? "Verified · SSL live" : "Not connected",
+      verifyDom: () => { this.setState({ domVerified: true }); this.fire("✓ DNS verified — SSL issued, pages shifted"); },
+
+      // settings
+      badgeClass: this.state.badge ? "on" : "", toggleBadge: () => this.setState(s => ({ badge: !s.badge })),
+      darkPref: dark ? "on" : "",
+
+      // shared
+      toastAdd: () => this.fire("✦ Opening editor…"),
+      toastSlot: () => this.fire("✓ Slot availability updated"),
+      toastSave: () => this.fire("✓ Saved"),
+      toastShow: this.state.toast, toastMsg: this.state.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

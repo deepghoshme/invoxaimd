@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes ob-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8%,6%) scale(1.2); } }
+  @keyframes ob-a2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-7%,5%) scale(1.15); } }
+  @keyframes ob-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes ob-spin { to { transform: rotate(360deg); } }
+  @keyframes ob-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes ob-pop { from { transform: scale(.9); } to { transform: scale(1); } }
+
+  .ob {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a; --red: #e5476f;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow-xl: 0 40px 90px -40px rgba(43,27,46,.45);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; position: relative;
+    -webkit-font-smoothing: antialiased; line-height: 1.55; display: flex; flex-direction: column;
+  }
+  .ob[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --red: #ff6f93;
+  }
+  .ob h1,.ob h2 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .ob p { margin: 0; }
+
+  .ob-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .ob-blob { position: absolute; width: 48vmax; height: 48vmax; border-radius: 50%; filter: blur(90px); opacity: .32; }
+  .ob-blob.b1 { background: var(--gold); top: -18vmax; left: -10vmax; animation: ob-a1 26s ease-in-out infinite; }
+  .ob-blob.b2 { background: var(--accent); bottom: -18vmax; right: -10vmax; animation: ob-a2 30s ease-in-out infinite; }
+
+  .ob-top { position: relative; z-index: 2; display: flex; align-items: center; padding: 18px 26px; }
+  .ob-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 17px; }
+  .ob-logo { width: 27px; height: 27px; border-radius: 8px; background: var(--grad); }
+  .ob-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .ob-stage { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 22px 50px; }
+  .ob-card { width: 100%; max-width: 520px; background: var(--card); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-xl); padding: 30px; }
+
+  .ob-steps { display: flex; gap: 7px; margin-bottom: 26px; }
+  .ob-stepdot { flex: 1; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .ob-stepdot.done { background: var(--grad); }
+  .ob-stepdot.cur { background: var(--border); position: relative; } .ob-stepdot.cur::after { content: ""; position: absolute; inset: 0; width: 60%; background: var(--grad); border-radius: 3px; }
+
+  .ob-view { animation: ob-in .35s ease; }
+  .ob-stepno { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--primary); }
+  .ob-h1 { font-size: 26px; font-weight: 800; margin: 8px 0 6px; }
+  .ob-lead { color: var(--muted); font-size: 14.5px; margin-bottom: 22px; }
+
+  .ob-label { display: block; font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; }
+  .ob-input { width: 100%; padding: 13px 15px; font: inherit; font-size: 15px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .ob-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent); }
+  .ob-otp { text-align: center; font-family: var(--fh); font-weight: 800; font-size: 30px; letter-spacing: 14px; padding-left: 14px; }
+  .ob-sfx { display: flex; align-items: center; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+  .ob-sfx.ok { border-color: var(--green); } .ob-sfx.bad { border-color: var(--red); }
+  .ob-sfx:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent); }
+  .ob-sfx input { flex: 1; border: 0; background: transparent; padding: 13px 15px; font: inherit; font-size: 15px; color: var(--text); outline: none; }
+  .ob-sfx .tail { padding: 0 15px; color: var(--muted); font-size: 14px; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+  .ob-avail { font-size: 12.5px; font-weight: 600; margin-top: 8px; display: flex; align-items: center; gap: 7px; min-height: 16px; }
+  .ob-avail.ok { color: var(--green); } .ob-avail.bad { color: var(--red); } .ob-avail.checking { color: var(--muted); }
+  .ob-mini-spin { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: ob-spin .7s linear infinite; }
+
+  .ob-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ob-cat { border: 1.5px solid var(--border); border-radius: 14px; padding: 15px; cursor: pointer; background: var(--card); position: relative; }
+  .ob-cat.on { border-color: var(--primary); background: color-mix(in srgb,var(--primary) 6%,transparent); }
+  .ob-cat .ico { font-size: 24px; } .ob-cat .nm { font-family: var(--fh); font-weight: 700; font-size: 14px; margin-top: 8px; }
+  .ob-cat .comm { font-size: 11.5px; color: var(--muted); margin-top: 3px; } .ob-cat .comm b { color: var(--primary); }
+  .ob-cat .tick { position: absolute; top: 11px; right: 11px; width: 20px; height: 20px; border-radius: 50%; background: var(--primary); color: #fff; display: none; place-items: center; font-size: 12px; } .ob-cat.on .tick { display: grid; }
+
+  .ob-ff { display: flex; gap: 12px; } .ob-ff > * { flex: 1; }
+  .ob-row { display: flex; gap: 11px; align-items: center; margin-top: 26px; }
+  .ob-back { font: inherit; font-family: var(--fh); font-weight: 600; font-size: 14px; padding: 13px 18px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+  .ob-next { position: relative; overflow: hidden; flex: 1; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .ob-next:disabled { opacity: .5; cursor: not-allowed; }
+  .ob-next .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .4; filter: blur(3px); animation: ob-shine 3s ease-in-out infinite; }
+  .ob-resend { font-size: 12.5px; color: var(--muted); margin-top: 14px; text-align: center; } .ob-resend a { color: var(--primary); cursor: pointer; font-weight: 600; }
+
+  /* done */
+  .ob-done { text-align: center; padding: 10px 0; animation: ob-pop .45s cubic-bezier(.2,.8,.2,1); }
+  .ob-check { width: 76px; height: 76px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-size: 36px; margin: 0 auto 18px; box-shadow: 0 16px 40px -12px color-mix(in srgb,var(--primary) 70%,transparent); }
+  .ob-done h2 { font-size: 26px; } .ob-done p { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
+  .ob-url { font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin: 18px 0; color: var(--primary); font-weight: 600; }
+  .ob-firstpages { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin: 16px 0 4px; }
+  .ob-fp { border: 1px solid var(--border); border-radius: 12px; padding: 14px 8px; text-align: center; cursor: pointer; background: var(--card); transition: border-color .15s, transform .15s; }
+  .ob-fp:hover { border-color: var(--primary); transform: translateY(-3px); }
+  .ob-fp .e { font-size: 24px; } .ob-fp .l { font-size: 12px; font-weight: 600; margin-top: 6px; }
+
+  @media (max-width: 520px) { .ob-cats, .ob-firstpages { grid-template-columns: 1fr; } .ob-firstpages { grid-template-columns: repeat(3,1fr); } }
+</style>
+</helmet>
+
+<div class="ob" data-theme="{{ theme }}">
+  <div class="ob-bg"><div class="ob-blob b1"></div><div class="ob-blob b2"></div></div>
+
+  <div class="ob-top">
+    <div class="ob-brand"><span class="ob-logo"></span>invoxai</div>
+    <button class="ob-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+  </div>
+
+  <div class="ob-stage">
+    <div class="ob-card">
+
+      <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+        <div class="ob-steps">
+          <span class="ob-stepdot {{ d0 }}"></span><span class="ob-stepdot {{ d1 }}"></span><span class="ob-stepdot {{ d2 }}"></span><span class="ob-stepdot {{ d3 }}"></span><span class="ob-stepdot {{ d4 }}"></span>
+        </div>
+
+        <!-- STEP 0 · OTP -->
+        <sc-if value="{{ isS0 }}" hint-placeholder-val="{{ true }}">
+          <div class="ob-view">
+            <div class="ob-stepno">Step 1 of 5</div>
+            <h1 class="ob-h1">Verify your email</h1>
+            <p class="ob-lead">We sent a 6-digit code to <b style="color:var(--text)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f190909f8890b182858495989edf989f">[email&#160;protected]</a></b>. Enter it below to continue.</p>
+            <label class="ob-label">Verification code</label>
+            <input class="ob-input ob-otp" inputmode="numeric" maxlength="6" placeholder="••••••" value="{{ otp }}" onInput="{{ onOtp }}" />
+            <div class="ob-resend">Didn't get it? <a>Resend code</a> · <a>Change email</a></div>
+          </div>
+        </sc-if>
+
+        <!-- STEP 1 · STORE NAME -->
+        <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ false }}">
+          <div class="ob-view">
+            <div class="ob-stepno">Step 2 of 5</div>
+            <h1 class="ob-h1">Name your store</h1>
+            <p class="ob-lead">This is how buyers will recognise you. You can change it anytime.</p>
+            <label class="ob-label">Store name</label>
+            <input class="ob-input" placeholder="e.g. Studio Aanya" value="{{ store }}" onInput="{{ onStore }}" />
+          </div>
+        </sc-if>
+
+        <!-- STEP 2 · SUBDOMAIN -->
+        <sc-if value="{{ isS2 }}" hint-placeholder-val="{{ false }}">
+          <div class="ob-view">
+            <div class="ob-stepno">Step 3 of 5</div>
+            <h1 class="ob-h1">Claim your subdomain</h1>
+            <p class="ob-lead">Your free address on invoxai. Connect a custom domain later from Settings.</p>
+            <label class="ob-label">Subdomain</label>
+            <div class="ob-sfx {{ subState }}">
+              <input placeholder="yourname" value="{{ sub }}" onInput="{{ onSub }}" />
+              <span class="tail">.invoxai.io</span>
+            </div>
+            <div class="ob-avail {{ subState }}">
+              <sc-if value="{{ subChecking }}" hint-placeholder-val="{{ false }}"><span class="ob-mini-spin"></span>Checking availability…</sc-if>
+              <sc-if value="{{ subOk }}" hint-placeholder-val="{{ false }}">✓ {{ sub }}.invoxai.io is available</sc-if>
+              <sc-if value="{{ subBad }}" hint-placeholder-val="{{ false }}">✕ {{ subMsg }}</sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- STEP 3 · CATEGORY -->
+        <sc-if value="{{ isS3 }}" hint-placeholder-val="{{ false }}">
+          <div class="ob-view">
+            <div class="ob-stepno">Step 4 of 5</div>
+            <h1 class="ob-h1">What do you sell?</h1>
+            <p class="ob-lead">This sets your per-sale commission rate. Pick the closest fit.</p>
+            <div class="ob-cats">
+              <sc-for list="{{ cats }}" as="c" hint-placeholder-count="4">
+                <div class="ob-cat {{ c.on }}" onClick="{{ c.pick }}"><span class="tick">✓</span><div class="ico">{{ c.ico }}</div><div class="nm">{{ c.nm }}</div><div class="comm"><b>{{ c.rate }}</b> commission</div></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- STEP 4 · BILLING -->
+        <sc-if value="{{ isS4 }}" hint-placeholder-val="{{ false }}">
+          <div class="ob-view">
+            <div class="ob-stepno">Step 5 of 5</div>
+            <h1 class="ob-h1">Billing details</h1>
+            <p class="ob-lead">For invoices and your commission wallet. GST is optional.</p>
+            <label class="ob-label">Billing name</label>
+            <input class="ob-input" placeholder="Legal / business name" value="{{ billName }}" onInput="{{ onBillName }}" />
+            <div class="ob-ff">
+              <div><label class="ob-label">City</label><input class="ob-input" placeholder="Mumbai" value="{{ city }}" onInput="{{ onCity }}" /></div>
+              <div><label class="ob-label">GSTIN (optional)</label><input class="ob-input" placeholder="22AAAAA0000A1Z5" /></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <div class="ob-row">
+          <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}"><button class="ob-back" onClick="{{ back }}">‹ Back</button></sc-if>
+          <button class="ob-next" onClick="{{ next }}" disabled="{{ nextDisabled }}">{{ nextLabel }}<span class="sh"></span></button>
+        </div>
+      </sc-if>
+
+      <!-- DONE -->
+      <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+        <div class="ob-done">
+          <div class="ob-check">✓</div>
+          <h2>You're all set, {{ firstName }}!</h2>
+          <p>{{ store }} is live. Your store address:</p>
+          <div class="ob-url">{{ sub }}.invoxai.io</div>
+          <p style="font-weight:600;color:var(--text)">Create your first page to get started</p>
+          <div class="ob-firstpages">
+            <div class="ob-fp"><div class="e">🔗</div><div class="l">Link-in-bio</div></div>
+            <div class="ob-fp"><div class="e">🛍️</div><div class="l">Store</div></div>
+            <div class="ob-fp"><div class="e">📦</div><div class="l">Product</div></div>
+          </div>
+          <button class="ob-next" style="margin-top:14px">Go to dashboard →<span class="sh"></span></button>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:620,&quot;height&quot;:760}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", step: 0, done: false,
+    otp: "", store: "", sub: "", subStatus: "idle", cat: -1,
+    billName: "", city: ""
+  };
+
+  RESERVED = ["app","admin","www","api","mail","blog","help","support","cdn","assets","status"];
+  CATS = [
+    { ico: "🎓", nm: "Courses", rate: "6%", key: "courses" },
+    { ico: "📦", nm: "Digital products", rate: "4%", key: "digital" },
+    { ico: "🛍️", nm: "Physical goods", rate: "5%", key: "physical" },
+    { ico: "🎟️", nm: "Events & tickets", rate: "5%", key: "events" },
+    { ico: "📅", nm: "Services", rate: "5%", key: "services" },
+    { ico: "⭐", nm: "Memberships", rate: "7%", key: "members" }
+  ];
+
+  onSub(v) {
+    const clean = v.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    this.setState({ sub: clean, subStatus: clean.length < 3 ? "idle" : "checking" });
+    clearTimeout(this._subT);
+    if (clean.length >= 3) {
+      this._subT = setTimeout(() => {
+        const taken = this.RESERVED.includes(clean);
+        this.setState({ subStatus: taken ? "bad" : "ok" });
+      }, 800);
+    }
+  }
+
+  next() {
+    const s = this.state;
+    if (s.step >= 4) { this.setState({ done: true }); return; }
+    this.setState({ step: s.step + 1 });
+  }
+  back() { this.setState(s => ({ step: Math.max(0, s.step - 1) })); }
+
+  renderVals() {
+    const s = this.state;
+    const cats = this.CATS.map((c, i) => ({ ico: c.ico, nm: c.nm, rate: c.rate, on: s.cat === i ? "on" : "", pick: () => this.setState({ cat: i }) }));
+
+    // per-step gating
+    let nextDisabled = false, nextLabel = "Continue →";
+    if (s.step === 0) { nextDisabled = s.otp.replace(/\D/g, "").length !== 6; nextLabel = "Verify & continue →"; }
+    if (s.step === 1) { nextDisabled = s.store.trim().length < 2; }
+    if (s.step === 2) { nextDisabled = s.subStatus !== "ok"; }
+    if (s.step === 3) { nextDisabled = s.cat < 0; }
+    if (s.step === 4) { nextDisabled = s.billName.trim().length < 2 || s.city.trim().length < 2; nextLabel = "Create my store ✦"; }
+
+    const dotCls = (i) => (i < s.step ? "done" : (i === s.step ? "cur" : ""));
+
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      notDone: !s.done, done: s.done,
+      d0: dotCls(0), d1: dotCls(1), d2: dotCls(2), d3: dotCls(3), d4: dotCls(4),
+      isS0: s.step === 0, isS1: s.step === 1, isS2: s.step === 2, isS3: s.step === 3, isS4: s.step === 4,
+
+      otp: s.otp, onOtp: (e) => this.setState({ otp: e.target.value.replace(/\D/g, "").slice(0, 6) }),
+      store: s.store, onStore: (e) => this.setState({ store: e.target.value }),
+      sub: s.sub, onSub: (e) => this.onSub(e.target.value),
+      subState: s.subStatus === "ok" ? "ok" : (s.subStatus === "bad" ? "bad" : (s.subStatus === "checking" ? "checking" : "")),
+      subChecking: s.subStatus === "checking", subOk: s.subStatus === "ok", subBad: s.subStatus === "bad",
+      subMsg: this.RESERVED.includes(s.sub) ? "That name is reserved — try another" : "Not available",
+      cats,
+      billName: s.billName, onBillName: (e) => this.setState({ billName: e.target.value }),
+      city: s.city, onCity: (e) => this.setState({ city: e.target.value }),
+
+      canBack: s.step > 0, back: () => this.back(), next: () => this.next(),
+      nextDisabled, nextLabel,
+
+      firstName: (s.billName || s.store || "there").split(" ")[0]
+    };
+  }
+}
+</script>
+</body>
+</html>

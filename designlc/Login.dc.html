@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes lg-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(9%,7%) scale(1.22); } }
+  @keyframes lg-a2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-8%,6%) scale(1.16); } }
+  @keyframes lg-a3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(6%,-7%) scale(1.2); } }
+  @keyframes lg-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes lg-spin { to { transform: rotate(360deg); } }
+  @keyframes lg-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes lg-pop { from { transform: scale(.9); } to { transform: scale(1); } }
+  @keyframes lg-float { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-12px) rotate(var(--r,0deg)); } }
+
+  .lg {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4 100%);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh;
+    -webkit-font-smoothing: antialiased; line-height: 1.55; display: grid; grid-template-columns: 1.05fr 1fr;
+  }
+  .lg[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e;
+  }
+  .lg h1,.lg h2 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .lg p { margin: 0; }
+
+  /* brand panel */
+  .lg-brandpanel { position: relative; overflow: hidden; background: var(--grad); color: #fff; padding: 54px 56px; display: flex; flex-direction: column; }
+  .lg-brandpanel::after { content: ""; position: absolute; inset: 0; background: radial-gradient(55% 90% at 80% 12%, rgba(255,255,255,.28), transparent 60%); }
+  .lg-bp-in { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
+  .lg-bp-logo { display: flex; align-items: center; gap: 11px; font-family: var(--fh); font-weight: 800; font-size: 22px; }
+  .lg-bp-logo .d { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.92); box-shadow: 0 10px 26px rgba(0,0,0,.2); }
+  .lg-bp-mid { margin-top: auto; }
+  .lg-bp-mid h2 { font-size: 40px; line-height: 1.1; font-weight: 800; max-width: 15ch; }
+  .lg-bp-ticks { margin-top: 26px; display: flex; flex-direction: column; gap: 13px; }
+  .lg-bp-ticks div { display: flex; gap: 11px; font-size: 15px; opacity: .95; } .lg-bp-ticks div::before { content: "✓"; font-weight: 800; }
+  .lg-bp-foot { margin-top: auto; font-size: 13px; opacity: .85; }
+  /* floating mock chips */
+  .lg-chip { position: absolute; z-index: 1; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); backdrop-filter: blur(8px); border-radius: 14px; padding: 12px 15px; color: #fff; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 9px; }
+  .lg-chip .e { font-size: 17px; }
+  .lg-chip.c1 { top: 16%; right: 8%; --r: 3deg; animation: lg-float 7s ease-in-out infinite; }
+  .lg-chip.c2 { bottom: 18%; right: 14%; --r: -3deg; animation: lg-float 8.4s ease-in-out infinite .6s; }
+
+  /* form side */
+  .lg-side { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 40px 28px; }
+  .lg-side-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .lg-blob { position: absolute; width: 40vmax; height: 40vmax; border-radius: 50%; filter: blur(90px); opacity: .16; }
+  .lg-blob.b1 { background: var(--secondary); top: -16vmax; right: -12vmax; animation: lg-a2 28s ease-in-out infinite; }
+  .lg-blob.b2 { background: var(--accent); bottom: -18vmax; left: -10vmax; animation: lg-a3 32s ease-in-out infinite; }
+
+  .lg-card { position: relative; z-index: 1; width: 100%; max-width: 400px; }
+  .lg-top { display: flex; align-items: center; margin-bottom: 26px; }
+  .lg-top .mlogo { display: none; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 17px; }
+  .lg-top .mlogo .d { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); }
+  .lg-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .lg-h1 { font-size: 28px; font-weight: 800; }
+  .lg-lead { color: var(--muted); font-size: 14.5px; margin-top: 8px; }
+  .lg-view { animation: lg-in .35s ease; }
+
+  .lg-google { width: 100%; margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 11px; padding: 13px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-family: var(--fh); font-weight: 600; font-size: 14.5px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .lg-google:hover { border-color: var(--muted); }
+  .lg-gico { width: 19px; height: 19px; flex: none; }
+  .lg-or { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--muted); font-size: 12px; }
+  .lg-or::before, .lg-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+  .lg-label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+  .lg-input { width: 100%; padding: 13px 15px; font: inherit; font-size: 15px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .lg-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent); }
+  .lg-input.err { border-color: var(--secondary); }
+  .lg-otp { text-align: center; font-family: var(--fh); font-weight: 800; font-size: 30px; letter-spacing: 14px; padding-left: 14px; }
+  .lg-err { color: var(--secondary); font-size: 11.5px; margin-top: 6px; min-height: 14px; }
+
+  .lg-go { position: relative; overflow: hidden; width: 100%; margin-top: 16px; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .lg-go:disabled { opacity: .5; cursor: not-allowed; }
+  .lg-go .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .4; filter: blur(3px); animation: lg-shine 3s ease-in-out infinite; }
+  .lg-spin { width: 17px; height: 17px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: lg-spin .7s linear infinite; }
+  .lg-mailto { font-size: 13px; color: var(--muted); margin-top: 16px; text-align: center; }
+  .lg-mailto b { color: var(--text); } .lg-mailto a { color: var(--primary); cursor: pointer; font-weight: 600; }
+  .lg-fine { font-size: 12px; color: var(--muted); margin-top: 22px; text-align: center; } .lg-fine a { color: var(--primary); }
+  .lg-back { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 14px; }
+
+  .lg-done { text-align: center; padding: 16px 0; animation: lg-pop .4s cubic-bezier(.2,.8,.2,1); }
+  .lg-check { width: 70px; height: 70px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-size: 32px; margin: 0 auto 16px; }
+  .lg-done h2 { font-size: 22px; } .lg-done p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .lg-loaddots { display: inline-flex; gap: 5px; margin-top: 16px; } .lg-loaddots i { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: lg-pop .6s ease-in-out infinite alternate; } .lg-loaddots i:nth-child(2){animation-delay:.2s} .lg-loaddots i:nth-child(3){animation-delay:.4s}
+
+  @media (max-width: 860px) {
+    .lg { grid-template-columns: 1fr; }
+    .lg-brandpanel { display: none; }
+    .lg-top .mlogo { display: flex; }
+  }
+</style>
+</helmet>
+
+<div class="lg" data-theme="{{ theme }}">
+  <!-- brand panel -->
+  <div class="lg-brandpanel">
+    <span class="lg-chip c1"><span class="e">₹</span>Payment received · ₹1,499</span>
+    <span class="lg-chip c2"><span class="e">🎉</span>New order · Studio Aanya</span>
+    <div class="lg-bp-in">
+      <div class="lg-bp-logo"><span class="d"></span>invoxai</div>
+      <div class="lg-bp-mid">
+        <h2>Welcome back to your business HQ.</h2>
+        <div class="lg-bp-ticks">
+          <div>Your store, courses &amp; pages — one login</div>
+          <div>Payments land in your own account</div>
+          <div>Buyers tracked across every sale</div>
+        </div>
+      </div>
+      <div class="lg-bp-foot">India-first · built for the world · invoxai.io</div>
+    </div>
+  </div>
+
+  <!-- form side -->
+  <div class="lg-side">
+    <div class="lg-side-bg"><div class="lg-blob b1"></div><div class="lg-blob b2"></div></div>
+    <div class="lg-card">
+      <div class="lg-top">
+        <div class="mlogo"><span class="d"></span>invoxai</div>
+        <button class="lg-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+      </div>
+
+      <!-- STEP: EMAIL -->
+      <sc-if value="{{ isEmail }}" hint-placeholder-val="{{ true }}">
+        <div class="lg-view">
+          <h1 class="lg-h1">Sign in to invoxai</h1>
+          <p class="lg-lead">Use Google or your email — no password needed.</p>
+          <button class="lg-google" onClick="{{ google }}">
+            <svg class="lg-gico" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.1-11.3-7.6l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.3 5.3C41.9 35.7 44 30.3 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+            Continue with Google
+          </button>
+          <div class="lg-or">or</div>
+          <label class="lg-label">Email address</label>
+          <input class="lg-input {{ emailErr }}" type="email" placeholder="you@email.com" value="{{ email }}" onInput="{{ onEmail }}" />
+          <div class="lg-err">{{ emailMsg }}</div>
+          <button class="lg-go" onClick="{{ sendCode }}" disabled="{{ sending }}">
+            <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}"><span class="lg-spin"></span>Sending code…</sc-if>
+            <sc-if value="{{ notSending }}" hint-placeholder-val="{{ true }}">Email me a code<span class="sh"></span></sc-if>
+          </button>
+          <div class="lg-fine">By continuing you agree to the <a>Terms</a> &amp; <a>Privacy Policy</a>.</div>
+        </div>
+      </sc-if>
+
+      <!-- STEP: OTP -->
+      <sc-if value="{{ isOtp }}" hint-placeholder-val="{{ false }}">
+        <div class="lg-view">
+          <button class="lg-back" onClick="{{ backToEmail }}">‹ Back</button>
+          <h1 class="lg-h1">Enter your code</h1>
+          <p class="lg-lead">We sent a 6-digit code to <b style="color:var(--text)">{{ email }}</b>.</p>
+          <input class="lg-input lg-otp" style="margin-top:22px" inputmode="numeric" maxlength="6" placeholder="••••••" value="{{ otp }}" onInput="{{ onOtp }}" />
+          <button class="lg-go" onClick="{{ verify }}" disabled="{{ verifyDisabled }}">
+            <sc-if value="{{ verifying }}" hint-placeholder-val="{{ false }}"><span class="lg-spin"></span>Verifying…</sc-if>
+            <sc-if value="{{ notVerifying }}" hint-placeholder-val="{{ true }}">Verify &amp; continue<span class="sh"></span></sc-if>
+          </button>
+          <div class="lg-mailto">Didn't get it? <a onClick="{{ sendCode }}">Resend code</a></div>
+        </div>
+      </sc-if>
+
+      <!-- STEP: DONE -->
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+        <div class="lg-done">
+          <div class="lg-check">✓</div>
+          <h2>You're in!</h2>
+          <p>Taking you to your dashboard…</p>
+          <div class="lg-loaddots"><i></i><i></i><i></i></div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:680}}">
+class Component extends DCLogic {
+  state = { theme: "light", step: "email", email: "", otp: "", emailTouched: false, sending: false, verifying: false };
+
+  validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+  sendCode() {
+    if (!this.validEmail(this.state.email)) { this.setState({ emailTouched: true }); return; }
+    if (this.state.sending) return;
+    this.setState({ sending: true });
+    setTimeout(() => this.setState({ sending: false, step: "otp", otp: "" }), 1300);
+  }
+  verify() {
+    if (this.state.otp.replace(/\D/g, "").length !== 6 || this.state.verifying) return;
+    this.setState({ verifying: true });
+    setTimeout(() => this.setState({ verifying: false, step: "done" }), 1300);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const emailBad = s.emailTouched && !this.validEmail(s.email);
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      isEmail: s.step === "email", isOtp: s.step === "otp", isDone: s.step === "done",
+      email: s.email, onEmail: (e) => this.setState({ email: e.target.value }),
+      emailErr: emailBad ? "err" : "", emailMsg: emailBad ? "Enter a valid email address" : "",
+      sendCode: () => this.sendCode(), sending: s.sending, notSending: !s.sending,
+      google: () => this.setState({ verifying: false, step: "done" }),
+      otp: s.otp, onOtp: (e) => this.setState({ otp: e.target.value.replace(/\D/g, "").slice(0, 6) }),
+      verify: () => this.verify(), verifying: s.verifying, notVerifying: !s.verifying,
+      verifyDisabled: s.otp.replace(/\D/g, "").length !== 6 || s.verifying,
+      backToEmail: () => this.setState({ step: "email" })
+    };
+  }
+}
+</script>
+</body>
+</html>
