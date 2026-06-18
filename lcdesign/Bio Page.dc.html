@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes bio-aurora1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8%,6%) scale(1.2); } }
+  @keyframes bio-aurora2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-7%,5%) scale(1.15); } }
+  @keyframes bio-aurora3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5%,-6%) scale(1.25); } }
+  @keyframes bio-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes bio-rise { from { transform: translateY(16px); } to { transform: none; } }
+  @keyframes bio-lp { 0% { box-shadow: 0 0 0 0 rgba(31,181,122,.5); } 70% { box-shadow: 0 0 0 8px rgba(31,181,122,0); } 100% { box-shadow: 0 0 0 0 rgba(31,181,122,0); } }
+
+  .bio {
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 40%,#ff4d7d 70%,#7b3fe4);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    /* light defaults */
+    --ink: #2b1b2e; --ink2: rgba(43,27,46,.62); --pane: rgba(255,255,255,.72); --paneb: rgba(255,255,255,.6);
+    --btn: rgba(255,255,255,.9); --btnt: #2b1b2e; --bg1: #fff3e6; --bg2: #ffe1ec; --bg3: #efe3ff;
+    font-family: var(--fb); min-height: 100dvh; position: relative; overflow-x: hidden;
+    -webkit-font-smoothing: antialiased; color: var(--ink);
+    background: var(--bg1);
+  }
+  .bio[data-theme="dark"] {
+    --ink: #f6eef2; --ink2: rgba(246,238,242,.66); --pane: rgba(34,24,51,.6); --paneb: rgba(255,255,255,.12);
+    --btn: rgba(255,255,255,.08); --btnt: #f6eef2; --bg1: #160f22; --bg2: #1d1430; --bg3: #221833;
+  }
+  .bio h1,.bio h2 { font-family: var(--fh); margin: 0; letter-spacing: -.01em; }
+
+  .bio-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: var(--bg1); }
+  .bio-blob { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(90px); opacity: .8; }
+  .bio-blob.b1 { background: var(--gold); top: -24vmax; left: -16vmax; animation: bio-aurora1 26s ease-in-out infinite; }
+  .bio-blob.b2 { background: var(--secondary); top: -10vmax; right: -22vmax; opacity: .7; animation: bio-aurora2 30s ease-in-out infinite; }
+  .bio-blob.b3 { background: var(--accent); bottom: -26vmax; left: 6vmax; opacity: .6; animation: bio-aurora3 24s ease-in-out infinite; }
+  .bio[data-theme="dark"] .bio-blob { opacity: .5; }
+
+  .bio-top { position: relative; z-index: 3; display: flex; padding: 16px 18px; }
+  .bio-tgl { margin-left: auto; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--paneb); background: var(--pane); backdrop-filter: blur(10px); color: var(--ink); cursor: pointer; font-size: 15px; }
+
+  .bio-shell { position: relative; z-index: 2; max-width: 460px; margin: 0 auto; padding: 6px 20px 120px; }
+  .bio-stack { display: flex; flex-direction: column; align-items: center; }
+  .bio-stack > * { animation: bio-rise .55s cubic-bezier(.2,.7,.2,1) both; }
+  .bio-stack > *:nth-child(2) { animation-delay: .05s; }
+  .bio-stack > *:nth-child(3) { animation-delay: .1s; }
+  .bio-stack > *:nth-child(4) { animation-delay: .15s; }
+  .bio-stack > *:nth-child(n+5) { animation-delay: .2s; }
+
+  .bio-av { width: 96px; height: 96px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; color: #fff; font-family: var(--fh); font-weight: 800; font-size: 36px; box-shadow: 0 16px 40px -14px rgba(255,77,125,.6); border: 3px solid var(--paneb); }
+  .bio-name { display: flex; align-items: center; gap: 7px; margin-top: 16px; }
+  .bio-name h1 { font-size: 22px; font-weight: 800; }
+  .bio-verify { width: 18px; height: 18px; border-radius: 50%; background: #1d9bf0; color: #fff; display: grid; place-items: center; font-size: 11px; flex: none; }
+  .bio-handle { color: var(--ink2); font-size: 14px; margin-top: 2px; }
+  .bio-tagline { text-align: center; color: var(--ink); opacity: .85; font-size: 14.5px; margin-top: 12px; max-width: 30ch; }
+
+  .bio-socials { display: flex; gap: 12px; margin-top: 18px; }
+  .bio-soc { width: 42px; height: 42px; border-radius: 50%; background: var(--pane); border: 1px solid var(--paneb); backdrop-filter: blur(10px); display: grid; place-items: center; font-size: 18px; color: var(--ink); cursor: pointer; transition: transform .15s, background .15s; }
+  .bio-soc:hover { transform: translateY(-3px) scale(1.05); }
+
+  .bio-links { width: 100%; display: flex; flex-direction: column; gap: 13px; margin-top: 26px; }
+  .bio-btn { position: relative; overflow: hidden; display: flex; align-items: center; gap: 13px; width: 100%; padding: 16px 18px; border-radius: 16px; background: var(--btn); color: var(--btnt); border: 1px solid var(--paneb); backdrop-filter: blur(10px); cursor: pointer; font-family: var(--fh); font-weight: 600; font-size: 15px; text-align: left; transition: transform .15s, box-shadow .15s; }
+  .bio-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -14px rgba(43,27,46,.4); }
+  .bio-btn .ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 16px; flex: none; background: color-mix(in srgb, var(--primary) 14%, transparent); }
+  .bio-btn .lbl { flex: 1; }
+  .bio-btn .arr { color: var(--ink2); font-size: 13px; }
+  .bio-btn.feat { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 16px 38px -14px rgba(255,77,125,.6); }
+  .bio-btn.feat .ic { background: rgba(255,255,255,.22); }
+  .bio-btn.feat .arr { color: rgba(255,255,255,.85); }
+  .bio-btn.feat .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .45; filter: blur(3px); animation: bio-shine 3.2s ease-in-out infinite; }
+  .bio-btn .badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.25); color: #fff; }
+
+  .bio-section { width: 100%; margin-top: 22px; }
+  .bio-sec-h { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); margin-bottom: 11px; padding-left: 4px; }
+
+  .bio-foot { text-align: center; margin-top: 30px; }
+  .bio-stat { display: inline-flex; gap: 16px; padding: 8px 16px; border-radius: 999px; background: var(--pane); border: 1px solid var(--paneb); backdrop-filter: blur(10px); font-size: 12px; color: var(--ink2); }
+  .bio-stat b { color: var(--ink); font-family: var(--fh); }
+
+  /* sticky mobile CTA */
+  .bio-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; padding: 12px 20px calc(12px + env(safe-area-inset-bottom,0px)); display: flex; justify-content: center; pointer-events: none; }
+  .bio-cta-in { pointer-events: auto; position: relative; overflow: hidden; max-width: 420px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px; border-radius: 15px; background: var(--grad); color: #fff; font-family: var(--fh); font-weight: 800; font-size: 15px; border: 0; cursor: pointer; box-shadow: 0 14px 34px -10px rgba(255,77,125,.6); }
+  .bio-cta-in .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .4; filter: blur(3px); animation: bio-shine 3s ease-in-out infinite; }
+
+  /* brand badge */
+  .bio-brand { position: fixed; right: 14px; bottom: 88px; z-index: 6; display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px 6px 6px; border-radius: 999px; background: var(--pane); backdrop-filter: blur(10px); border: 1px solid var(--paneb); text-decoration: none; box-shadow: 0 8px 22px -10px rgba(20,10,25,.5); }
+  .bio-brand .mk { width: 19px; height: 19px; border-radius: 6px; background: var(--grad); }
+  .bio-brand .pfx { font-size: 11px; color: var(--ink2); font-weight: 600; }
+  .bio-brand .nm { font-family: var(--fh); font-weight: 800; font-size: 12px; background: linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* toast on click (tracking) */
+  .bio-toast { position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 130%); opacity: 0; pointer-events: none; z-index: 9; display: flex; align-items: center; gap: 9px; padding: 10px 16px; border-radius: 999px; background: #18121f; color: #fff; font-size: 12.5px; font-weight: 600; box-shadow: 0 16px 40px -14px rgba(0,0,0,.6); transition: transform .4s cubic-bezier(.2,.8,.2,1), opacity .3s ease; white-space: nowrap; }
+  .bio-toast.show { transform: translate(-50%, 0); opacity: 1; }
+  .bio-toast .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; animation: bio-lp 1.6s infinite; }
+</style>
+</helmet>
+
+<div class="bio" data-theme="{{ theme }}">
+  <div class="bio-bg"><div class="bio-blob b1"></div><div class="bio-blob b2"></div><div class="bio-blob b3"></div></div>
+
+  <div class="bio-top">
+    <button class="bio-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+  </div>
+
+  <div class="bio-shell">
+    <div class="bio-stack">
+      <div class="bio-av">A</div>
+      <div class="bio-name"><h1>Aanya Sharma</h1><span class="bio-verify">✓</span></div>
+      <div class="bio-handle">@studioaanya</div>
+      <p class="bio-tagline">Music producer &amp; mixing coach. I help you make release-ready tracks. 🎧</p>
+
+      <div class="bio-socials">
+        <span class="bio-soc" onClick="{{ track }}">📷</span>
+        <span class="bio-soc" onClick="{{ track }}">▶</span>
+        <span class="bio-soc" onClick="{{ track }}">🎵</span>
+        <span class="bio-soc" onClick="{{ track }}">𝕏</span>
+        <span class="bio-soc" onClick="{{ track }}">✉</span>
+      </div>
+
+      <div class="bio-links">
+        <button class="bio-btn feat" onClick="{{ track }}">
+          <span class="ic">🎓</span>
+          <span class="lbl">Mixing Masterclass — 40% off</span>
+          <span class="badge">SALE</span>
+          <span class="sh"></span>
+        </button>
+
+        <div class="bio-section">
+          <div class="bio-sec-h">Shop</div>
+          <div class="bio-links" style="margin-top:0">
+            <button class="bio-btn" onClick="{{ track }}"><span class="ic">🛍️</span><span class="lbl">Browse my store</span><span class="arr">↗</span></button>
+            <button class="bio-btn" onClick="{{ track }}"><span class="ic">📦</span><span class="lbl">Preset packs &amp; project files</span><span class="arr">↗</span></button>
+          </div>
+        </div>
+
+        <div class="bio-section">
+          <div class="bio-sec-h">Work with me</div>
+          <div class="bio-links" style="margin-top:0">
+            <button class="bio-btn" onClick="{{ track }}"><span class="ic">📅</span><span class="lbl">Book a 1-to-1 session</span><span class="arr">↗</span></button>
+            <button class="bio-btn" onClick="{{ track }}"><span class="ic">⭐</span><span class="lbl">Join the VIP producer circle</span><span class="arr">↗</span></button>
+            <button class="bio-btn" onClick="{{ track }}"><span class="ic">▶</span><span class="lbl">Watch: free EQ tutorial</span><span class="arr">↗</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bio-foot">
+        <div class="bio-stat"><span><b>2.1k</b> students</span><span><b>148k</b> followers</span><span><b>4.9★</b> rating</span></div>
+      </div>
+    </div>
+  </div>
+
+  <a class="bio-brand"><span class="mk"></span><span class="pfx">Built with</span><span class="nm">invoxai</span></a>
+
+  <div class="bio-cta">
+    <button class="bio-cta-in" onClick="{{ track }}">🎓 Get the Masterclass — ₹1,499<span class="sh"></span></button>
+  </div>
+
+  <div class="bio-toast {{ toastClass }}"><span class="d"></span>Click tracked · redirecting…</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { theme: "light", toast: false };
+  track() {
+    // mirrors /api/bio/go: record click + device, then redirect
+    this.setState({ toast: true });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: false }), 1600);
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+  renderVals() {
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      track: () => this.track(),
+      toastClass: this.state.toast ? "show" : ""
+    };
+  }
+}
+</script>
+</body>
+</html>

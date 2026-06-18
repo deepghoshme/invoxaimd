@@ -10,3 +10,9 @@ next-env.d.ts
 
 # misc
 .DS_Store
+
+# lcdesign extracted working artifacts (keep the zip + .dc.html design refs only)
+lcdesign/uploads/
+lcdesign/.thumbnail
+lcdesign/scraps/
+lcdesign/*.js

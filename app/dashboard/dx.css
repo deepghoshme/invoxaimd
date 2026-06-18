@@ -4,20 +4,22 @@
   --bg: #fff9f4; --surface: #fff; --surface2: #fff3ec;
   --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
   --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6;
-  --shadow: 0 1px 2px rgba(43,27,46,.04), 0 8px 24px rgba(255,106,61,.07);
+  --shadow: 0 1px 2px rgba(43,27,46,.04), 0 12px 32px -16px rgba(43,27,46,.18);
+  --shadow-pop: 0 18px 50px -22px rgba(43,27,46,.42);
   --green: #1fb57a; --greenbg: #e5f7ef; --red: #e5476f; --redbg: #fde9ee;
-  --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 68%,#7b3fe4);
+  --grad: linear-gradient(135deg,#ffb23e 0%,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4 100%);
   background: var(--bg); color: var(--text);
   font-family: var(--font-inter), "Inter", system-ui, sans-serif;
   font-size: 14px; line-height: 1.45; min-height: 100dvh;
   display: grid; grid-template-columns: 240px 1fr;
 }
 .dx.dark {
-  --bg: #16101f; --surface: #211833; --surface2: #2a2040;
+  --bg: #16101f; --surface: #221833; --surface2: #2a2040;
   --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
-  --text: #f6eef2; --muted: #b9a8bc; --border: #322843;
-  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
-  --greenbg: #15301f; --redbg: #3a1822;
+  --text: #f6eef2; --muted: #b9a8bc; --border: #34264a;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 14px 36px -18px rgba(0,0,0,.6);
+  --shadow-pop: 0 22px 60px -22px rgba(0,0,0,.7);
+  --greenbg: #15301f; --redbg: #3a1822; --green: #36c98e; --red: #ff6f93;
 }
 .dx h1, .dx h2, .dx h3, .dx h4 { font-family: var(--font-sora), "Sora", sans-serif; }
 .dx svg { display: block; }
@@ -153,9 +155,9 @@
 .dx-live { font-size: 11px; font-weight: 600; color: var(--green); display: flex; align-items: center; gap: 5px; }
 .dx-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 .dx-editbtn { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
-.dx-switch { position: relative; width: 44px; height: 25px; border-radius: 99px; background: var(--border); cursor: pointer; flex: none; transition: .2s; border: 0; }
-.dx-switch i { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
-.dx-switch.on { background: var(--primary); } .dx-switch.on i { left: 22px; }
+.dx-switch { position: relative; width: 50px; height: 28px; border-radius: 99px; background: var(--border); cursor: pointer; flex: none; transition: background .2s; border: 0; }
+.dx-switch i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.dx-switch.on { background: var(--grad); } .dx-switch.on i { transform: translateX(22px); }
 .dx-mrow { display: flex; align-items: center; gap: 13px; padding: 11px 0; border-top: 1px solid var(--border); }
 .dx-mrow:first-child { border-top: 0; } .dx-mrow .tx { flex: 1; }
 .dx-mrow .tx b { font-size: 13.5px; } .dx-mrow .tx p { font-size: 12px; color: var(--muted); margin-top: 2px; }

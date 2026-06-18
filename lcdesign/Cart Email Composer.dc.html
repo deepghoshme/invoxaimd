@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes ce-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+  .ce {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .ce[data-theme="dark"] { --bg: #16101f; --card: #221833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6); }
+  .ce h1,.ce h2,.ce h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .ce p { margin: 0; }
+  .ce-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  .ce-nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--bg) 86%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .ce-nav-in { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .ce-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; }
+  .ce-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); } .ce-crumb { font-size: 13px; color: var(--muted); } .ce-crumb b { color: var(--text); }
+  .ce-r { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .ce-tgl { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+  .ce-btn { font: inherit; font-weight: 600; font-size: 13px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 9px 15px; border-radius: 9px; cursor: pointer; } .ce-btn.grad { background: var(--grad); color: #fff; border-color: transparent; font-family: var(--fh); font-weight: 700; }
+
+  .ce-main { padding: 24px 0 60px; }
+  .ce-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+  .ce-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 15px; box-shadow: var(--shadow); } .ce-kpi .l { font-size: 12px; color: var(--muted); } .ce-kpi .v { font-family: var(--fh); font-size: 21px; font-weight: 700; margin-top: 4px; } .ce-kpi .v small { font-size: 12px; color: var(--green); font-weight: 600; }
+
+  .ce-cols { display: grid; grid-template-columns: 1fr 1.05fr; gap: 18px; align-items: start; }
+  .ce-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+  .ce-ct { font-size: 15px; margin-bottom: 14px; display: flex; align-items: center; }
+  .ce-ct .sw { margin-left: auto; }
+  .ce-sw { width: 44px; height: 25px; border-radius: 999px; background: var(--border); border: 0; cursor: pointer; position: relative; flex: none; } .ce-sw.on { background: var(--grad); } .ce-sw i { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: transform .18s; } .ce-sw.on i { transform: translateX(19px); }
+  .ce-label { display: block; font-size: 12.5px; font-weight: 700; margin: 13px 0 6px; } .ce-label:first-of-type { margin-top: 0; }
+  .ce-input { width: 100%; padding: 11px 13px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; outline: none; } .ce-input:focus { border-color: var(--primary); } textarea.ce-input { resize: vertical; min-height: 120px; line-height: 1.6; }
+  .ce-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .ce-tag { font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--s2); color: var(--accent); cursor: pointer; }
+  .ce-seg { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; } .ce-seg button { flex: 1; border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 9px; border-radius: 8px; cursor: pointer; } .ce-seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+  .ce-srow { display: flex; align-items: center; gap: 11px; padding: 12px 0; border-top: 1px solid var(--border); } .ce-srow .tx { flex: 1; } .ce-srow .tx b { font-size: 13.5px; } .ce-srow .tx p { font-size: 12px; color: var(--muted); }
+
+  /* email preview */
+  .ce-mailwrap { background: var(--s2); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  .ce-inbox { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); margin-bottom: 14px; } .ce-inbox .from { width: 30px; height: 30px; border-radius: 50%; background: var(--grad); flex: none; } .ce-inbox b { color: var(--text); }
+  .ce-subj { font-family: var(--fh); font-weight: 700; font-size: 15px; margin-bottom: 12px; }
+  .ce-email { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px -16px rgba(0,0,0,.3); color: #2b1b2e; }
+  .ce-email .top { height: 6px; background: var(--grad); }
+  .ce-email .body { padding: 26px 24px; text-align: center; }
+  .ce-email .logo { width: 40px; height: 40px; border-radius: 11px; background: var(--grad); margin: 0 auto 16px; }
+  .ce-email h2 { font-family: var(--fh); font-weight: 800; font-size: 21px; color: #2b1b2e; }
+  .ce-email p { font-family: var(--fb); font-size: 14px; color: #6b5f6b; margin: 12px 0; white-space: pre-wrap; }
+  .ce-email .item { display: flex; align-items: center; gap: 12px; text-align: left; background: #faf6f1; border: 1px solid #efe6db; border-radius: 12px; padding: 12px; margin: 16px 0; } .ce-email .item .ic { width: 44px; height: 44px; border-radius: 9px; background: #fff; border: 1px solid #efe6db; display: grid; place-items: center; font-size: 20px; } .ce-email .item .nm { font-family: var(--fh); font-weight: 700; font-size: 14px; } .ce-email .item .pr { margin-left: auto; font-family: var(--fh); font-weight: 800; }
+  .ce-email .coupon { display: inline-block; font-family: ui-monospace, Menlo, monospace; font-weight: 800; font-size: 15px; letter-spacing: 1px; color: var(--primary); border: 2px dashed var(--primary); border-radius: 10px; padding: 9px 18px; margin: 6px 0 16px; }
+  .ce-email .cta { display: inline-block; background: var(--grad); color: #fff; font-family: var(--fh); font-weight: 800; font-size: 15px; padding: 14px 32px; border-radius: 12px; }
+  .ce-email .foot { padding: 16px; text-align: center; font-size: 11px; color: #9a8b95; border-top: 1px solid #efe6db; } .ce-email .foot b { background: linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: var(--fh); }
+
+  .ce-toastbox { position: fixed; left: 50%; bottom: 24px; z-index: 60; background: #18121f; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 9px; animation: ce-toast .4s ease; } .ce-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+
+  @media (max-width: 860px) { .ce-cols { grid-template-columns: 1fr; } .ce-kpis { grid-template-columns: 1fr 1fr; } }
+</style>
+</helmet>
+
+<div class="ce" data-theme="{{ theme }}">
+  <nav class="ce-nav">
+    <div class="ce-wrap ce-nav-in">
+      <div class="ce-brand"><span class="ce-logo"></span>invoxai</div>
+      <span class="ce-crumb">Dashboard / <b>Abandoned cart</b> / Recovery email</span>
+      <div class="ce-r"><button class="ce-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button><button class="ce-btn" onClick="{{ test }}">Send test</button><button class="ce-btn grad" onClick="{{ save }}">Save &amp; activate</button></div>
+    </div>
+  </nav>
+
+  <main class="ce-wrap ce-main">
+    <div class="ce-kpis">
+      <div class="ce-kpi"><div class="l">Abandoned (30d)</div><div class="v">38</div></div>
+      <div class="ce-kpi"><div class="l">Emails sent</div><div class="v">35</div></div>
+      <div class="ce-kpi"><div class="l">Recovered</div><div class="v">11 <small>31%</small></div></div>
+      <div class="ce-kpi"><div class="l">Recovered value</div><div class="v">₹14,300</div></div>
+    </div>
+
+    <div class="ce-cols">
+      <!-- composer -->
+      <div class="ce-card">
+        <div class="ce-ct">Recovery automation<button class="ce-sw {{ onCls }}" onClick="{{ toggleOn }}"><i></i></button></div>
+
+        <label class="ce-label">Send after abandonment</label>
+        <div class="ce-seg"><button class="{{ d1 }}" onClick="{{ setD1 }}">1 hour</button><button class="{{ d3 }}" onClick="{{ setD3 }}">3 hours</button><button class="{{ d24 }}" onClick="{{ setD24 }}">24 hours</button></div>
+
+        <label class="ce-label">From name</label>
+        <input class="ce-input" value="{{ fromName }}" onInput="{{ onFromName }}" />
+
+        <label class="ce-label">Subject line</label>
+        <input class="ce-input" value="{{ subject }}" onInput="{{ onSubject }}" />
+        <div class="ce-tags"><span class="ce-tag" onClick="{{ tagName }}">{first_name}</span><span class="ce-tag" onClick="{{ tagProduct }}">{product}</span><span class="ce-tag" onClick="{{ tagStore }}">{store}</span></div>
+
+        <label class="ce-label">Body</label>
+        <textarea class="ce-input" onInput="{{ onBody }}">{{ body }}</textarea>
+
+        <label class="ce-label">Button text</label>
+        <input class="ce-input" value="{{ cta }}" onInput="{{ onCta }}" />
+
+        <div class="ce-srow"><div class="tx"><b>Include a coupon</b><p>Sweeten the comeback with a discount</p></div><button class="ce-sw {{ cpnCls }}" onClick="{{ toggleCpn }}"><i></i></button></div>
+        <sc-if value="{{ cpnOn }}" hint-placeholder-val="{{ true }}">
+          <input class="ce-input" value="{{ cpnCode }}" onInput="{{ onCpnCode }}" placeholder="COMEBACK10" style="text-transform:uppercase;font-family:ui-monospace,Menlo,monospace;font-weight:700" />
+        </sc-if>
+      </div>
+
+      <!-- live email preview -->
+      <div class="ce-mailwrap">
+        <div class="ce-inbox"><span class="from"></span><div><b>{{ fromName }}</b> · to rohan@gmail.com</div></div>
+        <div class="ce-subj">{{ subjectView }}</div>
+        <div class="ce-email">
+          <div class="top"></div>
+          <div class="body">
+            <div class="logo"></div>
+            <h2>{{ headline }}</h2>
+            <p>{{ bodyView }}</p>
+            <div class="item"><span class="ic">🎧</span><div><div class="nm">Mixing Masterclass</div><div style="font-size:12px;color:#9a8b95">Course · lifetime access</div></div><span class="pr">₹1,499</span></div>
+            <sc-if value="{{ cpnOn }}" hint-placeholder-val="{{ true }}">
+              <div class="coupon">{{ cpnCodeView }} · 10% OFF</div>
+            </sc-if>
+            <div><span class="cta">{{ cta }}</span></div>
+          </div>
+          <div class="foot">You left this in your cart at Studio Aanya · Sent with <b>invoxai</b></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="ce-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1080,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", on: true, delay: "1", fromName: "Studio Aanya",
+    subject: "{first_name}, you left {product} behind 👀",
+    body: "Hi {first_name},\n\nYou were so close! Your cart at {store} is still waiting. Complete your order now and start learning today.",
+    cta: "Complete my order →", cpn: true, cpnCode: "COMEBACK10",
+    toast: false, toastMsg: ""
+  };
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 2000); }
+  componentWillUnmount() { clearTimeout(this._t); }
+  fill(str) { return String(str || "").replace(/\{first_name\}/g, "Rohan").replace(/\{product\}/g, "Mixing Masterclass").replace(/\{store\}/g, "Studio Aanya"); }
+  insert(field, tag) { this.setState(s => ({ [field]: (s[field] || "") + tag })); }
+  renderVals() {
+    const s = this.state, on = (b) => (b ? "on" : "");
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      onCls: on(s.on), toggleOn: () => this.setState(st => ({ on: !st.on })),
+      d1: on(s.delay === "1"), d3: on(s.delay === "3"), d24: on(s.delay === "24"),
+      setD1: () => this.setState({ delay: "1" }), setD3: () => this.setState({ delay: "3" }), setD24: () => this.setState({ delay: "24" }),
+      fromName: s.fromName, onFromName: (e) => this.setState({ fromName: e.target.value }),
+      subject: s.subject, onSubject: (e) => this.setState({ subject: e.target.value }), subjectView: this.fill(s.subject),
+      body: s.body, onBody: (e) => this.setState({ body: e.target.value }), bodyView: this.fill(s.body),
+      headline: "Still thinking it over?",
+      cta: s.cta, onCta: (e) => this.setState({ cta: e.target.value }),
+      tagName: () => this.insert("subject", "{first_name}"), tagProduct: () => this.insert("subject", "{product}"), tagStore: () => this.insert("subject", "{store}"),
+      cpnOn: s.cpn, cpnCls: on(s.cpn), toggleCpn: () => this.setState(st => ({ cpn: !st.cpn })),
+      cpnCode: s.cpnCode, onCpnCode: (e) => this.setState({ cpnCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") }), cpnCodeView: (s.cpnCode || "COUPON"),
+      save: () => this.fire("✓ Recovery email saved & activated"), test: () => this.fire("✓ Test email sent to you"),
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

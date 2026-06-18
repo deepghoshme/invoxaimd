@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes tg-in { from { transform: translateY(10px); } to { transform: none; } }
+
+  .tg {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.3);
+    --shadow-xl: 0 30px 70px -34px rgba(43,27,46,.5);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .tg[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6);
+    --shadow-xl: 0 36px 80px -34px rgba(0,0,0,.8);
+  }
+  .tg h1,.tg h2,.tg h3 { font-family: var(--fh); margin: 0; letter-spacing: -.02em; }
+  .tg-wrap { max-width: 1240px; margin: 0 auto; padding: 0 28px; }
+
+  .tg-head { padding: 44px 0 26px; position: relative; overflow: hidden; }
+  .tg-head .blob { position: absolute; width: 30vmax; height: 30vmax; border-radius: 50%; filter: blur(80px); opacity: .26; background: var(--grad); top: -16vmax; right: -6vmax; pointer-events: none; }
+  .tg-head .in { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+  .tg-kick { font-size: 12.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--primary); }
+  .tg-head h1 { font-size: clamp(28px,3.6vw,40px); font-weight: 800; margin: 10px 0 8px; }
+  .tg-head p { color: var(--muted); font-size: 16px; max-width: 48ch; }
+  .tg-tgl { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; }
+  .tg-tgl:hover { border-color: var(--muted); }
+
+  .tg-filters { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .tg-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .tg-chips::-webkit-scrollbar { display: none; }
+  .tg-chip { font: inherit; font-size: 13px; font-weight: 600; padding: 9px 15px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+  .tg-chip:hover { color: var(--text); border-color: var(--muted); }
+
+  /* active chip — driven per-chip from state (reliable; descendant-attr match is not) */
+  .tg-chip.on { background: var(--primary); color: #fff; border-color: transparent; }
+
+  /* card filtering (root data-filter) */
+  .tg[data-filter="bio"] .tg-card:not([data-type="bio"]),
+  .tg[data-filter="store"] .tg-card:not([data-type="store"]),
+  .tg[data-filter="opp"] .tg-card:not([data-type="opp"]),
+  .tg[data-filter="courses"] .tg-card:not([data-type="courses"]),
+  .tg[data-filter="book"] .tg-card:not([data-type="book"]),
+  .tg[data-filter="env"] .tg-card:not([data-type="env"]),
+  .tg[data-filter="pay"] .tg-card:not([data-type="pay"]),
+  .tg[data-filter="ldf"] .tg-card:not([data-type="ldf"]),
+  .tg[data-filter="website"] .tg-card:not([data-type="website"]),
+  .tg[data-filter="checkout"] .tg-card:not([data-type="checkout"]),
+  .tg[data-filter="vpc"] .tg-card:not([data-type="vpc"]) { display: none; }
+
+  .tg-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 22px; padding: 28px 0 64px; }
+  .tg-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; animation: tg-in .4s ease; display: flex; flex-direction: column; }
+  .tg-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-xl); }
+  .tg-thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--s2); }
+  .tg-tag { position: absolute; top: 11px; left: 11px; z-index: 5; font-size: 9.5px; font-weight: 800; letter-spacing: .04em; padding: 4px 9px; border-radius: 999px; text-transform: uppercase; }
+  .tg-tag.free { background: rgba(255,255,255,.92); color: #2b1b2e; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .tg-tag.prem { background: var(--grad); color: #fff; }
+  .tg-meta { padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .tg-meta .tx { flex: 1; min-width: 0; }
+  .tg-meta b { font-family: var(--fh); font-size: 15px; display: block; }
+  .tg-meta span { font-size: 12px; color: var(--muted); }
+  .tg-use { font: inherit; font-family: var(--fh); font-weight: 600; font-size: 12.5px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 8px 13px; border-radius: 9px; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .tg-use:hover { background: var(--primary); color: #fff; border-color: transparent; }
+
+  /* mockup scene */
+  .sc { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .scb { border-radius: 3px; background: rgba(127,110,120,.22); }
+  .tg[data-theme="dark"] .scb { background: rgba(255,255,255,.13); }
+
+  @media (max-width: 980px) { .tg-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 620px) { .tg-grid { grid-template-columns: 1fr; } .tg-wrap { padding: 0 18px; } }
+</style>
+</helmet>
+
+<div class="tg" data-theme="{{ theme }}" data-filter="{{ filter }}">
+
+  <header class="tg-head">
+    <div class="blob"></div>
+    <div class="tg-wrap in">
+      <div>
+        <div class="tg-kick">Sunset template library</div>
+        <h1>Premium templates for every page type</h1>
+        <p>Modern, dynamic and ultra-premium — pick a flagship, make it yours in the builder, then publish to your subdomain or custom domain. Free and premium options across all ten page types.</p>
+      </div>
+      <button class="tg-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+    </div>
+  </header>
+
+  <div class="tg-filters">
+    <div class="tg-wrap tg-chips">
+      <button class="tg-chip {{ c.all }}" onClick="{{ f.all }}">All templates</button>
+      <button class="tg-chip {{ c.bio }}" onClick="{{ f.bio }}">Link-in-bio</button>
+      <button class="tg-chip {{ c.store }}" onClick="{{ f.store }}">Store</button>
+      <button class="tg-chip {{ c.opp }}" onClick="{{ f.opp }}">Product</button>
+      <button class="tg-chip {{ c.courses }}" onClick="{{ f.courses }}">Courses</button>
+      <button class="tg-chip {{ c.book }}" onClick="{{ f.book }}">Booking</button>
+      <button class="tg-chip {{ c.env }}" onClick="{{ f.env }}">Events</button>
+      <button class="tg-chip {{ c.pay }}" onClick="{{ f.pay }}">Payment</button>
+      <button class="tg-chip {{ c.ldf }}" onClick="{{ f.ldf }}">Lead form</button>
+      <button class="tg-chip {{ c.website }}" onClick="{{ f.website }}">Website</button>
+      <button class="tg-chip {{ c.checkout }}" onClick="{{ f.checkout }}">Checkout</button>
+      <button class="tg-chip {{ c.vpc }}" onClick="{{ f.vpc }}">VIP channel</button>
+    </div>
+  </div>
+
+  <div class="tg-wrap">
+    <div class="tg-grid">
+
+      <!-- BIO · Aurora -->
+      <div class="tg-card" data-type="bio">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:linear-gradient(165deg,#ffb23e,#ff6a3d 45%,#7b3fe4);align-items:center;padding:18px 0;gap:7px">
+            <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 6px 16px rgba(0,0,0,.18)"></div>
+            <div style="width:64px;height:7px;border-radius:3px;background:#fff"></div>
+            <div style="width:90px;height:5px;border-radius:3px;background:rgba(255,255,255,.7)"></div>
+            <div style="width:78%;height:18px;border-radius:9px;background:rgba(255,255,255,.95);margin-top:5px"></div>
+            <div style="width:78%;height:18px;border-radius:9px;background:rgba(255,255,255,.85)"></div>
+            <div style="width:78%;height:18px;border-radius:9px;background:rgba(255,255,255,.7)"></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Aurora Bio</b><span>Link-in-bio · gradient</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- BIO · Midnight -->
+      <div class="tg-card" data-type="bio">
+        <div class="tg-thumb"><span class="tg-tag prem">Premium</span>
+          <div class="sc" style="background:#15121f;align-items:center;padding:18px 0;gap:7px">
+            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff6aa0,#a06bff)"></div>
+            <div style="width:60px;height:7px;border-radius:3px;background:#f2eef6"></div>
+            <div style="width:78%;height:18px;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid #ff6aa0;box-shadow:0 0 14px -2px #ff6aa0"></div>
+            <div style="width:78%;height:18px;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid #a06bff;box-shadow:0 0 14px -2px #a06bff"></div>
+            <div style="width:78%;height:18px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2)"></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Midnight Neon</b><span>Link-in-bio · dark glow</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- BIO · Minimal -->
+      <div class="tg-card" data-type="bio">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:#fffdfb;align-items:center;padding:18px 0;gap:8px">
+            <div style="width:36px;height:36px;border-radius:50%;background:#2b1b2e"></div>
+            <div style="width:54px;height:6px;border-radius:3px;background:#2b1b2e"></div>
+            <div style="width:80%;height:16px;border-radius:8px;border:1.5px solid #2b1b2e"></div>
+            <div style="width:80%;height:16px;border-radius:8px;border:1.5px solid #2b1b2e"></div>
+            <div style="width:80%;height:16px;border-radius:8px;background:#ff6a3d"></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Clean Mono</b><span>Link-in-bio · minimal</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- STORE · Marketplace -->
+      <div class="tg-card" data-type="store">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--card);padding:10px;gap:7px">
+            <div style="display:flex;align-items:center;gap:5px"><div style="width:14px;height:6px;border-radius:2px;background:var(--primary)"></div><div class="scb" style="flex:1;height:5px"></div><div style="width:12px;height:12px;border-radius:50%;background:var(--s2)"></div></div>
+            <div style="height:42px;border-radius:6px;background:var(--grad);position:relative;overflow:hidden"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <div style="border:1px solid var(--border);border-radius:5px;overflow:hidden"><div style="height:26px;background:var(--s2)"></div><div style="padding:4px"><div class="scb" style="height:4px;width:80%"></div><div style="height:5px;width:40%;background:var(--primary);border-radius:2px;margin-top:4px"></div></div></div>
+              <div style="border:1px solid var(--border);border-radius:5px;overflow:hidden"><div style="height:26px;background:var(--s2)"></div><div style="padding:4px"><div class="scb" style="height:4px;width:70%"></div><div style="height:5px;width:46%;background:var(--primary);border-radius:2px;margin-top:4px"></div></div></div>
+              <div style="border:1px solid var(--border);border-radius:5px;overflow:hidden"><div style="height:26px;background:var(--s2)"></div><div style="padding:4px"><div class="scb" style="height:4px;width:75%"></div><div style="height:5px;width:38%;background:var(--primary);border-radius:2px;margin-top:4px"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Marketplace</b><span>Store · catalog grid</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- STORE · Editorial -->
+      <div class="tg-card" data-type="store">
+        <div class="tg-thumb"><span class="tg-tag prem">Premium</span>
+          <div class="sc" style="background:#faf4ee;padding:12px;gap:8px">
+            <div style="width:70%;height:11px;border-radius:3px;background:#2b1b2e"></div>
+            <div style="width:40%;height:6px;border-radius:3px;background:#ff6a3d"></div>
+            <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:8px;flex:1;margin-top:2px">
+              <div style="border-radius:6px;background:linear-gradient(135deg,#ffb23e,#ff4d7d)"></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="flex:1;border-radius:6px;background:#efe5db"></div><div style="flex:1;border-radius:6px;background:#e7d9cd"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Atelier</b><span>Store · editorial</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- OPP · Landing -->
+      <div class="tg-card" data-type="opp">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--card);padding:11px;gap:7px">
+            <div style="height:50px;border-radius:6px;background:var(--grad)"></div>
+            <div class="scb" style="height:7px;width:75%"></div>
+            <div class="scb" style="height:4px;width:95%"></div>
+            <div class="scb" style="height:4px;width:88%"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div style="font-weight:800;color:var(--primary);font-size:11px;font-family:var(--fh)">₹1,499</div><div style="height:14px;flex:1;border-radius:7px;background:var(--grad)"></div></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Spotlight</b><span>One-page product · landing</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- OPP · PDP -->
+      <div class="tg-card" data-type="opp">
+        <div class="tg-thumb"><span class="tg-tag prem">Premium</span>
+          <div class="sc" style="background:var(--card);padding:11px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;flex:1">
+              <div style="display:flex;flex-direction:column;gap:5px"><div style="flex:1;border-radius:6px;background:var(--s2)"></div><div style="display:flex;gap:4px"><div style="width:16px;height:16px;border-radius:4px;background:var(--s2);border:1.5px solid var(--primary)"></div><div style="width:16px;height:16px;border-radius:4px;background:var(--s2)"></div><div style="width:16px;height:16px;border-radius:4px;background:var(--s2)"></div></div></div>
+              <div style="display:flex;flex-direction:column;gap:5px"><div class="scb" style="height:7px;width:85%"></div><div style="height:8px;width:50%;background:var(--primary);border-radius:3px"></div><div class="scb" style="height:4px;width:95%"></div><div class="scb" style="height:4px;width:80%"></div><div style="margin-top:auto;height:14px;border-radius:7px;background:var(--grad)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Catalog PDP</b><span>Product · gallery + details</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- COURSES · Hub -->
+      <div class="tg-card" data-type="courses">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--card);padding:11px;gap:7px">
+            <div class="scb" style="height:8px;width:55%"></div>
+            <div style="display:flex;gap:6px;flex:1">
+              <div style="flex:1;border:1px solid var(--border);border-radius:6px;overflow:hidden"><div style="height:24px;background:linear-gradient(135deg,#7b3fe4,#ff4d7d)"></div><div style="padding:5px"><div class="scb" style="height:4px;width:80%"></div><div style="height:4px;width:60%;background:var(--green);border-radius:2px;margin-top:5px"></div></div></div>
+              <div style="flex:1;border:1px solid var(--border);border-radius:6px;overflow:hidden"><div style="height:24px;background:linear-gradient(135deg,#ffb23e,#ff6a3d)"></div><div style="padding:5px"><div class="scb" style="height:4px;width:75%"></div><div style="height:4px;width:35%;background:var(--green);border-radius:2px;margin-top:5px"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Academy</b><span>Courses · hub + progress</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- BOOKING · Calendar -->
+      <div class="tg-card" data-type="book">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--card);padding:11px;gap:7px">
+            <div class="scb" style="height:7px;width:60%"></div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+              <div style="height:13px;border-radius:3px;background:var(--s2)"></div><div style="height:13px;border-radius:3px;background:var(--s2)"></div><div style="height:13px;border-radius:3px;background:var(--primary)"></div><div style="height:13px;border-radius:3px;background:var(--s2)"></div><div style="height:13px;border-radius:3px;background:var(--s2)"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:1px">
+              <div style="height:12px;border-radius:4px;border:1px solid var(--border)"></div><div style="height:12px;border-radius:4px;background:var(--grad)"></div>
+              <div style="height:12px;border-radius:4px;border:1px solid var(--border)"></div><div style="height:12px;border-radius:4px;border:1px solid var(--border)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Slots</b><span>1-to-1 booking · calendar</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- EVENT · Ticket -->
+      <div class="tg-card" data-type="env">
+        <div class="tg-thumb"><span class="tg-tag prem">Premium</span>
+          <div class="sc" style="background:#120e1c;padding:12px;gap:8px;justify-content:center;align-items:center">
+            <div style="width:88%;height:40px;border-radius:8px;background:linear-gradient(120deg,#ff4d7d,#7b3fe4);position:relative"></div>
+            <div style="width:88%;display:flex;gap:0;border-radius:7px;overflow:hidden;border:1px dashed rgba(255,255,255,.4)">
+              <div style="flex:1;padding:6px"><div style="height:5px;width:70%;background:#fff;border-radius:2px"></div><div style="height:4px;width:45%;background:rgba(255,255,255,.55);border-radius:2px;margin-top:4px"></div></div>
+              <div style="width:30px;border-left:1px dashed rgba(255,255,255,.4);display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800">🎟️</div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Showtime</b><span>Event booking · ticket</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- PAYMENT · Pay link -->
+      <div class="tg-card" data-type="pay">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--s2);padding:14px;justify-content:center;align-items:center;gap:7px">
+            <div style="width:80%;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px">
+              <div class="scb" style="height:4px;width:40%"></div>
+              <div style="font-family:var(--fh);font-weight:800;font-size:15px;color:var(--text)">₹2,500</div>
+              <div style="height:14px;border-radius:7px;background:var(--grad);margin-top:2px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>QuickPay</b><span>Payment page · fixed amount</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- LEAD FORM · Capture -->
+      <div class="tg-card" data-type="ldf">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--card);padding:12px;gap:7px">
+            <div class="scb" style="height:8px;width:65%"></div>
+            <div class="scb" style="height:4px;width:90%"></div>
+            <div style="height:13px;border-radius:5px;border:1px solid var(--border);margin-top:3px"></div>
+            <div style="height:13px;border-radius:5px;border:1px solid var(--border)"></div>
+            <div style="height:13px;border-radius:5px;border:1px solid var(--border)"></div>
+            <div style="height:15px;border-radius:7px;background:var(--grad);margin-top:2px"></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Capture</b><span>Lead form · CRM-ready</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- WEBSITE · Hero site -->
+      <div class="tg-card" data-type="website">
+        <div class="tg-thumb"><span class="tg-tag prem">Premium</span>
+          <div class="sc" style="background:var(--card);padding:0">
+            <div style="display:flex;align-items:center;gap:5px;padding:7px 9px;border-bottom:1px solid var(--border)"><div style="width:14px;height:6px;border-radius:2px;background:var(--primary)"></div><div class="scb" style="width:10px;height:4px;margin-left:auto"></div><div class="scb" style="width:10px;height:4px"></div><div style="width:16px;height:8px;border-radius:4px;background:var(--grad)"></div></div>
+            <div style="flex:1;background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 30%,transparent),color-mix(in srgb,var(--accent) 28%,transparent));display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px">
+              <div style="width:60%;height:8px;border-radius:3px;background:var(--text);opacity:.85"></div>
+              <div style="width:44%;height:5px;border-radius:3px;background:var(--text);opacity:.45"></div>
+              <div style="width:34px;height:12px;border-radius:6px;background:var(--grad);margin-top:3px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:8px"><div style="height:14px;border-radius:4px;background:var(--s2)"></div><div style="height:14px;border-radius:4px;background:var(--s2)"></div><div style="height:14px;border-radius:4px;background:var(--s2)"></div></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Launch</b><span>Website · multi-section</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- CHECKOUT · Trust -->
+      <div class="tg-card" data-type="checkout">
+        <div class="tg-thumb"><span class="tg-tag free">Free</span>
+          <div class="sc" style="background:var(--card);padding:11px">
+            <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:9px;flex:1">
+              <div style="display:flex;flex-direction:column;gap:6px"><div class="scb" style="height:6px;width:55%"></div><div style="height:12px;border-radius:5px;border:1px solid var(--border)"></div><div style="height:12px;border-radius:5px;border:1px solid var(--border)"></div><div style="height:14px;border-radius:7px;background:var(--grad);margin-top:auto"></div></div>
+              <div style="background:var(--s2);border-radius:7px;padding:8px;display:flex;flex-direction:column;gap:5px"><div class="scb" style="height:24px"></div><div style="display:flex;justify-content:space-between"><div class="scb" style="height:4px;width:40%"></div><div style="height:5px;width:24%;background:var(--primary);border-radius:2px"></div></div><div style="display:flex;gap:4px;margin-top:auto"><div style="flex:1;height:8px;border-radius:99px;background:color-mix(in srgb,var(--green) 25%,transparent)"></div><div style="flex:1;height:8px;border-radius:99px;background:color-mix(in srgb,var(--green) 25%,transparent)"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>TrustPay</b><span>Checkout · conversion-focused</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+      <!-- VIP · Members -->
+      <div class="tg-card" data-type="vpc">
+        <div class="tg-thumb"><span class="tg-tag prem">Premium</span>
+          <div class="sc" style="background:linear-gradient(160deg,#2a1830,#7b3fe4);padding:14px;justify-content:center;align-items:center;gap:7px;color:#fff">
+            <div style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-size:15px">⭐</div>
+            <div style="width:62%;height:7px;border-radius:3px;background:#fff"></div>
+            <div style="width:80%;height:5px;border-radius:3px;background:rgba(255,255,255,.55)"></div>
+            <div style="width:50%;height:14px;border-radius:7px;background:#fff;margin-top:3px"></div>
+          </div>
+        </div>
+        <div class="tg-meta"><div class="tx"><b>Inner Circle</b><span>VIP channel · paid access</span></div><button class="tg-use">Use</button></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { theme: "light", filter: "all" };
+  renderVals() {
+    const set = (filter) => () => this.setState({ filter });
+    const cur = this.state.filter;
+    const on = (k) => (cur === k ? "on" : "");
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      filter: this.state.filter,
+      c: {
+        all: on("all"), bio: on("bio"), store: on("store"), opp: on("opp"),
+        courses: on("courses"), book: on("book"), env: on("env"), pay: on("pay"),
+        ldf: on("ldf"), website: on("website"), checkout: on("checkout"), vpc: on("vpc")
+      },
+      f: {
+        all: set("all"), bio: set("bio"), store: set("store"), opp: set("opp"),
+        courses: set("courses"), book: set("book"), env: set("env"), pay: set("pay"),
+        ldf: set("ldf"), website: set("website"), checkout: set("checkout"), vpc: set("vpc")
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

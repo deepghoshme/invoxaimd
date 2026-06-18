@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes pb-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8%,7%) scale(1.2); } }
+  @keyframes pb-a2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-7%,5%) scale(1.16); } }
+  @keyframes pb-flow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes pb-drift { from { background-position: 0 0; } to { background-position: 56px 56px; } }
+  @keyframes pb-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes pb-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+  @keyframes pb-fade { from { transform: translateY(8px); } to { transform: none; } }
+  @keyframes pb-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+
+  .pb {
+    --bg: #f3eee9; --panel: #fff; --p2: #faf6f1; --line: #e7dccf; --ink: #2b1b2e; --mut: #7a6770;
+    --primary: #ff6a3d; --green: #1fb57a;
+    --brand: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --fh: "Sora", sans-serif; --fb: "Inter", sans-serif;
+    background: var(--bg); color: var(--ink); font-family: var(--fb); min-height: 100dvh; display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased; font-size: 14px;
+  }
+  .pb.dark { --bg: #14101c; --panel: #1d1730; --p2: #241c3a; --line: #322843; --ink: #f6eef2; --mut: #b9a8bc; --primary: #ff7e55; }
+  .pb h1,.pb h2,.pb h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .pb p { margin: 0; }
+
+  .pb-top { display: flex; align-items: center; gap: 12px; padding: 11px 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  .pb-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; }
+  .pb-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--brand); }
+  .pb-crumb { font-size: 12.5px; color: var(--mut); } .pb-crumb b { color: var(--ink); }
+  .pb-seg { display: inline-flex; background: var(--p2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+  .pb-seg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--mut); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+  .pb-seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .pb-top-r { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .pb-ico { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font-size: 14px; display: grid; place-items: center; }
+  .pb-save { font: inherit; font-weight: 600; font-size: 13px; padding: 9px 15px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .pb-pub { font: inherit; font-family: var(--fh); font-weight: 700; font-size: 13px; padding: 9px 18px; border-radius: 9px; border: 0; background: var(--brand); color: #fff; cursor: pointer; }
+
+  /* CREATE PICKER */
+  .pb-pick { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 40px 24px; animation: pb-fade .4s ease; }
+  .pb-pick-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .pb-pblob { position: absolute; width: 40vmax; height: 40vmax; border-radius: 50%; filter: blur(90px); opacity: .2; }
+  .pb-pblob.b1 { background: #ffb23e; top: -16vmax; left: -8vmax; animation: pb-a1 26s ease-in-out infinite; }
+  .pb-pblob.b2 { background: #7b3fe4; bottom: -16vmax; right: -8vmax; animation: pb-a2 30s ease-in-out infinite; }
+  .pb-pick-in { position: relative; z-index: 1; max-width: 880px; width: 100%; }
+  .pb-pick-in h1 { font-size: 30px; font-weight: 800; text-align: center; }
+  .pb-pick-in .lead { color: var(--mut); font-size: 15px; text-align: center; margin: 10px 0 30px; }
+  .pb-types { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
+  .pb-type { background: var(--panel); border: 1.5px solid var(--line); border-radius: 15px; padding: 18px 14px; cursor: pointer; text-align: center; transition: transform .18s, border-color .18s, box-shadow .18s; }
+  .pb-type:hover { transform: translateY(-4px); border-color: color-mix(in srgb,var(--primary) 45%,var(--line)); box-shadow: 0 18px 40px -24px rgba(43,27,46,.4); }
+  .pb-type .e { font-size: 26px; } .pb-type .nm { font-family: var(--fh); font-weight: 700; font-size: 13.5px; margin-top: 10px; } .pb-type .rt { font-family: ui-monospace,Menlo,monospace; font-size: 10.5px; color: var(--mut); margin-top: 3px; }
+
+  /* BUILDER */
+  .pb-stage { flex: 1; display: flex; min-height: 0; animation: pb-fade .4s ease; }
+  .pb-panel { width: 336px; flex: none; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  .pb-panel.hide { display: none; }
+  .pb-tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .pb-tab { flex: 1; border: 0; background: none; font: inherit; font-weight: 600; font-size: 12px; color: var(--mut); padding: 13px 2px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .pb-tab.on { color: var(--primary); border-color: var(--primary); }
+  .pb-panel-body { flex: 1; overflow-y: auto; padding: 18px; scrollbar-width: thin; }
+  .pb-grp { margin-bottom: 20px; } .pb-grp > .h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mut); margin-bottom: 9px; display: flex; align-items: center; }
+  .pb-grp > .h .add { margin-left: auto; color: var(--primary); cursor: pointer; font-size: 12px; text-transform: none; letter-spacing: 0; }
+  .pb-label { display: block; font-size: 12px; font-weight: 700; margin: 12px 0 5px; }
+  .pb-input { width: 100%; padding: 10px 12px; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--p2); border: 1.5px solid var(--line); border-radius: 10px; outline: none; }
+  .pb-input:focus { border-color: var(--primary); }
+  textarea.pb-input { resize: vertical; min-height: 60px; }
+  .pb-row { display: flex; gap: 9px; } .pb-row > * { flex: 1; }
+
+  /* image upload dropzone */
+  .pb-drop { border: 1.5px dashed var(--line); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; position: relative; background: var(--p2); transition: border-color .15s; display: block; }
+  .pb-drop:hover { border-color: var(--primary); }
+  .pb-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .pb-drop .ic { font-size: 22px; } .pb-drop .t { font-size: 12.5px; font-weight: 600; margin-top: 5px; } .pb-drop .s { font-size: 11px; color: var(--mut); margin-top: 2px; }
+  .pb-drop.has { padding: 0; border-style: solid; overflow: hidden; } .pb-drop.has img { width: 100%; display: block; max-height: 140px; object-fit: cover; }
+  .pb-drop .change { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; }
+  .pb-gallery { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 8px; }
+  .pb-gthumb { aspect-ratio: 1; border-radius: 9px; overflow: hidden; position: relative; background: var(--p2); border: 1px solid var(--line); }
+  .pb-gthumb img { width: 100%; height: 100%; object-fit: cover; } .pb-gthumb .x { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border: 0; background: rgba(0,0,0,.6); color: #fff; border-radius: 6px; cursor: pointer; font-size: 11px; }
+  .pb-gadd { aspect-ratio: 1; border: 1.5px dashed var(--line); border-radius: 9px; display: grid; place-items: center; cursor: pointer; position: relative; color: var(--mut); font-size: 22px; } .pb-gadd input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  /* repeater item (testimonial/faq) */
+  .pb-item { border: 1px solid var(--line); border-radius: 11px; padding: 11px; margin-bottom: 9px; background: var(--p2); }
+  .pb-item .hd { display: flex; align-items: center; margin-bottom: 7px; } .pb-item .hd b { font-size: 12px; } .pb-item .hd .x { margin-left: auto; border: 0; background: none; color: var(--mut); cursor: pointer; font-size: 13px; }
+  .pb-item input, .pb-item textarea { width: 100%; padding: 8px 10px; font: inherit; font-size: 12.5px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); outline: none; margin-bottom: 6px; }
+
+  .pb-feat { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
+  .pb-feat input { flex: 1; padding: 9px 11px; font: inherit; font-size: 13px; background: var(--p2); border: 1.5px solid var(--line); border-radius: 9px; color: var(--ink); outline: none; }
+  .pb-feat .x { width: 32px; height: 36px; border: 1px solid var(--line); background: var(--panel); border-radius: 9px; color: var(--mut); cursor: pointer; flex: none; }
+
+  .pb-bgs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; }
+  .pb-bg { aspect-ratio: 1.4; border-radius: 9px; border: 2px solid var(--line); cursor: pointer; overflow: hidden; position: relative; }
+  .pb-bg.on { border-color: var(--primary); }
+  .pb-sw { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pb-swatch { width: 30px; height: 30px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; }
+  .pb-swatch.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--panel) inset; }
+  .pb-chips { display: flex; gap: 7px; flex-wrap: wrap; } .pb-chip { flex: 1; min-width: 64px; text-align: center; border: 1.5px solid var(--line); border-radius: 9px; padding: 9px; font-size: 12px; font-weight: 600; cursor: pointer; } .pb-chip.on { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb,var(--primary) 7%,transparent); }
+  .pb-mrow { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-top: 1px solid var(--line); } .pb-mrow:first-child { border-top: 0; } .pb-mrow .tx { flex: 1; } .pb-mrow .tx b { font-size: 13px; } .pb-mrow .tx p { font-size: 11.5px; color: var(--mut); margin-top: 2px; }
+  .pb-tg { width: 40px; height: 23px; border-radius: 999px; background: var(--line); border: 0; cursor: pointer; position: relative; flex: none; } .pb-tg.on { background: var(--brand); } .pb-tg i { position: absolute; top: 3px; left: 3px; width: 17px; height: 17px; border-radius: 50%; background: #fff; transition: transform .15s; } .pb-tg.on i { transform: translateX(17px); }
+
+  /* sections reorder list */
+  .pb-sec { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; margin-bottom: 8px; background: var(--p2); }
+  .pb-sec .nm { flex: 1; font-size: 13px; font-weight: 600; }
+  .pb-sec .ord { display: flex; flex-direction: column; gap: 1px; } .pb-sec .ord button { border: 0; background: none; color: var(--mut); cursor: pointer; font-size: 10px; line-height: 1; padding: 1px; } .pb-sec .ord button:hover { color: var(--primary); }
+  .pb-sec .tg2 { width: 36px; height: 21px; border-radius: 999px; background: var(--line); border: 0; cursor: pointer; position: relative; flex: none; } .pb-sec .tg2.on { background: var(--brand); } .pb-sec .tg2 i { position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: transform .15s; } .pb-sec .tg2.on i { transform: translateX(15px); }
+
+  .pb-seo-prev { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 12px; }
+  .pb-seo-prev .hd { background: var(--p2); padding: 7px 11px; font-family: ui-monospace,Menlo,monospace; font-size: 10.5px; color: var(--mut); }
+  .pb-seo-prev .bd { padding: 11px; } .pb-seo-prev .u { color: #1a8917; font-size: 11px; } .pb-seo-prev .t { color: #1a0dab; font-size: 14px; margin: 2px 0; } .pb.dark .pb-seo-prev .t { color: #8ab4f8; } .pb-seo-prev .d { color: var(--mut); font-size: 11.5px; }
+  .pb-pixel-live { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--green); background: color-mix(in srgb,var(--green) 12%,transparent); padding: 7px 12px; border-radius: 999px; margin-top: 4px; }
+  .pb-pixel-live .d { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+  /* preview area */
+  .pb-prev { flex: 1; min-width: 0; overflow: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+  .pb-prev.full { padding: 0; }
+  .pb-urlbar { display: flex; align-items: center; gap: 9px; width: 100%; max-width: 940px; margin-bottom: 13px; }
+  .pb-url { flex: 1; font-family: ui-monospace,Menlo,monospace; font-size: 11.5px; color: var(--mut); background: var(--panel); border: 1px solid var(--line); padding: 6px 13px; border-radius: 999px; }
+  .pb-url .lk { color: var(--green); }
+  .pb-pubpill { font-size: 11px; font-weight: 700; color: var(--green); background: color-mix(in srgb,var(--green) 14%,transparent); padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+  .pb-draftpill { font-size: 11px; font-weight: 700; color: var(--mut); background: var(--p2); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+  .pb-frame { width: 100%; max-width: 940px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 30px 70px -34px rgba(43,27,46,.4); border: 1px solid var(--line); }
+  .pb-frame.mob { max-width: 360px; }
+  .pb-prev.full .pb-frame, .pb-prev.full .pb-urlbar { max-width: 100%; }
+  .pb-prev.full .pb-frame { border-radius: 0; border: 0; box-shadow: none; }
+  .pb-prev.full .pb-urlbar { padding: 10px 18px 0; }
+
+  /* ===== the PAGE being built ===== */
+  .pg { --ac: #ff6a3d; --ac2: #ff4d7d; --rad: 14px; position: relative; overflow: hidden; background: #fff; color: #1f1426; font-family: var(--sf, "Sora"), sans-serif; }
+  .pg.dark { background: #15171c; color: #f2f3f5; }
+  .pg-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+  .pg-bg .blob { position: absolute; border-radius: 50%; filter: blur(64px); opacity: .5; }
+  .bg-aurora .blob.x1 { width: 55%; height: 65%; background: var(--ac); top: -15%; left: -8%; animation: pb-a1 24s ease-in-out infinite; }
+  .bg-aurora .blob.x2 { width: 50%; height: 60%; background: var(--ac2); top: -10%; right: -10%; animation: pb-a2 28s ease-in-out infinite; }
+  .bg-mesh { background: radial-gradient(40% 50% at 18% 20%, color-mix(in srgb,var(--ac) 30%,transparent), transparent 70%), radial-gradient(38% 46% at 84% 16%, color-mix(in srgb,#ffb23e 28%,transparent), transparent 72%), radial-gradient(46% 52% at 72% 90%, color-mix(in srgb,var(--ac2) 26%,transparent), transparent 74%); }
+  .bg-flow { background: linear-gradient(120deg, color-mix(in srgb,#ffb23e 34%,#fff), color-mix(in srgb,var(--ac) 38%,#fff), color-mix(in srgb,var(--ac2) 34%,#fff), color-mix(in srgb,#7b3fe4 30%,#fff)); background-size: 300% 300%; animation: pb-flow 16s ease infinite; opacity: .85; }
+  .pg.dark .bg-flow { mix-blend-mode: screen; opacity: .5; }
+  .bg-dots { background-image: radial-gradient(color-mix(in srgb,var(--ac) 28%,transparent) 2px, transparent 2px); background-size: 26px 26px; animation: pb-drift 14s linear infinite; opacity: .5; }
+  .pg-in { position: relative; z-index: 1; padding: 40px 36px 44px; text-align: center; }
+  .pg-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-family: "Inter",sans-serif; font-size: 12px; font-weight: 700; color: var(--ac); background: color-mix(in srgb,var(--ac) 12%,#fff); padding: 6px 14px; border-radius: 999px; }
+  .pg.dark .pg-eyebrow { background: color-mix(in srgb,var(--ac) 24%,#15171c); }
+  .pg-img { width: 100%; max-width: 460px; margin: 22px auto 0; aspect-ratio: 16/9; border-radius: var(--rad); overflow: hidden; background: repeating-linear-gradient(45deg, color-mix(in srgb,var(--ac) 12%,#f4eee8) 0 14px, #f4eee8 14px 28px); display: grid; place-items: center; }
+  .pg-img img { width: 100%; height: 100%; object-fit: cover; }
+  .pg-img .ph { font-family: ui-monospace,Menlo,monospace; font-size: 11px; color: #8a7d72; background: rgba(255,255,255,.7); padding: 5px 11px; border-radius: 999px; }
+  .pg-h1 { font-size: 36px; line-height: 1.08; font-weight: 800; margin: 22px auto 0; max-width: 18ch; }
+  .pg-sub { font-family: "Inter",sans-serif; font-size: 16px; color: #6b5f6b; margin: 14px auto 0; max-width: 42ch; } .pg.dark .pg-sub { color: #aab; }
+  .pg-price { display: inline-flex; align-items: baseline; gap: 10px; margin-top: 20px; } .pg-price .now { font-weight: 800; font-size: 32px; } .pg-price .was { color: #9a8b95; text-decoration: line-through; font-size: 17px; }
+  .pg-cta { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 8px; margin-top: 24px; background: linear-gradient(135deg,var(--ac),var(--ac2)); color: #fff; font-family: "Inter",sans-serif; font-weight: 700; font-size: 15px; padding: 14px 30px; cursor: pointer; box-shadow: 0 14px 30px -12px color-mix(in srgb,var(--ac) 70%,transparent); border-radius: var(--rad); }
+  .pg-cta .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .4; filter: blur(3px); animation: pb-shine 3.2s ease-in-out infinite; }
+  .anim-pulse .pg-cta { animation: pb-pulse 2.4s ease-in-out infinite; } .anim-none .pg-cta .sh { display: none; }
+  .bt-rounded { --rad: 13px; } .bt-pill .pg-cta, .bt-pill .pg-img { border-radius: 999px; } .bt-pill .pg-img { border-radius: 26px; } .bt-sharp { --rad: 3px; }
+  .pg-sec { position: relative; z-index: 1; padding: 30px 36px; border-top: 1px solid color-mix(in srgb,var(--ac) 10%, #e8ded3); } .pg.dark .pg-sec { border-color: rgba(255,255,255,.08); }
+  .pg-sec h2 { font-size: 22px; text-align: center; margin-bottom: 18px; }
+  .pg-feats { list-style: none; padding: 0; margin: 0 auto; max-width: 380px; text-align: left; display: flex; flex-direction: column; gap: 10px; font-family: "Inter",sans-serif; font-size: 14.5px; } .pg-feats li { display: flex; gap: 10px; } .pg-feats li::before { content: "✓"; color: #1fb57a; font-weight: 800; }
+  .pg-gal { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; } .pg-gal .g { aspect-ratio: 1; border-radius: var(--rad); overflow: hidden; background: repeating-linear-gradient(45deg, color-mix(in srgb,var(--ac) 12%,#f4eee8) 0 12px, #f4eee8 12px 24px); } .pg-gal .g img { width: 100%; height: 100%; object-fit: cover; }
+  .pg-testis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 720px; margin: 0 auto; } .pg-testi { border: 1px solid color-mix(in srgb,var(--ac) 14%, #ece2d7); border-radius: var(--rad); padding: 16px; } .pg.dark .pg-testi { border-color: rgba(255,255,255,.1); } .pg-testi .st { color: #ffb23e; font-size: 13px; } .pg-testi p { font-family: "Inter",sans-serif; font-size: 13.5px; margin: 8px 0 10px; } .pg-testi b { font-family: "Inter",sans-serif; font-size: 12.5px; }
+  .pg-faq { max-width: 600px; margin: 0 auto; } .pg-faqi { border: 1px solid color-mix(in srgb,var(--ac) 14%, #ece2d7); border-radius: var(--rad); padding: 13px 16px; margin-bottom: 9px; text-align: left; } .pg.dark .pg-faqi { border-color: rgba(255,255,255,.1); } .pg-faqi b { font-size: 14px; } .pg-faqi p { font-family: "Inter",sans-serif; font-size: 13px; color: #6b5f6b; margin-top: 7px; } .pg.dark .pg-faqi p { color: #aab; }
+  .pg-trust { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .pg-tb { display: inline-flex; align-items: center; gap: 7px; font-family: "Inter",sans-serif; font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 999px; background: color-mix(in srgb,var(--ac) 10%,transparent); } .pg-tb .i { color: var(--ac); }
+  .pg-ctaband { text-align: center; } .pg-ctaband h2 { margin-bottom: 14px; }
+  .pg-pow { font-family: "Inter",sans-serif; font-size: 11.5px; color: #9a8b95; text-align: center; padding: 20px; }
+
+  .pb-tplgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pb-tpl { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--p2); }
+  .pb-tpl .thumb { height: 58px; position: relative; }
+  .pb-tpl .thumb .lock { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.34); color: #fff; font-size: 15px; }
+  .pb-tpl .meta { display: flex; align-items: center; gap: 6px; padding: 8px 10px 0; }
+  .pb-tpl .meta b { font-size: 11.5px; font-family: var(--fh); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pb-tpl .bdg { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 99px; flex: none; }
+  .pb-tpl .bdg.free { background: color-mix(in srgb,var(--green) 16%,transparent); color: var(--green); }
+  .pb-tpl .bdg.prem { background: var(--brand); color: #fff; }
+  .pb-tpl .bdg.owned { background: color-mix(in srgb,var(--primary) 16%,transparent); color: var(--primary); }
+  .pb-tplbtn { width: calc(100% - 20px); margin: 8px 10px 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 7px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .pb-tplbtn.buy { background: var(--brand); color: #fff; border-color: transparent; }
+  .pb-drop .dropimg { width: 100%; height: 120px; background-size: cover; background-position: center; }
+  .pg-img-fill { width: 100%; height: 100%; background-size: cover; background-position: center; }
+  .pb-toastbox { position: fixed; left: 50%; bottom: 26px; z-index: 60; background: #18121f; color: #fff; padding: 13px 20px; border-radius: 12px; font-size: 13.5px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 10px; animation: pb-toast .4s cubic-bezier(.2,.8,.2,1); }
+  .pb-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+
+  @media (max-width: 860px) { .pb-types { grid-template-columns: repeat(2,1fr); } .pb-panel { position: fixed; z-index: 30; top: 56px; bottom: 0; box-shadow: 20px 0 50px -30px rgba(0,0,0,.5); } .pb-stage { display: block; } .pg-testis { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="pb {{ darkClass }}">
+  <div class="pb-top">
+    <div class="pb-brand"><span class="pb-logo"></span>Page Builder</div>
+    <sc-if value="{{ building }}" hint-placeholder-val="{{ false }}">
+      <span class="pb-crumb">/ <b>{{ typeLabel }}</b> · {{ cTitle }}</span>
+      <div class="pb-seg" style="margin-left:auto"><button class="{{ mWeb }}" onClick="{{ setWeb }}">🖥</button><button class="{{ mMob }}" onClick="{{ setMob }}">📱</button></div>
+      <div class="pb-seg"><button class="{{ mBuild }}" onClick="{{ setBuild }}">✎ Edit</button><button class="{{ mPrev }}" onClick="{{ setPrev }}">👁 Preview</button></div>
+      <div class="pb-top-r" style="margin-left:0">
+        <button class="pb-ico" onClick="{{ toggleTheme }}">{{ themeIcon }}</button>
+        <button class="pb-save" onClick="{{ saveDraft }}">Save draft</button>
+        <button class="pb-pub" onClick="{{ publish }}">Publish ↗</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ picking }}" hint-placeholder-val="{{ true }}">
+      <button class="pb-ico" style="margin-left:auto" onClick="{{ toggleTheme }}">{{ themeIcon }}</button>
+    </sc-if>
+  </div>
+
+  <!-- CREATE PICKER -->
+  <sc-if value="{{ picking }}" hint-placeholder-val="{{ true }}">
+    <div class="pb-pick">
+      <div class="pb-pick-bg"><div class="pb-pblob b1"></div><div class="pb-pblob b2"></div></div>
+      <div class="pb-pick-in">
+        <h1>Create a new page</h1>
+        <p class="lead">Pick a page type — you'll get a flagship template you can make your own.</p>
+        <div class="pb-types">
+          <sc-for list="{{ types }}" as="t" hint-placeholder-count="10">
+            <div class="pb-type" onClick="{{ t.pick }}"><div class="e">{{ t.e }}</div><div class="nm">{{ t.nm }}</div><div class="rt">{{ t.rt }}</div></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- BUILDER -->
+  <sc-if value="{{ building }}" hint-placeholder-val="{{ false }}">
+    <div class="pb-stage">
+      <aside class="pb-panel {{ panelHide }}">
+        <div class="pb-tabs">
+          <button class="pb-tab {{ tabContent }}" onClick="{{ goContent }}">Content</button>
+          <button class="pb-tab {{ tabDesign }}" onClick="{{ goDesign }}">Design</button>
+          <button class="pb-tab {{ tabSections }}" onClick="{{ goSections }}">Sections</button>
+          <button class="pb-tab {{ tabTpl }}" onClick="{{ goTpl }}">Themes</button>
+          <button class="pb-tab {{ tabSeo }}" onClick="{{ goSeo }}">SEO</button>
+          <button class="pb-tab {{ tabPixels }}" onClick="{{ goPixels }}">Pixels</button>
+        </div>
+        <div class="pb-panel-body">
+          <!-- CONTENT -->
+          <sc-if value="{{ isContent }}" hint-placeholder-val="{{ true }}">
+            <div class="pb-grp">
+              <div class="h">Hero</div>
+              <label class="pb-drop {{ heroHas }}">
+                <input type="file" accept="image/*" onChange="{{ onHero }}" />
+                <sc-if value="{{ heroSet }}" hint-placeholder-val="{{ false }}"><div class="dropimg" style="{{ heroBg }}"></div><span class="change">Change</span></sc-if>
+                <sc-if value="{{ heroEmpty }}" hint-placeholder-val="{{ true }}"><div class="ic">🖼️</div><div class="t">Upload hero image</div><div class="s">PNG / JPG · drag or click</div></sc-if>
+              </label>
+              <label class="pb-label">Eyebrow</label>
+              <input class="pb-input" value="{{ cEyebrow }}" onInput="{{ onEyebrow }}" />
+              <label class="pb-label">Headline</label>
+              <input class="pb-input" value="{{ cTitle }}" onInput="{{ onTitle }}" />
+              <label class="pb-label">Subtitle</label>
+              <textarea class="pb-input" onInput="{{ onSub }}">{{ cSub }}</textarea>
+              <sc-if value="{{ hasPrice }}" hint-placeholder-val="{{ true }}">
+                <div class="pb-row">
+                  <div><label class="pb-label">Price (₹)</label><input class="pb-input" value="{{ cPrice }}" onInput="{{ onPrice }}" /></div>
+                  <div><label class="pb-label">Compare-at</label><input class="pb-input" value="{{ cWas }}" onInput="{{ onWas }}" /></div>
+                </div>
+                <label class="pb-label">Button text</label>
+                <input class="pb-input" value="{{ cBtn }}" onInput="{{ onBtn }}" />
+              </sc-if>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Highlights</div>
+              <sc-for list="{{ feats }}" as="f" hint-placeholder-count="3"><div class="pb-feat"><input value="{{ f.text }}" onInput="{{ f.edit }}" /><button class="x" onClick="{{ f.remove }}">✕</button></div></sc-for>
+              <button class="pb-save" style="border:0;color:var(--primary);background:none;padding:4px 0" onClick="{{ addFeat }}">＋ Add highlight</button>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Gallery</div>
+              <div class="pb-gallery">
+                <sc-for list="{{ gallery }}" as="g" hint-placeholder-count="0"><div class="pb-gthumb" style="{{ g.style }}"><button class="x" onClick="{{ g.remove }}">✕</button></div></sc-for>
+                <label class="pb-gadd">＋<input type="file" accept="image/*" onChange="{{ onGallery }}" /></label>
+              </div>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Testimonials <span class="add" onClick="{{ addTesti }}">＋ Add</span></div>
+              <sc-for list="{{ testis }}" as="t" hint-placeholder-count="2">
+                <div class="pb-item"><div class="hd"><b>Testimonial</b><button class="x" onClick="{{ t.remove }}">✕</button></div><input value="{{ t.name }}" onInput="{{ t.editName }}" placeholder="Name" /><textarea onInput="{{ t.editQuote }}" placeholder="Quote">{{ t.quote }}</textarea></div>
+              </sc-for>
+            </div>
+            <div class="pb-grp">
+              <div class="h">FAQ <span class="add" onClick="{{ addFaq }}">＋ Add</span></div>
+              <sc-for list="{{ faqs }}" as="q" hint-placeholder-count="2">
+                <div class="pb-item"><div class="hd"><b>Question</b><button class="x" onClick="{{ q.remove }}">✕</button></div><input value="{{ q.q }}" onInput="{{ q.editQ }}" placeholder="Question" /><textarea onInput="{{ q.editA }}" placeholder="Answer">{{ q.a }}</textarea></div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <!-- DESIGN -->
+          <sc-if value="{{ isDesign }}" hint-placeholder-val="{{ false }}">
+            <div class="pb-grp">
+              <div class="h">Page theme</div>
+              <div class="pb-chips"><div class="pb-chip {{ ptLight }}" onClick="{{ setPtLight }}">☀ Light</div><div class="pb-chip {{ ptDark }}" onClick="{{ setPtDark }}">☾ Dark</div></div>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Background</div>
+              <div class="pb-bgs">
+                <div class="pb-bg {{ bgAurora }}" onClick="{{ setBgAurora }}" style="background:linear-gradient(135deg,#ffb23e,#ff4d7d 60%,#7b3fe4)"></div>
+                <div class="pb-bg {{ bgMesh }}" onClick="{{ setBgMesh }}" style="background:radial-gradient(circle at 30% 30%,#ff6a3d,transparent),radial-gradient(circle at 70% 70%,#7b3fe4,#ffb23e)"></div>
+                <div class="pb-bg {{ bgFlow }}" onClick="{{ setBgFlow }}" style="background:linear-gradient(120deg,#ffb23e,#ff6a3d,#ff4d7d,#7b3fe4)"></div>
+                <div class="pb-bg {{ bgDots }}" onClick="{{ setBgDots }}" style="background:#fff3ec;background-image:radial-gradient(#ff6a3d 2px,transparent 2px);background-size:9px 9px"></div>
+              </div>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Brand color</div>
+              <div class="pb-sw">
+                <div class="pb-swatch {{ acO }}" onClick="{{ setAcO }}" style="background:#ff6a3d"></div>
+                <div class="pb-swatch {{ acP }}" onClick="{{ setAcP }}" style="background:#ff4d7d"></div>
+                <div class="pb-swatch {{ acV }}" onClick="{{ setAcV }}" style="background:#7b3fe4"></div>
+                <div class="pb-swatch {{ acT }}" onClick="{{ setAcT }}" style="background:#1f9b8e"></div>
+                <div class="pb-swatch {{ acB }}" onClick="{{ setAcB }}" style="background:#2a6fdb"></div>
+              </div>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Heading font</div>
+              <div class="pb-chips"><div class="pb-chip {{ fnSora }}" onClick="{{ setFnSora }}" style="font-family:Sora">Sora</div><div class="pb-chip {{ fnSpace }}" onClick="{{ setFnSpace }}" style="font-family:'Space Grotesk'">Space</div><div class="pb-chip {{ fnPlay }}" onClick="{{ setFnPlay }}" style="font-family:'Playfair Display'">Playfair</div></div>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Button shape</div>
+              <div class="pb-chips"><div class="pb-chip {{ btR }}" onClick="{{ setBtR }}">Rounded</div><div class="pb-chip {{ btP }}" onClick="{{ setBtP }}">Pill</div><div class="pb-chip {{ btS }}" onClick="{{ setBtS }}">Sharp</div></div>
+            </div>
+            <div class="pb-grp">
+              <div class="h">Button animation</div>
+              <div class="pb-chips"><div class="pb-chip {{ anShine }}" onClick="{{ setAnShine }}">Shine</div><div class="pb-chip {{ anPulse }}" onClick="{{ setAnPulse }}">Pulse</div><div class="pb-chip {{ anNone }}" onClick="{{ setAnNone }}">None</div></div>
+            </div>
+          </sc-if>
+
+          <!-- SECTIONS -->
+          <sc-if value="{{ isSections }}" hint-placeholder-val="{{ false }}">
+            <div class="pb-grp">
+              <div class="h">Page sections</div>
+              <p style="font-size:12px;color:var(--mut);margin-bottom:12px">Toggle on/off and reorder. Hero always shows first.</p>
+              <sc-for list="{{ sectionRows }}" as="s" hint-placeholder-count="6">
+                <div class="pb-sec"><div class="ord"><button onClick="{{ s.up }}">▲</button><button onClick="{{ s.down }}">▼</button></div><span class="nm">{{ s.label }}</span><button class="tg2 {{ s.onCls }}" onClick="{{ s.toggle }}"><i></i></button></div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <!-- THEMES / TEMPLATES -->
+          <sc-if value="{{ isTpl }}" hint-placeholder-val="{{ false }}">
+            <div class="pb-grp">
+              <div class="h">Themes &amp; templates · {{ tplCount }}</div>
+              <p style="font-size:12px;color:var(--mut);margin-bottom:10px">One click restyles the page <b>and auto-adds the right widgets</b>. Premium unlock after purchase.</p>
+              <div class="pb-chips" style="flex-wrap:wrap;margin-bottom:12px">
+                <sc-for list="{{ tplCats }}" as="c" hint-placeholder-count="7"><div class="pb-chip {{ c.on }}" onClick="{{ c.go }}" style="flex:none">{{ c.label }}</div></sc-for>
+              </div>
+              <div class="pb-tplgrid">
+                <sc-for list="{{ templates }}" as="t" hint-placeholder-count="8">
+                  <div class="pb-tpl">
+                    <div class="thumb" style="background: {{ t.thumb }}"><sc-if value="{{ t.locked }}" hint-placeholder-val="{{ false }}"><span class="lock">🔒</span></sc-if></div>
+                    <div class="meta"><b>{{ t.name }}</b><span class="bdg {{ t.badgeCls }}">{{ t.badge }}</span></div>
+                    <button class="pb-tplbtn {{ t.btnCls }}" onClick="{{ t.action }}">{{ t.btnLabel }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- SEO -->
+          <sc-if value="{{ isSeo }}" hint-placeholder-val="{{ false }}">
+            <div class="pb-grp">
+              <label class="pb-label">Meta title</label>
+              <input class="pb-input" value="{{ sTitle }}" onInput="{{ onSTitle }}" />
+              <label class="pb-label">Meta description</label>
+              <textarea class="pb-input" onInput="{{ onSDesc }}">{{ sDesc }}</textarea>
+              <label class="pb-label">URL slug</label>
+              <input class="pb-input" value="{{ sSlug }}" onInput="{{ onSSlug }}" />
+              <div class="pb-mrow" style="margin-top:8px"><div class="tx"><b>Index on Google</b><p>Let search engines find it</p></div><button class="pb-tg {{ idxClass }}" onClick="{{ toggleIdx }}"><i></i></button></div>
+              <div class="pb-seo-prev"><div class="hd">Google preview</div><div class="bd"><div class="u">{{ subUrl }}/{{ sSlug }}</div><div class="t">{{ sTitle }}</div><div class="d">{{ sDesc }}</div></div></div>
+            </div>
+          </sc-if>
+
+          <!-- PIXELS -->
+          <sc-if value="{{ isPixels }}" hint-placeholder-val="{{ false }}">
+            <div class="pb-grp">
+              <label class="pb-label">Meta Pixel ID</label>
+              <input class="pb-input" value="{{ pMeta }}" onInput="{{ onPMeta }}" placeholder="123456789012345" />
+              <label class="pb-label">Google Ads tag</label>
+              <input class="pb-input" value="{{ pGoogle }}" onInput="{{ onPGoogle }}" placeholder="AW-XXXXXXXX" />
+              <p style="font-size:12px;color:var(--mut);margin:12px 0 8px">View, click &amp; Purchase events fire automatically — including checkout.</p>
+              <sc-if value="{{ pixelsLive }}" hint-placeholder-val="{{ false }}"><span class="pb-pixel-live"><span class="d"></span>Pixels active on this page</span></sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </aside>
+
+      <!-- PREVIEW -->
+      <div class="pb-prev {{ prevFull }}">
+        <div class="pb-urlbar">
+          <div class="pb-url"><span class="lk">{{ urlLock }}</span> {{ fullUrl }}</div>
+          <sc-if value="{{ isPub }}" hint-placeholder-val="{{ false }}"><span class="pb-pubpill">● Published · live</span></sc-if>
+          <sc-if value="{{ isDraft }}" hint-placeholder-val="{{ true }}"><span class="pb-draftpill">Draft</span></sc-if>
+        </div>
+        <div class="pb-frame {{ frameMob }}">
+          <div class="pg {{ bgClass }} {{ btClass }} {{ animClass }} {{ pageThemeClass }}" style="--ac: {{ ac }}; --ac2: {{ ac2 }}; --sf: {{ sf }}">
+            <div class="pg-bg"><span class="blob x1"></span><span class="blob x2"></span></div>
+            <div class="pg-in">
+              <span class="pg-eyebrow">{{ cEyebrow }}</span>
+              <div class="pg-img">
+                <sc-if value="{{ heroSet }}" hint-placeholder-val="{{ false }}"><div class="pg-img-fill" style="{{ heroBg }}"></div></sc-if>
+                <sc-if value="{{ heroEmpty }}" hint-placeholder-val="{{ true }}"><span class="ph">HERO IMAGE</span></sc-if>
+              </div>
+              <h1 class="pg-h1">{{ cTitle }}</h1>
+              <p class="pg-sub">{{ cSub }}</p>
+              <sc-if value="{{ hasPrice }}" hint-placeholder-val="{{ true }}"><div class="pg-price"><span class="now">₹{{ cPrice }}</span><span class="was">₹{{ cWas }}</span></div></sc-if>
+              <div class="pg-cta">{{ ctaText }}<span class="sh"></span></div>
+            </div>
+
+            <sc-for list="{{ orderedSections }}" as="sec" hint-placeholder-count="3">
+              <div class="pg-sec {{ sec.extraClass }}">
+                <sc-if value="{{ sec.isHighlights }}" hint-placeholder-val="{{ false }}"><h2>{{ sec.heading }}</h2><ul class="pg-feats"><sc-for list="{{ feats }}" as="f" hint-placeholder-count="3"><li>{{ f.text }}</li></sc-for></ul></sc-if>
+                <sc-if value="{{ sec.isGallery }}" hint-placeholder-val="{{ false }}"><h2>{{ sec.heading }}</h2><div class="pg-gal"><sc-for list="{{ galleryView }}" as="g" hint-placeholder-count="3"><div class="g" style="{{ g.style }}"></div></sc-for></div></sc-if>
+                <sc-if value="{{ sec.isTestimonials }}" hint-placeholder-val="{{ false }}"><h2>{{ sec.heading }}</h2><div class="pg-testis"><sc-for list="{{ testis }}" as="t" hint-placeholder-count="2"><div class="pg-testi"><div class="st">★★★★★</div><p>“{{ t.quote }}”</p><b>— {{ t.name }}</b></div></sc-for></div></sc-if>
+                <sc-if value="{{ sec.isFaq }}" hint-placeholder-val="{{ false }}"><h2>{{ sec.heading }}</h2><div class="pg-faq"><sc-for list="{{ faqs }}" as="q" hint-placeholder-count="2"><div class="pg-faqi"><b>{{ q.q }}</b><p>{{ q.a }}</p></div></sc-for></div></sc-if>
+                <sc-if value="{{ sec.isTrust }}" hint-placeholder-val="{{ false }}"><div class="pg-trust"><span class="pg-tb"><span class="i">✓</span>Secure checkout</span><span class="pg-tb"><span class="i">↺</span>7-day refund</span><span class="pg-tb"><span class="i">⚡</span>Instant delivery</span></div></sc-if>
+                <sc-if value="{{ sec.isCta }}" hint-placeholder-val="{{ false }}"><div class="pg-ctaband"><h2>{{ ctaHeading }}</h2><div class="pg-cta">{{ ctaText }}<span class="sh"></span></div></div></sc-if>
+              </div>
+            </sc-for>
+
+            <div class="pg-pow">Built with invoxai</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="pb-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", stage: "pick", type: null,
+    device: "web", mode: "builder", tab: "content",
+    cEyebrow: "", cTitle: "", cSub: "", cPrice: "1499", cWas: "2499", cBtn: "Buy now",
+    hero: null, gallery: [],
+    feats: ["Lifetime access", "Instant delivery", "7-day refund"],
+    testis: [{ name: "Rohan M.", quote: "Worth ten times the price. My mixes finally translate." }, { name: "Priya S.", quote: "Clear, no fluff, real sessions." }],
+    faqs: [{ q: "Do I get lifetime access?", a: "Yes — buy once, keep it forever including updates." }, { q: "Is there a refund?", a: "7-day no-questions money-back guarantee." }],
+    bg: "aurora", ac: "#ff6a3d", bt: "rounded", anim: "shine", font: "sora", pageTheme: "light",
+    sections: [
+      { key: "highlights", label: "Highlights", on: true, heading: "What you get" },
+      { key: "gallery", label: "Gallery", on: true, heading: "Gallery" },
+      { key: "testimonials", label: "Testimonials", on: true, heading: "Loved by customers" },
+      { key: "trust", label: "Trust badges", on: true },
+      { key: "faq", label: "FAQ", on: true, heading: "Questions" },
+      { key: "cta", label: "Closing CTA", on: true }
+    ],
+    sTitle: "", sDesc: "", sSlug: "", index: true, pMeta: "", pGoogle: "", unlocked: {}, tplCat: "opp",
+    published: false, toast: false, toastMsg: ""
+  };
+
+  TYPES = [
+    { key: "opp", e: "📦", nm: "One-page product", rt: "/opp", price: true, eyebrow: "✦ Featured product", title: "Your product name", sub: "A short, punchy description of what they're buying.", slug: "product" },
+    { key: "landing", e: "🎯", nm: "Landing page", rt: "/led", price: true, eyebrow: "⚡ Limited offer", title: "A bold offer headline", sub: "The promise that gets them to act now.", slug: "offer" },
+    { key: "store", e: "🛍️", nm: "Store", rt: "/store", price: false, eyebrow: "🛍️ Storefront", title: "Your store name", sub: "Browse the full collection.", slug: "store" },
+    { key: "courses", e: "🎓", nm: "Courses", rt: "/courses", price: true, eyebrow: "🎓 Online course", title: "Master a new skill", sub: "Everything you need, in one course.", slug: "course" },
+    { key: "booking", e: "📅", nm: "1-to-1 booking", rt: "/book", price: true, eyebrow: "📅 Book a session", title: "Book time with me", sub: "Pick a slot that works for you.", slug: "session" },
+    { key: "event", e: "🎟️", nm: "Event", rt: "/env", price: true, eyebrow: "🎟️ Live event", title: "Join the live event", sub: "Limited seats — grab yours.", slug: "event" },
+    { key: "payment", e: "💳", nm: "Payment page", rt: "/pay", price: true, eyebrow: "💳 Pay securely", title: "Make a payment", sub: "Quick and secure checkout.", slug: "pay" },
+    { key: "leadform", e: "📝", nm: "Lead form", rt: "/ldf", price: false, eyebrow: "📝 Join the list", title: "Join the waitlist", sub: "Be the first to know when we launch.", slug: "waitlist" },
+    { key: "vip", e: "⭐", nm: "VIP channel", rt: "/vpc", price: true, eyebrow: "⭐ Members only", title: "Join the inner circle", sub: "Exclusive access for members.", slug: "vip" },
+    { key: "bio", e: "🔗", nm: "Link-in-bio", rt: "/bio", price: false, eyebrow: "🔗 All my links", title: "Everything in one place", sub: "Find all my links below.", slug: "bio" }
+  ];
+  AC2 = { "#ff6a3d": "#ff4d7d", "#ff4d7d": "#7b3fe4", "#7b3fe4": "#ff4d7d", "#1f9b8e": "#2a6fdb", "#2a6fdb": "#7b3fe4", "#ffb23e": "#ff6a3d", "#e5476f": "#7b3fe4", "#16a34a": "#0ea5e9", "#0ea5e9": "#7b3fe4", "#f59e0b": "#e5476f", "#db2777": "#7b3fe4", "#6d28d9": "#ff4d7d" };
+  PRESETS = [
+    { id: "t1", name: "Sunset Aurora", bg: "aurora", ac: "#ff6a3d", font: "sora", pt: "light", bt: "rounded", anim: "shine" },
+    { id: "t2", name: "Midnight Neon", bg: "aurora", ac: "#7b3fe4", font: "space", pt: "dark", bt: "pill", anim: "pulse" },
+    { id: "t3", name: "Clean Mono", bg: "dots", ac: "#ff6a3d", font: "sora", pt: "light", bt: "sharp", anim: "none" },
+    { id: "t4", name: "Bloom", bg: "mesh", ac: "#ff4d7d", font: "play", pt: "light", bt: "rounded", anim: "shine" },
+    { id: "t5", name: "Ocean", bg: "flow", ac: "#0ea5e9", font: "sora", pt: "light", bt: "pill", anim: "shine" },
+    { id: "t6", name: "Evergreen", bg: "mesh", ac: "#16a34a", font: "sora", pt: "light", bt: "rounded", anim: "none" },
+    { id: "t7", name: "Grape Soda", bg: "aurora", ac: "#6d28d9", font: "space", pt: "light", bt: "pill", anim: "pulse" },
+    { id: "t8", name: "Ember", bg: "flow", ac: "#e5476f", font: "sora", pt: "dark", bt: "rounded", anim: "shine" },
+    { id: "t9", name: "Goldleaf", bg: "mesh", ac: "#ffb23e", font: "play", pt: "light", bt: "rounded", anim: "shine" },
+    { id: "t10", name: "Teal Calm", bg: "dots", ac: "#1f9b8e", font: "sora", pt: "light", bt: "rounded", anim: "none" },
+    { id: "t11", name: "Indigo Pro", bg: "aurora", ac: "#2a6fdb", font: "space", pt: "light", bt: "rounded", anim: "shine" },
+    { id: "t12", name: "Amber Heat", bg: "flow", ac: "#f59e0b", font: "sora", pt: "light", bt: "pill", anim: "shine" },
+    { id: "t13", name: "Luxe Noir", bg: "mesh", ac: "#ffb23e", font: "play", pt: "dark", bt: "sharp", anim: "shine", premium: true },
+    { id: "t14", name: "Neon Club", bg: "aurora", ac: "#db2777", font: "space", pt: "dark", bt: "pill", anim: "pulse", premium: true },
+    { id: "t15", name: "Editorial", bg: "dots", ac: "#6d28d9", font: "play", pt: "light", bt: "sharp", anim: "none", premium: true },
+    { id: "t16", name: "Aurora Pro", bg: "aurora", ac: "#ff4d7d", font: "sora", pt: "dark", bt: "rounded", anim: "shine", premium: true },
+    { id: "t17", name: "Cosmos", bg: "mesh", ac: "#7b3fe4", font: "space", pt: "dark", bt: "rounded", anim: "pulse", premium: true },
+    { id: "t18", name: "Rose Gold", bg: "flow", ac: "#db2777", font: "play", pt: "light", bt: "pill", anim: "shine", premium: true },
+    { id: "t19", name: "Mono Luxe", bg: "dots", ac: "#1f9b8e", font: "play", pt: "dark", bt: "sharp", anim: "none", premium: true },
+    { id: "t20", name: "Vibrant Pop", bg: "flow", ac: "#f59e0b", font: "space", pt: "light", bt: "pill", anim: "pulse", premium: true }
+  ];
+  applyPreset(p) { this.setState({ bg: p.bg, ac: p.ac, font: p.font, pageTheme: p.pt, bt: p.bt, anim: p.anim }); this.applySections(p.cat); this.fire("✓ " + p.name + " applied — widgets added"); }
+  buyTpl(p) { this.setState(s => ({ unlocked: { ...s.unlocked, [p.id]: true }, bg: p.bg, ac: p.ac, font: p.font, pageTheme: p.pt, bt: p.bt, anim: p.anim })); this.applySections(p.cat); this.fire("🎉 " + p.name + " unlocked & applied"); }
+  FONTS = { sora: "Sora", space: "Space Grotesk", play: "Playfair Display" };
+  CATS = [["opp","Product"],["landing","Landing"],["store","Store"],["courses","Courses"],["bio","Bio"],["event","Event"],["booking","Booking"],["payment","Payment"],["vip","VIP"],["leadform","Lead form"]];
+  NAMES = ["Aurora","Bloom","Ember","Ocean","Indigo","Goldleaf","Noir","Cosmos","Vivid","Mono","Pulse","Lumen","Nova","Drift","Coral","Slate","Halo","Prism","Vertex","Mirage","Zephyr","Onyx","Saffron","Quartz"];
+  PALS = ["#ff6a3d","#ff4d7d","#7b3fe4","#1f9b8e","#2a6fdb","#ffb23e","#e5476f","#16a34a","#0ea5e9","#f59e0b","#db2777","#6d28d9"];
+  BGSET = ["aurora","mesh","flow","dots"]; FNSET = ["sora","space","play"]; PTSET = ["light","dark"]; BTSET = ["rounded","pill","sharp"]; ANSET = ["shine","pulse","none"];
+  SECMAP = { opp:["highlights","gallery","testimonials","trust","faq","cta"], landing:["highlights","testimonials","trust","cta"], store:["gallery","trust","cta"], courses:["highlights","testimonials","faq","cta"], bio:["cta"], event:["highlights","trust","cta"], booking:["highlights","faq","cta"], payment:["trust"], vip:["highlights","trust","cta"], leadform:["trust"] };
+  catLabel(c) { const f = this.CATS.find(x => x[0] === c); return f ? f[1] : "Page"; }
+  genThemes(cat) { const a = []; for (let i = 0; i < 24; i++) { a.push({ id: cat + "_" + i, name: this.NAMES[i] + " " + this.catLabel(cat), cat, bg: this.BGSET[i % 4], ac: this.PALS[i % 12], font: this.FNSET[i % 3], pt: this.PTSET[i % 2], bt: this.BTSET[i % 3], anim: this.ANSET[i % 3], premium: i % 3 === 2 }); } return a; }
+  applySections(cat) { const want = this.SECMAP[cat] || ["highlights","testimonials","trust","cta"]; this.setState(s => ({ sections: s.sections.map(x => ({ ...x, on: want.includes(x.key) })) })); }
+
+  fire(msg) { this.setState({ toast: true, toastMsg: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 2200); }
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  pick(t) {
+    this.setState({ stage: "build", type: t, tplCat: t.key, cEyebrow: t.eyebrow, cTitle: t.title, cSub: t.sub, sTitle: t.title + " · Studio Aanya", sDesc: t.sub, sSlug: t.slug, tab: "content", mode: "builder", published: false });
+  }
+  readImg(file, cb) { if (!file) return; const r = new FileReader(); r.onload = (e) => cb(e.target.result); r.readAsDataURL(file); }
+  onHero(e) { this.readImg(e.target.files && e.target.files[0], (d) => this.setState({ hero: d })); }
+  onGallery(e) { this.readImg(e.target.files && e.target.files[0], (d) => this.setState(s => ({ gallery: [...s.gallery, d] }))); }
+  moveSec(i, dir) { this.setState(s => { const a = [...s.sections]; const j = i + dir; if (j < 0 || j >= a.length) return {}; [a[i], a[j]] = [a[j], a[i]]; return { sections: a }; }); }
+
+  renderVals() {
+    const s = this.state, t = s.type, on = (b) => (b ? "on" : "");
+    const types = this.TYPES.map(x => ({ e: x.e, nm: x.nm, rt: x.rt, pick: () => this.pick(x) }));
+    const hasPrice = t ? t.price : true;
+    const route = t ? t.rt : "/opp";
+
+    const feats = s.feats.map((f, i) => ({ text: f, edit: (e) => this.setState(st => { const a = [...st.feats]; a[i] = e.target.value; return { feats: a }; }), remove: () => this.setState(st => ({ feats: st.feats.filter((_, j) => j !== i) })) }));
+    const bgStyle = (u) => u ? ("background-image:url('" + u + "');background-size:cover;background-position:center") : "";
+    const gallery = s.gallery.map((g, i) => ({ src: g, style: bgStyle(g), remove: () => this.setState(st => ({ gallery: st.gallery.filter((_, j) => j !== i) })) }));
+    const galleryView = (s.gallery.length ? s.gallery : [null, null, null]).map(g => ({ has: !!g, src: g || "", style: bgStyle(g) }));
+    const testis = s.testis.map((x, i) => ({ name: x.name, quote: x.quote,
+      editName: (e) => this.setState(st => { const a = [...st.testis]; a[i] = { ...a[i], name: e.target.value }; return { testis: a }; }),
+      editQuote: (e) => this.setState(st => { const a = [...st.testis]; a[i] = { ...a[i], quote: e.target.value }; return { testis: a }; }),
+      remove: () => this.setState(st => ({ testis: st.testis.filter((_, j) => j !== i) })) }));
+    const faqs = s.faqs.map((x, i) => ({ q: x.q, a: x.a,
+      editQ: (e) => this.setState(st => { const a = [...st.faqs]; a[i] = { ...a[i], q: e.target.value }; return { faqs: a }; }),
+      editA: (e) => this.setState(st => { const a = [...st.faqs]; a[i] = { ...a[i], a: e.target.value }; return { faqs: a }; }),
+      remove: () => this.setState(st => ({ faqs: st.faqs.filter((_, j) => j !== i) })) }));
+
+    const sectionRows = s.sections.map((sec, i) => ({ label: sec.label, onCls: on(sec.on), toggle: () => this.setState(st => { const a = [...st.sections]; a[i] = { ...a[i], on: !a[i].on }; return { sections: a }; }), up: () => this.moveSec(i, -1), down: () => this.moveSec(i, 1) }));
+    const orderedSections = s.sections.filter(x => x.on).map(sec => ({
+      heading: sec.heading || "",
+      extraClass: sec.key === "cta" ? "pg-ctaband" : "",
+      isHighlights: sec.key === "highlights", isGallery: sec.key === "gallery", isTestimonials: sec.key === "testimonials", isFaq: sec.key === "faq", isTrust: sec.key === "trust", isCta: sec.key === "cta"
+    }));
+
+    return {
+      darkClass: s.theme === "dark" ? "dark" : "",
+      themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggleTheme: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      picking: s.stage === "pick", building: s.stage === "build", types,
+      typeLabel: t ? t.nm : "",
+
+      mWeb: on(s.device === "web"), mMob: on(s.device === "mobile"), frameMob: s.device === "mobile" ? "mob" : "",
+      setWeb: () => this.setState({ device: "web" }), setMob: () => this.setState({ device: "mobile" }),
+      mBuild: on(s.mode === "builder"), mPrev: on(s.mode === "preview"),
+      setBuild: () => this.setState({ mode: "builder" }), setPrev: () => this.setState({ mode: "preview" }),
+      panelHide: s.mode === "preview" ? "hide" : "", prevFull: s.mode === "preview" ? "full" : "",
+
+      tabContent: on(s.tab === "content"), tabDesign: on(s.tab === "design"), tabSections: on(s.tab === "sections"), tabTpl: on(s.tab === "tpl"), tabSeo: on(s.tab === "seo"), tabPixels: on(s.tab === "pixels"),
+      goContent: () => this.setState({ tab: "content" }), goDesign: () => this.setState({ tab: "design" }), goSections: () => this.setState({ tab: "sections" }), goTpl: () => this.setState({ tab: "tpl" }), goSeo: () => this.setState({ tab: "seo" }), goPixels: () => this.setState({ tab: "pixels" }),
+      isContent: s.tab === "content", isDesign: s.tab === "design", isSections: s.tab === "sections", isTpl: s.tab === "tpl", isSeo: s.tab === "seo", isPixels: s.tab === "pixels",
+      tplCats: this.CATS.map(c => ({ label: c[1], on: s.tplCat === c[0] ? "on" : "", go: () => this.setState({ tplCat: c[0] }) })),
+      tplCount: "24 in " + this.catLabel(s.tplCat),
+      templates: this.genThemes(s.tplCat).map(p => { const owned = !p.premium || s.unlocked[p.id]; return {
+        name: p.name, thumb: "linear-gradient(135deg," + p.ac + "," + (this.AC2[p.ac] || "#ff4d7d") + ")",
+        locked: p.premium && !owned,
+        badge: p.premium ? (owned ? "Owned" : "₹499") : "Free",
+        badgeCls: p.premium ? (owned ? "owned" : "prem") : "free",
+        btnLabel: owned ? "Apply" : "🔒 Buy ₹499", btnCls: owned ? "" : "buy",
+        action: owned ? (() => this.applyPreset(p)) : (() => this.buyTpl(p))
+      }; }),
+
+      cEyebrow: s.cEyebrow, cTitle: s.cTitle, cSub: s.cSub, cPrice: s.cPrice, cWas: s.cWas, cBtn: s.cBtn, hasPrice,
+      onEyebrow: (e) => this.setState({ cEyebrow: e.target.value }), onTitle: (e) => this.setState({ cTitle: e.target.value }),
+      onSub: (e) => this.setState({ cSub: e.target.value }), onPrice: (e) => this.setState({ cPrice: e.target.value.replace(/[^0-9]/g, "") }),
+      onWas: (e) => this.setState({ cWas: e.target.value.replace(/[^0-9]/g, "") }), onBtn: (e) => this.setState({ cBtn: e.target.value }),
+      ctaText: hasPrice ? (s.cBtn + " · ₹" + s.cPrice) : (s.cBtn || "Continue"),
+      ctaHeading: "Ready to get started?",
+
+      heroImg: s.hero || "", heroBg: bgStyle(s.hero), heroSet: !!s.hero, heroEmpty: !s.hero, heroHas: s.hero ? "has" : "",
+      onHero: (e) => this.onHero(e), onGallery: (e) => this.onGallery(e),
+      gallery, galleryView, feats, addFeat: () => this.setState(st => ({ feats: [...st.feats, "New highlight"] })),
+      testis, addTesti: () => this.setState(st => ({ testis: [...st.testis, { name: "Name", quote: "Their words…" }] })),
+      faqs, addFaq: () => this.setState(st => ({ faqs: [...st.faqs, { q: "New question?", a: "Answer." }] })),
+
+      bgClass: "bg-" + s.bg, bgAurora: on(s.bg === "aurora"), bgMesh: on(s.bg === "mesh"), bgFlow: on(s.bg === "flow"), bgDots: on(s.bg === "dots"),
+      setBgAurora: () => this.setState({ bg: "aurora" }), setBgMesh: () => this.setState({ bg: "mesh" }), setBgFlow: () => this.setState({ bg: "flow" }), setBgDots: () => this.setState({ bg: "dots" }),
+      ac: s.ac, ac2: this.AC2[s.ac] || "#ff4d7d",
+      acO: on(s.ac === "#ff6a3d"), acP: on(s.ac === "#ff4d7d"), acV: on(s.ac === "#7b3fe4"), acT: on(s.ac === "#1f9b8e"), acB: on(s.ac === "#2a6fdb"),
+      setAcO: () => this.setState({ ac: "#ff6a3d" }), setAcP: () => this.setState({ ac: "#ff4d7d" }), setAcV: () => this.setState({ ac: "#7b3fe4" }), setAcT: () => this.setState({ ac: "#1f9b8e" }), setAcB: () => this.setState({ ac: "#2a6fdb" }),
+      sf: this.FONTS[s.font] || "Sora", fnSora: on(s.font === "sora"), fnSpace: on(s.font === "space"), fnPlay: on(s.font === "play"),
+      setFnSora: () => this.setState({ font: "sora" }), setFnSpace: () => this.setState({ font: "space" }), setFnPlay: () => this.setState({ font: "play" }),
+      btClass: "bt-" + s.bt, btR: on(s.bt === "rounded"), btP: on(s.bt === "pill"), btS: on(s.bt === "sharp"),
+      setBtR: () => this.setState({ bt: "rounded" }), setBtP: () => this.setState({ bt: "pill" }), setBtS: () => this.setState({ bt: "sharp" }),
+      animClass: "anim-" + s.anim, anShine: on(s.anim === "shine"), anPulse: on(s.anim === "pulse"), anNone: on(s.anim === "none"),
+      setAnShine: () => this.setState({ anim: "shine" }), setAnPulse: () => this.setState({ anim: "pulse" }), setAnNone: () => this.setState({ anim: "none" }),
+      pageThemeClass: s.pageTheme === "dark" ? "dark" : "", ptLight: on(s.pageTheme === "light"), ptDark: on(s.pageTheme === "dark"),
+      setPtLight: () => this.setState({ pageTheme: "light" }), setPtDark: () => this.setState({ pageTheme: "dark" }),
+
+      sectionRows, orderedSections,
+
+      sTitle: s.sTitle, sDesc: s.sDesc, sSlug: s.sSlug,
+      onSTitle: (e) => this.setState({ sTitle: e.target.value }), onSDesc: (e) => this.setState({ sDesc: e.target.value }),
+      onSSlug: (e) => this.setState({ sSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }),
+      idxClass: on(s.index), toggleIdx: () => this.setState(st => ({ index: !st.index })), subUrl: "aanya.invoxai.io" + route,
+      pMeta: s.pMeta, pGoogle: s.pGoogle, onPMeta: (e) => this.setState({ pMeta: e.target.value.replace(/[^0-9]/g, "") }), onPGoogle: (e) => this.setState({ pGoogle: e.target.value }), pixelsLive: !!(s.pMeta || s.pGoogle),
+
+      fullUrl: "aanya.invoxai.io" + route + "/" + s.sSlug + (s.published ? "" : " · preview"),
+      urlLock: s.published ? "🔒" : "✎", isPub: s.published, isDraft: !s.published,
+      saveDraft: () => this.fire("✓ Draft saved"),
+      publish: () => { this.setState({ published: true, mode: "preview" }); this.fire("🎉 Published! Live at aanya.invoxai.io" + route + "/" + s.sSlug); },
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

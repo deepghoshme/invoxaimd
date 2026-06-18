@@ -216,7 +216,7 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
           <BioTracker pageId={page.id} storeId={store.id} />
         </>
       ) : (
-        <Notice title={page.title || store.store_name || ""} body="Template coming soon." />
+        <ComingSoon storeName={store.store_name} pageTitle={page.title} />
       )}
     </>
   );
@@ -301,6 +301,83 @@ function Notice({ title, body }: { title: string; body: string }) {
         <h1 style={{ marginTop: 0 }}>{title}</h1>
         <p className="muted">{body}</p>
       </div>
+    </main>
+  );
+}
+
+/**
+ * Polished branded fallback for page types that exist in the DB (courses, pay,
+ * book, ldf, vpc, led, env) but don't yet have a public renderer. Uses the
+ * global design tokens so it respects the user's OS-level light/dark preference
+ * and the site's colour scheme — never looks broken.
+ */
+function ComingSoon({
+  storeName,
+  pageTitle,
+}: {
+  storeName: string | null;
+  pageTitle: string | null;
+}) {
+  const name = storeName || "This store";
+  const label = pageTitle || "This page";
+  return (
+    <main
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--space-4) var(--space-3)",
+        background: "var(--color-bg)",
+        textAlign: "center",
+      }}
+    >
+      {/* Brand accent bar */}
+      <div
+        aria-hidden="true"
+        style={{
+          width: 56,
+          height: 5,
+          borderRadius: 99,
+          background: "var(--brand-gradient)",
+          marginBottom: "var(--space-3)",
+        }}
+      />
+      <div
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontWeight: 800,
+          fontSize: "clamp(1.25rem, 4vw, 1.75rem)",
+          color: "var(--color-text)",
+          letterSpacing: "-0.02em",
+          marginBottom: "var(--space-1)",
+        }}
+      >
+        {name}
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontWeight: 600,
+          fontSize: "clamp(0.95rem, 3vw, 1.15rem)",
+          color: "var(--color-primary)",
+          marginBottom: "var(--space-2)",
+        }}
+      >
+        {label}
+      </div>
+      <p
+        style={{
+          color: "var(--color-muted)",
+          fontSize: "0.9375rem",
+          maxWidth: 360,
+          lineHeight: 1.6,
+          margin: "0 auto",
+        }}
+      >
+        We&rsquo;re putting the finishing touches on this page. Check back soon.
+      </p>
     </main>
   );
 }

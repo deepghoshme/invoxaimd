@@ -35,9 +35,20 @@ export async function saveGateway(input: {
   const keyId = input.key_id.trim();
   const secret = input.key_secret.trim();
 
-  // Enabling requires a key id and a secret on file.
+  // Enabling requires a key id AND a key secret on file.
   if (input.is_enabled && !keyId) {
     return { ok: false, error: "Enter your Razorpay Key ID to enable payments." };
+  }
+  if (input.is_enabled && !secret) {
+    // Check whether a secret is already stored before rejecting.
+    const { data: existing } = await supabase
+      .from("payment_gateways")
+      .select("key_secret")
+      .eq("store_id", storeId)
+      .maybeSingle();
+    if (!existing?.key_secret) {
+      return { ok: false, error: "Enter your Razorpay Key Secret to enable payments." };
+    }
   }
 
   const row: Record<string, unknown> = {

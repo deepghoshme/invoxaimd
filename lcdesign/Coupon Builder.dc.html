@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes cp-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+  @keyframes cp-in { from { transform: translateY(6px); opacity: .5; } to { transform: none; opacity: 1; } }
+  .cp {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a; --greenbg: #e5f7ef;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .cp[data-theme="dark"] { --bg: #16101f; --card: #221833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --greenbg: #15301f; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6); }
+  .cp h1,.cp h2,.cp h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .cp p { margin: 0; }
+  .cp-wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  .cp-nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--bg) 86%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .cp-nav-in { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .cp-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; }
+  .cp-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); } .cp-crumb { font-size: 13px; color: var(--muted); } .cp-crumb b { color: var(--text); }
+  .cp-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .cp-main { padding: 26px 0 60px; }
+  .cp-phead { margin-bottom: 18px; } .cp-phead h1 { font-size: 22px; } .cp-phead p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .cp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  .cp-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+  .cp-ct { font-size: 15px; margin-bottom: 16px; }
+  .cp-label { display: block; font-size: 12.5px; font-weight: 700; margin: 13px 0 6px; } .cp-label:first-of-type { margin-top: 0; }
+  .cp-input { width: 100%; padding: 11px 13px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; outline: none; }
+  .cp-input:focus { border-color: var(--primary); } .cp-input.code { text-transform: uppercase; font-family: ui-monospace, Menlo, monospace; font-weight: 700; letter-spacing: 1px; }
+  .cp-ff { display: flex; gap: 11px; } .cp-ff > * { flex: 1; }
+  .cp-seg { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; } .cp-seg button { flex: 1; border: 0; background: none; font: inherit; font-weight: 600; font-size: 13px; color: var(--muted); padding: 9px; border-radius: 8px; cursor: pointer; } .cp-seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+  .cp-srow { display: flex; align-items: center; gap: 11px; padding: 12px 0; border-top: 1px solid var(--border); } .cp-srow .tx { flex: 1; } .cp-srow .tx b { font-size: 13.5px; } .cp-srow .tx p { font-size: 12px; color: var(--muted); }
+  .cp-sw { width: 44px; height: 25px; border-radius: 999px; background: var(--border); border: 0; cursor: pointer; position: relative; flex: none; } .cp-sw.on { background: var(--grad); } .cp-sw i { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: transform .18s; } .cp-sw.on i { transform: translateX(19px); }
+  .cp-create { width: 100%; margin-top: 16px; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15px; cursor: pointer; }
+
+  /* preview */
+  .cp-ticket { position: relative; border-radius: 16px; overflow: hidden; background: var(--grad); color: #fff; padding: 26px 24px; text-align: center; }
+  .cp-ticket::before, .cp-ticket::after { content: ""; position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: var(--card); transform: translateY(-50%); } .cp-ticket::before { left: -11px; } .cp-ticket::after { right: -11px; }
+  .cp-ticket .lab { font-size: 12px; font-weight: 700; opacity: .9; text-transform: uppercase; letter-spacing: .06em; }
+  .cp-ticket .code { font-family: ui-monospace, Menlo, monospace; font-weight: 800; font-size: 30px; letter-spacing: 2px; margin: 8px 0; border: 2px dashed rgba(255,255,255,.6); border-radius: 12px; padding: 10px; }
+  .cp-ticket .off { font-family: var(--fh); font-weight: 800; font-size: 17px; } .cp-ticket .cond { font-size: 12px; opacity: .9; margin-top: 6px; }
+  .cp-calc { margin-top: 16px; } .cp-row { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px; } .cp-row .g { color: var(--green); }
+  .cp-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 12px; border-top: 1px solid var(--border); } .cp-total .tv { font-family: var(--fh); font-weight: 800; font-size: 22px; }
+  .cp-link { display: flex; gap: 8px; margin-top: 16px; } .cp-link .url { flex: 1; font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .cp-link button { font: inherit; font-weight: 700; font-size: 12.5px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 10px 14px; border-radius: 9px; cursor: pointer; }
+  .cp-hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .cp-list { margin-top: 18px; } .cp-cpn { display: flex; align-items: center; gap: 13px; padding: 13px 16px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 9px; background: var(--card); animation: cp-in .3s ease; }
+  .cp-cpn .cd { font-family: ui-monospace, Menlo, monospace; font-weight: 700; font-size: 14px; color: var(--primary); background: color-mix(in srgb,var(--primary) 10%,transparent); padding: 6px 12px; border-radius: 8px; }
+  .cp-cpn .meta { font-size: 12.5px; color: var(--muted); } .cp-cpn .meta b { color: var(--text); }
+  .cp-cpn .use { margin-left: auto; text-align: right; } .cp-cpn .use .n { font-weight: 700; font-family: var(--fh); font-size: 13px; } .cp-cpn .use .l { font-size: 11px; color: var(--muted); }
+  .cp-live { font-size: 11px; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 5px; } .cp-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+  .cp-toastbox { position: fixed; left: 50%; bottom: 24px; z-index: 60; background: #18121f; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 9px; animation: cp-toast .4s ease; } .cp-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+
+  @media (max-width: 820px) { .cp-cols { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="cp" data-theme="{{ theme }}">
+  <nav class="cp-nav">
+    <div class="cp-wrap cp-nav-in">
+      <div class="cp-brand"><span class="cp-logo"></span>invoxai</div>
+      <span class="cp-crumb">Dashboard / <b>Coupons</b></span>
+      <button class="cp-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+    </div>
+  </nav>
+
+  <main class="cp-wrap cp-main">
+    <div class="cp-phead"><h1>Coupons &amp; discount links</h1><p>Codes auto-apply across every paid page &amp; checkout. Share a link and the discount applies itself.</p></div>
+
+    <div class="cp-cols">
+      <!-- builder -->
+      <div class="cp-card">
+        <h3 class="cp-ct">Create a coupon</h3>
+        <label class="cp-label">Code</label>
+        <input class="cp-input code" value="{{ code }}" onInput="{{ onCode }}" placeholder="SUMMER25" />
+        <label class="cp-label">Discount type</label>
+        <div class="cp-seg"><button class="{{ tPct }}" onClick="{{ setPct }}">Percent %</button><button class="{{ tFlat }}" onClick="{{ setFlat }}">Flat ₹</button></div>
+        <div class="cp-ff" style="margin-top:13px">
+          <div><label class="cp-label" style="margin-top:0">{{ valLabel }}</label><input class="cp-input" value="{{ val }}" onInput="{{ onVal }}" /></div>
+          <div><label class="cp-label" style="margin-top:0">Min. order ₹</label><input class="cp-input" value="{{ min }}" onInput="{{ onMin }}" /></div>
+        </div>
+        <label class="cp-label">Applies to</label>
+        <select class="cp-input" onChange="{{ onScope }}"><option>All products</option><option>Courses only</option><option>Digital only</option><option>One product</option></select>
+        <div class="cp-ff" style="margin-top:13px">
+          <div><label class="cp-label" style="margin-top:0">Usage limit</label><input class="cp-input" value="{{ limit }}" onInput="{{ onLimit }}" placeholder="100" /></div>
+          <div><label class="cp-label" style="margin-top:0">Expires</label><input class="cp-input" value="{{ expiry }}" onInput="{{ onExpiry }}" placeholder="31 Jul 2026" /></div>
+        </div>
+        <div class="cp-srow"><div class="tx"><b>Auto-apply via link</b><p>Discount applies when the link is opened</p></div><button class="cp-sw {{ autoCls }}" onClick="{{ toggleAuto }}"><i></i></button></div>
+        <button class="cp-create" onClick="{{ create }}">Create coupon</button>
+      </div>
+
+      <!-- preview -->
+      <div>
+        <div class="cp-card">
+          <h3 class="cp-ct">Live preview</h3>
+          <div class="cp-ticket">
+            <div class="lab">Coupon</div>
+            <div class="code">{{ codePrev }}</div>
+            <div class="off">{{ offLabel }}</div>
+            <div class="cond">{{ condLabel }}</div>
+          </div>
+          <div class="cp-calc">
+            <div class="cp-row"><span style="color:var(--muted)">Sample order (₹{{ sample }})</span><span>₹{{ sample }}</span></div>
+            <div class="cp-row g"><span>Discount</span><span>−₹{{ discount }}</span></div>
+            <div class="cp-total"><span style="font-weight:700">Buyer pays</span><span class="tv">₹{{ finalAmt }}</span></div>
+          </div>
+          <label class="cp-label">Discount link</label>
+          <div class="cp-link"><span class="url">{{ link }}</span><button onClick="{{ copy }}">{{ copyLabel }}</button></div>
+          <p class="cp-hint">Share this anywhere — the coupon auto-applies at checkout.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cp-list">
+      <h3 class="cp-ct" style="margin:18px 0 12px">Active coupons</h3>
+      <sc-for list="{{ coupons }}" as="c" hint-placeholder-count="3">
+        <div class="cp-cpn"><span class="cd">{{ c.code }}</span><div><div style="font-weight:600;font-size:13.5px">{{ c.off }}</div><div class="meta">{{ c.scope }} · expires {{ c.expiry }}</div></div><div class="use"><div class="n">{{ c.used }}/{{ c.limit }}</div><div class="l">used</div></div><span class="cp-live">Active</span></div>
+      </sc-for>
+    </div>
+  </main>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="cp-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1040,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", code: "SUMMER25", type: "pct", val: "25", min: "0", scope: "All products", limit: "100", expiry: "31 Jul 2026", auto: true,
+    coupons: [
+      { code: "LAUNCH20", off: "20% off", scope: "All products", used: 142, limit: 500, expiry: "30 Jun" },
+      { code: "WELCOME10", off: "₹100 off", scope: "First order", used: 58, limit: 200, expiry: "31 Dec" },
+      { code: "COURSE50", off: "50% off", scope: "Courses only", used: 23, limit: 100, expiry: "15 Jul" }
+    ],
+    toast: false, toastMsg: ""
+  };
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 2000); }
+  componentWillUnmount() { clearTimeout(this._t); }
+  create() {
+    const code = (this.state.code || "NEWCODE").toUpperCase();
+    const off = this.state.type === "pct" ? (this.state.val || "0") + "% off" : "₹" + (this.state.val || "0") + " off";
+    this.setState(s => ({ coupons: [{ code, off, scope: s.scope, used: 0, limit: parseInt(s.limit, 10) || 0, expiry: s.expiry }, ...s.coupons] }));
+    this.fire("✓ Coupon " + code + " created — link ready");
+  }
+  renderVals() {
+    const s = this.state, on = (b) => (b ? "on" : "");
+    const code = (s.code || "CODE").toUpperCase();
+    const sample = 2000;
+    const v = parseFloat(s.val) || 0;
+    const discount = s.type === "pct" ? Math.round(sample * Math.min(v, 100) / 100) : Math.min(v, sample);
+    const offLabel = s.type === "pct" ? v + "% OFF" : "₹" + v + " OFF";
+    const condParts = [];
+    if (parseFloat(s.min) > 0) condParts.push("Min. order ₹" + s.min);
+    condParts.push(s.scope);
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      code: s.code, onCode: (e) => this.setState({ code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") }),
+      tPct: on(s.type === "pct"), tFlat: on(s.type === "flat"), setPct: () => this.setState({ type: "pct" }), setFlat: () => this.setState({ type: "flat" }),
+      valLabel: s.type === "pct" ? "Percent %" : "Amount ₹", val: s.val, onVal: (e) => this.setState({ val: e.target.value.replace(/[^0-9]/g, "") }),
+      min: s.min, onMin: (e) => this.setState({ min: e.target.value.replace(/[^0-9]/g, "") }),
+      onScope: (e) => this.setState({ scope: e.target.value }),
+      limit: s.limit, onLimit: (e) => this.setState({ limit: e.target.value.replace(/[^0-9]/g, "") }),
+      expiry: s.expiry, onExpiry: (e) => this.setState({ expiry: e.target.value }),
+      autoCls: on(s.auto), toggleAuto: () => this.setState(st => ({ auto: !st.auto })),
+      codePrev: code, offLabel, condLabel: condParts.join(" · "),
+      sample: sample.toLocaleString("en-IN"), discount: discount.toLocaleString("en-IN"), finalAmt: (sample - discount).toLocaleString("en-IN"),
+      link: "aanya.invoxai.io/store?coupon=" + code,
+      copy: () => this.fire("📋 Link copied"), copyLabel: "Copy",
+      create: () => this.create(), coupons: s.coupons,
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

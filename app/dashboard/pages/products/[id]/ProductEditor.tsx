@@ -126,6 +126,13 @@ export default function ProductEditor({
   const [lpInterval, setLpInterval] = useState(String(c.liveproof_interval ?? 8));
   const [lpItems, setLpItems] = useState<{ name: string; location?: string }[]>(c.liveproof_items ?? []);
 
+  // PDP fields
+  const [variants, setVariants] = useState<{ name: string; options: string[] }[]>(c.variants ?? []);
+  const [specs, setSpecs] = useState<[string, string][]>(c.specs ?? []);
+  const [highlights, setHighlights] = useState<string[]>(c.highlights ?? []);
+  const [offers, setOffers] = useState<string[]>(c.offers ?? []);
+  const [related, setRelated] = useState<{ name: string; price?: number; compareAt?: number; img?: string; url?: string }[]>(c.related ?? []);
+
   function toggleBadge(b: string) {
     setBadges((prev) => (prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]));
   }
@@ -191,6 +198,11 @@ export default function ProductEditor({
     liveproof_enabled: lpEnabled,
     liveproof_interval: parseFloat(lpInterval) || 8,
     liveproof_items: lpItems.filter((x) => x.name.trim()),
+    variants: variants.filter((v) => v.name.trim()),
+    specs: specs.filter((s) => s[0].trim()),
+    highlights: highlights.filter((h) => h.trim()),
+    offers: offers.filter((o) => o.trim()),
+    related: related.filter((r) => r.name.trim()),
   };
 
   function payload() {
@@ -555,6 +567,118 @@ export default function ProductEditor({
               <div className="field" style={{ marginBottom: 0 }}><label>Google tag ID</label><input value={googleId} onChange={(e) => setGoogleId(e.target.value)} placeholder="G-XXXX / AW-XXXX" /></div>
             </div>
           </Sec>
+
+          {/* Variants (PDP) */}
+          <Sec title="Variants (size / color / plan)" open={false}>
+            <p className="dx-muted" style={{ fontSize: 11, marginTop: 0 }}>Add option pickers shown on the PDP (Catalog layout). E.g. "Size → S, M, L" or "Color → Red, Blue".</p>
+            {variants.map((v, i) => {
+              const updV = (patch: Partial<{ name: string; options: string[] }>) =>
+                setVariants(variants.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 9, marginBottom: 9 }}>
+                  <div className="frow">
+                    <input style={{ flex: ".5" }} value={v.name} onChange={(e) => updV({ name: e.target.value })} placeholder="Variant name (e.g. Size)" />
+                    <button className="del" type="button" onClick={() => setVariants(variants.filter((_, j) => j !== i))}>✕</button>
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Options (comma-separated)</label>
+                    <input value={v.options.join(", ")} onChange={(e) => updV({ options: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} placeholder="Small, Medium, Large" />
+                  </div>
+                </div>
+              );
+            })}
+            <button className="addrow" type="button" onClick={() => setVariants([...variants, { name: "", options: [] }])}>+ Add variant</button>
+          </Sec>
+
+          {/* Specs (PDP) */}
+          <Sec title="Specifications (key / value table)" open={false}>
+            <p className="dx-muted" style={{ fontSize: 11, marginTop: 0 }}>Shown as a table in the Specifications tab on the PDP.</p>
+            {specs.map(([k, v], i) => (
+              <div className="frow" key={i}>
+                <input style={{ flex: ".45" }} value={k} onChange={(e) => setSpecs(specs.map((s, j) => j === i ? [e.target.value, s[1]] : s))} placeholder="Key (e.g. Weight)" />
+                <input value={v} onChange={(e) => setSpecs(specs.map((s, j) => j === i ? [s[0], e.target.value] : s))} placeholder="Value (e.g. 200g)" />
+                <button className="del" type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}>✕</button>
+              </div>
+            ))}
+            <button className="addrow" type="button" onClick={() => setSpecs([...specs, ["", ""]])}>+ Add spec row</button>
+          </Sec>
+
+          {/* Highlights (PDP) */}
+          <Sec title="Highlights (key bullets)" open={false}>
+            <p className="dx-muted" style={{ fontSize: 11, marginTop: 0 }}>Up to 5 bullet points shown prominently below the title on the PDP. Leave Features empty to use these exclusively.</p>
+            {highlights.map((h, i) => (
+              <div className="frow" key={i}>
+                <input value={h} onChange={(e) => setHighlights(highlights.map((x, j) => j === i ? e.target.value : x))} placeholder={`Highlight ${i + 1}`} />
+                <button className="del" type="button" onClick={() => setHighlights(highlights.filter((_, j) => j !== i))}>✕</button>
+              </div>
+            ))}
+            <button className="addrow" type="button" onClick={() => setHighlights([...highlights, ""])}>+ Add highlight</button>
+          </Sec>
+
+          {/* Offers (PDP) */}
+          <Sec title="Available offers / promo text" open={false}>
+            <p className="dx-muted" style={{ fontSize: 11, marginTop: 0 }}>Short promo lines shown in the offers strip on the PDP (e.g. "Extra 10% off with COUPON10").</p>
+            {offers.map((o, i) => (
+              <div className="frow" key={i}>
+                <input value={o} onChange={(e) => setOffers(offers.map((x, j) => j === i ? e.target.value : x))} placeholder="e.g. Bank offer: 5% cashback on HDFC" />
+                <button className="del" type="button" onClick={() => setOffers(offers.filter((_, j) => j !== i))}>✕</button>
+              </div>
+            ))}
+            <button className="addrow" type="button" onClick={() => setOffers([...offers, ""])}>+ Add offer</button>
+          </Sec>
+
+          {/* Related products (PDP) */}
+          <Sec title="Related products" open={false}>
+            <p className="dx-muted" style={{ fontSize: 11, marginTop: 0 }}>Shown in a "You may also like" row at the bottom of the PDP. Link to any product URL on your store.</p>
+            {related.map((r, i) => {
+              const updR = (patch: Partial<typeof r>) =>
+                setRelated(related.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 9, marginBottom: 9 }}>
+                  <div className="frow" style={{ marginBottom: 6 }}>
+                    <input style={{ flex: 2 }} value={r.name} onChange={(e) => updR({ name: e.target.value })} placeholder="Product name" />
+                    <button className="del" type="button" onClick={() => setRelated(related.filter((_, j) => j !== i))}>✕</button>
+                  </div>
+                  <div className="ff">
+                    <div className="field"><label>Price</label><input inputMode="decimal" value={r.price != null ? String(r.price) : ""} onChange={(e) => updR({ price: parseFloat(e.target.value) || undefined })} placeholder="499" /></div>
+                    <div className="field"><label>Compare-at</label><input inputMode="decimal" value={r.compareAt != null ? String(r.compareAt) : ""} onChange={(e) => updR({ compareAt: parseFloat(e.target.value) || undefined })} placeholder="999" /></div>
+                  </div>
+                  <div className="field"><label>Link URL</label><input value={r.url ?? ""} onChange={(e) => updR({ url: e.target.value })} placeholder="/opp/product-slug or https://…" /></div>
+                  <div className="field" style={{ marginBottom: 0 }}><label>Image URL</label><ImageInput value={r.img ?? ""} onChange={(url) => updR({ img: url })} /></div>
+                </div>
+              );
+            })}
+            <button className="addrow" type="button" onClick={() => setRelated([...related, { name: "" }])}>+ Add related product</button>
+          </Sec>
+
+          {/* Suggest more */}
+          <div style={{ margin: "8px 0 0", padding: "14px 16px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 10 }}>Ideas to improve this product page</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {([
+                { icon: "📸", label: "Add more product images", hint: "A gallery of 3–5 images lifts buyer confidence. Use the Image gallery section.", action: () => setGallery([...gallery, ""]) },
+                { icon: "⭐", label: "Add customer testimonials", hint: "Reviews are the #1 conversion driver. Add 2–3 real quotes.", action: () => setTestimonials([...testimonials, { name: "", text: "", rating: 5 }]) },
+                { icon: "❓", label: "Add FAQ items", hint: "Answer the top 3 objections buyers have before purchasing.", action: () => setFaqs([...faqs, { q: "", a: "" }]) },
+                { icon: "⏰", label: "Add a countdown offer", hint: "A deadline creates urgency — try a 48-hour flash sale.", action: () => { setCdEnabled(true); } },
+                { icon: "🏷️", label: "Switch to Catalog (PDP) layout", hint: "Shopify-style product page with variants, specs, reviews tabs, and related products.", action: () => setLayout("pdp") },
+              ] as { icon: string; label: string; hint: string; action: () => void }[]).map(({ icon, label, hint, action }) => (
+                <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 2 }}>{hint}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={action}
+                    style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: "var(--primary)", color: "#fff", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {publicUrl && <p className="dx-muted" style={{ fontSize: 11 }}>Public link: <strong>{publicUrl}</strong></p>}
         </div>

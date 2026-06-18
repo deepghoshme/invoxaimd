@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes bc-fade { from { transform: translateY(8px); } to { transform: none; } }
+
+  .bc {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6;
+    --green: #1fb57a; --greenbg: #e5f7ef; --red: #e5476f; --redbg: #fde9ee;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .bc[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --greenbg: #15301f; --red: #ff6f93; --redbg: #3a1822;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6);
+  }
+  .bc h1,.bc h2,.bc h3 { font-family: var(--fh); margin: 0; letter-spacing: -.02em; }
+  .bc p { margin: 0; }
+  .bc-wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+
+  .bc-nav { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 84%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .bc-nav-in { display: flex; align-items: center; gap: 12px; height: 62px; }
+  .bc-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 17px; letter-spacing: -.02em; }
+  .bc-logo { width: 27px; height: 27px; border-radius: 8px; background: var(--grad); }
+  .bc-brand .sub { font-size: 11px; font-weight: 600; color: var(--muted); border-left: 1px solid var(--border); padding-left: 9px; margin-left: 3px; }
+  .bc-nav-r { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .bc-tgl { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+  .bc-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; font-family: var(--fh); }
+
+  .bc-main { padding: 30px 0 60px; animation: bc-fade .4s ease; }
+  .bc-hello { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+  .bc-hello .av { width: 56px; height: 56px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 22px; font-family: var(--fh); flex: none; }
+  .bc-hello h1 { font-size: 24px; }
+  .bc-hello p { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+
+  .bc-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 24px; }
+  .bc-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+  .bc-kpi .lbl { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  .bc-kpi .val { font-family: var(--fh); font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin-top: 5px; }
+  .bc-kpi .val small { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  .bc-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .bc-tab { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s; }
+  .bc-tab.on { background: var(--primary); color: #fff; border-color: transparent; }
+
+  .bc-orders { display: flex; flex-direction: column; gap: 12px; }
+  .bc-order { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); display: flex; gap: 15px; align-items: center; transition: border-color .15s, transform .15s; }
+  .bc-order:hover { border-color: color-mix(in srgb, var(--primary) 38%, var(--border)); transform: translateY(-2px); }
+  .bc-order .thumb { width: 56px; height: 56px; border-radius: 13px; background: var(--s2); display: grid; place-items: center; font-size: 24px; flex: none; }
+  .bc-order .mid { flex: 1; min-width: 0; }
+  .bc-order .nm { font-family: var(--fh); font-weight: 700; font-size: 15px; }
+  .bc-order .meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+  .bc-seller { display: inline-flex; align-items: center; gap: 5px; }
+  .bc-seller .d { width: 15px; height: 15px; border-radius: 4px; background: var(--grad); flex: none; }
+  .bc-cat { font-size: 10.5px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); padding: 2px 8px; border-radius: 999px; }
+  .bc-order .right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+  .bc-amt { font-family: var(--fh); font-weight: 800; font-size: 15px; }
+  .bc-pill { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .t-paid { background: var(--greenbg); color: var(--green); }
+  .t-pend { background: var(--redbg); color: var(--red); }
+  .bc-act { font: inherit; font-family: var(--fh); font-weight: 600; font-size: 12.5px; padding: 8px 14px; border-radius: 9px; border: 0; cursor: pointer; color: #fff; background: var(--grad); white-space: nowrap; }
+  .bc-act.ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+
+  .bc-empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+  .bc-empty .e { font-size: 38px; } .bc-empty h3 { font-size: 17px; margin: 12px 0 6px; color: var(--text); }
+
+  @media (max-width: 640px) {
+    .bc-kpis { grid-template-columns: 1fr; }
+    .bc-order { flex-wrap: wrap; }
+    .bc-order .right { flex-direction: row; width: 100%; justify-content: space-between; align-items: center; }
+    .bc-brand .sub { display: none; }
+  }
+</style>
+</helmet>
+
+<div class="bc" data-theme="{{ theme }}">
+  <nav class="bc-nav">
+    <div class="bc-wrap bc-nav-in">
+      <div class="bc-brand"><span class="bc-logo"></span>invoxai<span class="sub">Buyer corner</span></div>
+      <div class="bc-nav-r">
+        <button class="bc-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+        <span class="bc-avatar">R</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="bc-wrap bc-main">
+    <div class="bc-hello">
+      <span class="av">R</span>
+      <div><h1>Hi, Rohan 👋</h1><p>One account · all your purchases across every invoxai store.</p></div>
+    </div>
+
+    <div class="bc-kpis">
+      <div class="bc-kpi"><div class="lbl">Total spent</div><div class="val">₹8,940</div></div>
+      <div class="bc-kpi"><div class="lbl">Orders</div><div class="val">11 <small>· 3 stores</small></div></div>
+      <div class="bc-kpi"><div class="lbl">Active access</div><div class="val">5 <small>products</small></div></div>
+    </div>
+
+    <div class="bc-tabs">
+      <button class="bc-tab {{ tAll }}" onClick="{{ goAll }}">All orders</button>
+      <button class="bc-tab {{ tAccess }}" onClick="{{ goAccess }}">My access</button>
+      <button class="bc-tab {{ tPend }}" onClick="{{ goPend }}">Pending</button>
+    </div>
+
+    <!-- ALL -->
+    <sc-if value="{{ isAll }}" hint-placeholder-val="{{ true }}">
+      <div class="bc-orders">
+        <div class="bc-order"><span class="thumb">🎧</span><div class="mid"><div class="nm">Mixing Masterclass</div><div class="meta"><span class="bc-seller"><span class="d"></span>Studio Aanya</span><span class="bc-cat">Courses</span><span>18 Jun 2026</span></div></div><div class="right"><span class="bc-amt">₹1,499</span><button class="bc-act">Access ↗</button></div></div>
+        <div class="bc-order"><span class="thumb">📦</span><div class="mid"><div class="nm">Producer Preset Pack Vol. 2</div><div class="meta"><span class="bc-seller"><span class="d"></span>Studio Aanya</span><span class="bc-cat">Digital</span><span>18 Jun 2026</span></div></div><div class="right"><span class="bc-amt">₹599</span><button class="bc-act">Download</button></div></div>
+        <div class="bc-order"><span class="thumb">🎟️</span><div class="mid"><div class="nm">Live Mixing Workshop · Seat</div><div class="meta"><span class="bc-seller"><span class="d"></span>Studio Aanya</span><span class="bc-cat">Events</span><span>17 Jun 2026</span></div></div><div class="right"><span class="bc-amt">₹799</span><button class="bc-act ghost">View ticket</button></div></div>
+        <div class="bc-order"><span class="thumb">🏋️</span><div class="mid"><div class="nm">12-Week Strength Plan</div><div class="meta"><span class="bc-seller"><span class="d"></span>FitWithDev</span><span class="bc-cat">Courses</span><span>9 Jun 2026</span></div></div><div class="right"><span class="bc-amt">₹2,499</span><button class="bc-act">Access ↗</button></div></div>
+        <div class="bc-order"><span class="thumb">📘</span><div class="mid"><div class="nm">Notion Templates Pack</div><div class="meta"><span class="bc-seller"><span class="d"></span>NoteCraft</span><span class="bc-cat">Digital</span><span>2 Jun 2026</span></div></div><div class="right"><span class="bc-pill t-pend">Pending</span><button class="bc-act ghost">Complete payment</button></div></div>
+      </div>
+    </sc-if>
+
+    <!-- ACCESS -->
+    <sc-if value="{{ isAccess }}" hint-placeholder-val="{{ false }}">
+      <div class="bc-orders">
+        <div class="bc-order"><span class="thumb">🎧</span><div class="mid"><div class="nm">Mixing Masterclass</div><div class="meta"><span class="bc-seller"><span class="d"></span>Studio Aanya</span><span class="bc-cat">Courses</span><span>Lifetime access</span></div></div><div class="right"><span class="bc-pill t-paid">Active</span><button class="bc-act">Open course ↗</button></div></div>
+        <div class="bc-order"><span class="thumb">📦</span><div class="mid"><div class="nm">Producer Preset Pack Vol. 2</div><div class="meta"><span class="bc-seller"><span class="d"></span>Studio Aanya</span><span class="bc-cat">Digital</span><span>Files ready</span></div></div><div class="right"><span class="bc-pill t-paid">Active</span><button class="bc-act">Download</button></div></div>
+        <div class="bc-order"><span class="thumb">🏋️</span><div class="mid"><div class="nm">12-Week Strength Plan</div><div class="meta"><span class="bc-seller"><span class="d"></span>FitWithDev</span><span class="bc-cat">Courses</span><span>Week 2 of 12</span></div></div><div class="right"><span class="bc-pill t-paid">Active</span><button class="bc-act">Continue ↗</button></div></div>
+        <div class="bc-order"><span class="thumb">⭐</span><div class="mid"><div class="nm">Inner Circle membership</div><div class="meta"><span class="bc-seller"><span class="d"></span>FitWithDev</span><span class="bc-cat">Membership</span><span>Renews 9 Jul</span></div></div><div class="right"><span class="bc-pill t-paid">Active</span><button class="bc-act">Join chat ↗</button></div></div>
+      </div>
+    </sc-if>
+
+    <!-- PENDING -->
+    <sc-if value="{{ isPend }}" hint-placeholder-val="{{ false }}">
+      <div class="bc-orders">
+        <div class="bc-order"><span class="thumb">📘</span><div class="mid"><div class="nm">Notion Templates Pack</div><div class="meta"><span class="bc-seller"><span class="d"></span>NoteCraft</span><span class="bc-cat">Digital</span><span>Started 2 Jun</span></div></div><div class="right"><span class="bc-pill t-pend">Pending</span><button class="bc-act">Complete payment</button></div></div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:920,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = { theme: "light", tab: "all" };
+  renderVals() {
+    const t = this.state.tab;
+    const set = (tab) => () => this.setState({ tab });
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      isAll: t === "all", isAccess: t === "access", isPend: t === "pend",
+      tAll: t === "all" ? "on" : "", tAccess: t === "access" ? "on" : "", tPend: t === "pend" ? "on" : "",
+      goAll: set("all"), goAccess: set("access"), goPend: set("pend")
+    };
+  }
+}
+</script>
+</body>
+</html>

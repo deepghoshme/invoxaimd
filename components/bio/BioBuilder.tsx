@@ -183,6 +183,35 @@ export default function BioBuilder({
             <div className="ff"><div className="field"><label>Real price</label><input value={c.featured?.real ?? ""} onChange={(e) => setFeat({ real: e.target.value })} placeholder="₹1,499" /></div><div className="field"><label>Offer price</label><input value={c.featured?.off ?? ""} onChange={(e) => setFeat({ off: e.target.value })} placeholder="₹999" /></div></div>
             <div className="ff"><div className="field"><label>Button text</label><input value={c.featured?.cta ?? ""} onChange={(e) => setFeat({ cta: e.target.value })} placeholder="Enroll now" /></div><div className="field"><label>Button URL</label><input value={c.featured?.url ?? ""} onChange={(e) => setFeat({ url: e.target.value })} placeholder="/opp/..." /></div></div>
           </div>
+
+          {/* Suggest more */}
+          <div style={{ margin: "18px 0 0", padding: "14px 16px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 10 }}>Ideas to grow your Bio page</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                { icon: "📧", label: "Add a newsletter signup link", hint: "Link to a Beehiiv / ConvertKit / Mailchimp form to capture emails.", action: () => set({ links: [...(c.links ?? []), { ic: "📧", t: "Subscribe to my newsletter", u: "https://", type: "link" as const }] }) },
+                { icon: "🛒", label: "Sell a product from your Bio", hint: "Feature a paid product or course right on your link page.", action: () => {} },
+                { icon: "💬", label: "Add a WhatsApp / Telegram link", hint: "Let visitors reach you on chat in one tap.", action: () => set({ links: [...(c.links ?? []), { ic: "💬", t: "Chat on WhatsApp", u: "https://wa.me/", type: "link" as const }] }) },
+                { icon: "📅", label: "Add a booking / calendar link", hint: "Let fans book a call or session directly (Cal.com, Calendly…).", action: () => set({ links: [...(c.links ?? []), { ic: "📅", t: "Book a call", u: "https://cal.com/", type: "link" as const }] }) },
+                { icon: "🎁", label: "Add a freebie / lead magnet link", hint: "Offer a free PDF, checklist, or mini-course to grow your list.", action: () => set({ links: [...(c.links ?? []), { ic: "🎁", t: "Free download", u: "https://", type: "link" as const }] }) },
+              ].map(({ icon, label, hint, action }) => (
+                <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 2 }}>{hint}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={action}
+                    style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: "var(--primary)", color: "#fff", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="previewwrap">

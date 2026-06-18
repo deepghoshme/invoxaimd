@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes gw-spin { to { transform: rotate(360deg); } }
+  @keyframes gw-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+  .gw {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .gw[data-theme="dark"] { --bg: #16101f; --card: #221833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6); }
+  .gw h1,.gw h2,.gw h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .gw p { margin: 0; }
+  .gw-wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+  .gw-nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--bg) 86%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .gw-nav-in { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .gw-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; } .gw-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); } .gw-crumb { font-size: 13px; color: var(--muted); } .gw-crumb b { color: var(--text); }
+  .gw-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .gw-main { padding: 26px 0 60px; }
+  .gw-h { margin-bottom: 16px; } .gw-h h1 { font-size: 22px; } .gw-h p { color: var(--muted); font-size: 13.5px; margin-top: 5px; }
+  .gw-note { display: flex; gap: 10px; background: color-mix(in srgb,var(--accent) 8%,transparent); border: 1px solid color-mix(in srgb,var(--accent) 25%,transparent); border-radius: 12px; padding: 13px 15px; font-size: 13px; margin-bottom: 18px; } .gw-note .e { font-size: 16px; }
+
+  .gw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .gw-g { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer; background: var(--card); } .gw-g.on { border-color: var(--primary); background: color-mix(in srgb,var(--primary) 6%,transparent); }
+  .gw-g .lg { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; font-family: var(--fh); font-weight: 800; font-size: 13px; color: #fff; flex: none; }
+  .gw-g .nm { font-family: var(--fh); font-weight: 700; font-size: 14px; } .gw-g .ds { font-size: 11.5px; color: var(--muted); }
+  .gw-g .badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; } .gw-g .badge.live { background: color-mix(in srgb,var(--green) 16%,transparent); color: var(--green); }
+
+  .gw-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); }
+  .gw-ct { display: flex; align-items: center; gap: 11px; margin-bottom: 16px; } .gw-ct .lg { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-family: var(--fh); font-weight: 800; font-size: 12px; color: #fff; } .gw-ct h3 { font-size: 16px; } .gw-ct .sw { margin-left: auto; }
+  .gw-seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; margin-bottom: 14px; } .gw-seg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12px; color: var(--muted); padding: 7px 14px; border-radius: 999px; cursor: pointer; } .gw-seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+  .gw-label { display: block; font-size: 12.5px; font-weight: 700; margin: 12px 0 6px; } .gw-label:first-of-type { margin-top: 0; }
+  .gw-input { width: 100%; padding: 11px 13px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 11px; outline: none; font-family: ui-monospace, Menlo, monospace; } .gw-input:focus { border-color: var(--primary); }
+  .gw-sw { width: 46px; height: 26px; border-radius: 999px; background: var(--border); border: 0; cursor: pointer; position: relative; flex: none; } .gw-sw.on { background: var(--grad); } .gw-sw i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .18s; } .gw-sw.on i { transform: translateX(20px); }
+  .gw-act { display: flex; gap: 9px; margin-top: 16px; } .gw-btn { font: inherit; font-family: var(--fh); font-weight: 700; font-size: 13.5px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 12px 16px; border-radius: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; } .gw-btn.grad { background: var(--grad); color: #fff; border-color: transparent; } .gw-spin { width: 15px; height: 15px; border: 2.5px solid rgba(0,0,0,.2); border-top-color: var(--primary); border-radius: 50%; animation: gw-spin .7s linear infinite; }
+  .gw-secure { font-size: 11.5px; color: var(--muted); margin-top: 12px; }
+
+  .gw-toastbox { position: fixed; left: 50%; bottom: 24px; z-index: 60; background: #18121f; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 9px; animation: gw-toast .4s ease; } .gw-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+  @media (max-width: 620px) { .gw-list { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="gw" data-theme="{{ theme }}">
+  <nav class="gw-nav">
+    <div class="gw-wrap gw-nav-in">
+      <div class="gw-brand"><span class="gw-logo"></span>invoxai</div>
+      <span class="gw-crumb">Settings / <b>Payments</b></span>
+      <button class="gw-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+    </div>
+  </nav>
+
+  <main class="gw-wrap gw-main">
+    <div class="gw-h"><h1>Connect your payment gateway</h1><p>Buyers pay you directly — funds land in your own account.</p></div>
+    <div class="gw-note"><span class="e">🔒</span><div>Your keys are stored <b>encrypted</b> and used only to create &amp; verify orders. We never hold your money or store card data.</div></div>
+
+    <div class="gw-list">
+      <sc-for list="{{ gateways }}" as="g" hint-placeholder-count="5">
+        <div class="gw-g {{ g.on }}" onClick="{{ g.pick }}"><span class="lg" style="background: {{ g.color }}">{{ g.abbr }}</span><div><div class="nm">{{ g.name }}</div><div class="ds">{{ g.desc }}</div></div><sc-if value="{{ g.connected }}" hint-placeholder-val="{{ false }}"><span class="badge live">● Live</span></sc-if></div>
+      </sc-for>
+    </div>
+
+    <div class="gw-card">
+      <div class="gw-ct"><span class="lg" style="background: {{ selColor }}">{{ selAbbr }}</span><h3>{{ selName }}</h3><button class="gw-sw {{ enabledCls }}" onClick="{{ toggleEnabled }}"><i></i></button></div>
+      <div class="gw-seg"><button class="{{ testCls }}" onClick="{{ setTest }}">Test mode</button><button class="{{ liveCls }}" onClick="{{ setLive }}">Live mode</button></div>
+      <label class="gw-label">{{ keyLabel }}</label>
+      <input class="gw-input" value="{{ keyId }}" onInput="{{ onKeyId }}" placeholder="{{ keyPh }}" />
+      <label class="gw-label">{{ secretLabel }}</label>
+      <input class="gw-input" type="password" value="{{ secret }}" onInput="{{ onSecret }}" placeholder="••••••••••••••••" />
+      <div class="gw-act">
+        <button class="gw-btn" onClick="{{ test }}"><sc-if value="{{ testing }}" hint-placeholder-val="{{ false }}"><span class="gw-spin"></span>Testing…</sc-if><sc-if value="{{ notTesting }}" hint-placeholder-val="{{ true }}">Test connection</sc-if></button>
+        <button class="gw-btn grad" onClick="{{ save }}">Save &amp; connect</button>
+      </div>
+      <div class="gw-secure">Need help finding your keys? See the {{ selName }} dashboard → API keys.</div>
+    </div>
+  </main>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="gw-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:860,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  state = { theme: "light", sel: "razorpay", mode: "test", enabled: true, keyId: "", secret: "", testing: false, connected: { razorpay: true }, toast: false, toastMsg: "" };
+  GW = [
+    { key: "razorpay", name: "Razorpay", abbr: "Rzp", color: "#0b3c82", desc: "UPI · cards · netbanking", keyLabel: "Key ID", keyPh: "rzp_live_xxxxxxxx" },
+    { key: "cashfree", name: "Cashfree", abbr: "CF", color: "#5b2be0", desc: "UPI · cards · EMI", keyLabel: "App ID", keyPh: "CF_xxxxxxxx" },
+    { key: "stripe", name: "Stripe", abbr: "S", color: "#635bff", desc: "International cards", keyLabel: "Publishable key", keyPh: "pk_live_xxxxxxxx" },
+    { key: "payu", name: "PayU", abbr: "PU", color: "#a0d911", desc: "Cards · UPI · EMI", keyLabel: "Merchant key", keyPh: "xxxxxxxx" },
+    { key: "phonepe", name: "PhonePe", abbr: "Pe", color: "#5f259f", desc: "UPI-first", keyLabel: "Merchant ID", keyPh: "MERCHANTxxxx" }
+  ];
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 1900); }
+  componentWillUnmount() { clearTimeout(this._t); }
+  test() { if (this.state.testing) return; this.setState({ testing: true }); setTimeout(() => { this.setState({ testing: false }); this.fire("✓ Connection successful"); }, 1400); }
+  save() { const g = this.GW.find(x => x.key === this.state.sel); this.setState(s => ({ connected: { ...s.connected, [s.sel]: true } })); this.fire("✓ " + g.name + " connected — checkout is live"); }
+  renderVals() {
+    const s = this.state, on = (b) => (b ? "on" : "");
+    const sel = this.GW.find(x => x.key === s.sel) || this.GW[0];
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      gateways: this.GW.map(g => ({ name: g.name, abbr: g.abbr, color: g.color, desc: g.desc, on: on(s.sel === g.key), connected: !!s.connected[g.key], pick: () => this.setState({ sel: g.key, keyId: "", secret: "" }) })),
+      selName: sel.name, selAbbr: sel.abbr, selColor: sel.color, keyLabel: sel.keyLabel, keyPh: sel.keyPh, secretLabel: "Key secret",
+      enabledCls: on(s.enabled), toggleEnabled: () => this.setState(st => ({ enabled: !st.enabled })),
+      testCls: on(s.mode === "test"), liveCls: on(s.mode === "live"), setTest: () => this.setState({ mode: "test" }), setLive: () => this.setState({ mode: "live" }),
+      keyId: s.keyId, onKeyId: (e) => this.setState({ keyId: e.target.value }), secret: s.secret, onSecret: (e) => this.setState({ secret: e.target.value }),
+      test: () => this.test(), testing: s.testing, notTesting: !s.testing, save: () => this.save(),
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

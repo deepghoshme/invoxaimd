@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes et-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(7%,5%) scale(1.18); } }
+  @keyframes et-pop { from { transform: scale(.94); } to { transform: scale(1); } }
+  .et {
+    --bg: #0f1115; --card: #1c1f26; --s2: #23262e;
+    --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f2f3f5; --muted: #9aa0ab; --border: rgba(255,255,255,.1); --green: #36c98e;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; position: relative; line-height: 1.5; display: grid; place-items: center; padding: 28px 18px; -webkit-font-smoothing: antialiased;
+  }
+  .et[data-theme="light"] { --bg: #fff9f4; --card: #fff; --s2: #fff3ec; --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e; --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a; }
+  .et h1,.et h2,.et h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .et p { margin: 0; }
+
+  .et-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; } .et-blob { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(95px); opacity: .3; background: var(--grad); top: -18vmax; left: -10vmax; animation: et-a1 28s ease-in-out infinite; }
+  .et-tgl { position: fixed; top: 16px; right: 16px; z-index: 10; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: color-mix(in srgb,var(--card) 80%,transparent); backdrop-filter: blur(8px); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .et-ticket { position: relative; z-index: 1; width: 380px; max-width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 22px; overflow: hidden; box-shadow: 0 40px 90px -40px rgba(0,0,0,.7); animation: et-pop .4s cubic-bezier(.2,.8,.2,1); }
+  .et-poster { height: 150px; background: linear-gradient(130deg,#2a1830,#7b3fe4 55%,#ff4d7d); position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 18px; }
+  .et-poster::after { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 90% at 80% 10%, rgba(255,255,255,.28), transparent 60%); }
+  .et-poster > * { position: relative; z-index: 1; color: #fff; } .et-poster .k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .9; } .et-poster h2 { font-size: 22px; margin-top: 5px; }
+  .et-confirm { display: inline-flex; align-items: center; gap: 7px; position: absolute; top: 14px; left: 14px; z-index: 2; background: rgba(0,0,0,.4); color: #fff; font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 999px; } .et-confirm .d { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+  .et-body { padding: 20px; }
+  .et-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .et-kv .l { font-size: 11px; color: var(--muted); font-weight: 600; } .et-kv .v { font-family: var(--fh); font-weight: 700; font-size: 14px; margin-top: 2px; }
+  .et-perf { border-top: 1px dashed var(--border); margin: 18px -20px 0; position: relative; padding: 20px 20px 0; } .et-perf::before, .et-perf::after { content: ""; position: absolute; top: -11px; width: 22px; height: 22px; border-radius: 50%; background: var(--bg); } .et-perf::before { left: -11px; } .et-perf::after { right: -11px; }
+  .et-qr { width: 130px; height: 130px; margin: 0 auto; border-radius: 12px; background: #fff; padding: 10px; }
+  .et-qr .grid { width: 100%; height: 100%; background-image: repeating-linear-gradient(0deg, #111 0 4px, transparent 4px 8px), repeating-linear-gradient(90deg, #111 0 4px, transparent 4px 8px); border-radius: 4px; }
+  .et-code { text-align: center; font-family: ui-monospace, Menlo, monospace; font-weight: 700; font-size: 14px; letter-spacing: 2px; margin-top: 12px; } .et-codel { text-align: center; font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .et-act { display: flex; gap: 9px; padding: 0 20px 20px; } .et-btn { flex: 1; font: inherit; font-family: var(--fh); font-weight: 700; font-size: 13px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 12px; border-radius: 11px; cursor: pointer; } .et-btn.grad { background: var(--grad); color: #fff; border-color: transparent; }
+  .et-foot { text-align: center; font-size: 11px; color: var(--muted); padding-bottom: 18px; } .et-foot b { background: linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: var(--fh); }
+</style>
+</helmet>
+
+<div class="et" data-theme="{{ theme }}">
+  <div class="et-bg"><div class="et-blob"></div></div>
+  <button class="et-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+
+  <div class="et-ticket">
+    <div class="et-poster">
+      <span class="et-confirm"><span class="d"></span>Confirmed</span>
+      <div class="k">Live Workshop</div>
+      <h2>Mix a Track, Start to Finish</h2>
+    </div>
+    <div class="et-body">
+      <div class="et-rows">
+        <div class="et-kv"><div class="l">Date</div><div class="v">28 Jun 2026</div></div>
+        <div class="et-kv"><div class="l">Time</div><div class="v">6:00 PM IST</div></div>
+        <div class="et-kv"><div class="l">Ticket</div><div class="v">VIP · Q&amp;A</div></div>
+        <div class="et-kv"><div class="l">Attendee</div><div class="v">Rohan Mehta</div></div>
+        <div class="et-kv"><div class="l">Location</div><div class="v">Online · Zoom</div></div>
+        <div class="et-kv"><div class="l">Order</div><div class="v">#A7B2K9</div></div>
+      </div>
+      <div class="et-perf">
+        <div class="et-qr"><div class="grid"></div></div>
+        <div class="et-code">INVX-7K2M-9QD4</div>
+        <div class="et-codel">Show this at entry · 1 admit</div>
+      </div>
+    </div>
+    <div class="et-act">
+      <button class="et-btn" onClick="{{ cal }}">＋ Add to calendar</button>
+      <button class="et-btn grad" onClick="{{ join }}">Join event ↗</button>
+    </div>
+    <div class="et-foot">Hosted by Studio Aanya · Ticket by <b>invoxai</b></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:440,&quot;height&quot;:720}}">
+class Component extends DCLogic {
+  state = { theme: "dark" };
+  renderVals() {
+    return {
+      theme: this.state.theme, themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      cal: () => {}, join: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>

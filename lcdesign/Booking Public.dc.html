@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes bk-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(7%,5%) scale(1.18); } }
+  @keyframes bk-spin { to { transform: rotate(360deg); } }
+  @keyframes bk-pop { from { transform: scale(.92); } to { transform: scale(1); } }
+  .bk {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow-xl: 0 40px 90px -40px rgba(43,27,46,.45);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; position: relative; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .bk[data-theme="dark"] { --bg: #0f1115; --card: #1c1f26; --s2: #23262e; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f2f3f5; --muted: #9aa0ab; --border: rgba(255,255,255,.1); --green: #36c98e; }
+  .bk h1,.bk h2,.bk h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .bk p { margin: 0; }
+
+  .bk-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; } .bk-blob { position: absolute; width: 44vmax; height: 44vmax; border-radius: 50%; filter: blur(90px); opacity: .28; background: var(--grad); top: -18vmax; right: -10vmax; animation: bk-a1 28s ease-in-out infinite; }
+  .bk-tgl { position: fixed; top: 16px; right: 16px; z-index: 10; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: color-mix(in srgb,var(--card) 80%,transparent); backdrop-filter: blur(8px); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .bk-wrap { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 40px 24px 60px; }
+  .bk-card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow-xl); overflow: hidden; }
+  .bk-grid { display: grid; grid-template-columns: 290px 1fr; }
+  .bk-side { padding: 26px; border-right: 1px solid var(--border); }
+  .bk-host { display: flex; align-items: center; gap: 11px; margin-bottom: 16px; } .bk-host .av { width: 46px; height: 46px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 17px; font-family: var(--fh); } .bk-host b { font-size: 14px; } .bk-host p { font-size: 12px; color: var(--muted); }
+  .bk-side h1 { font-size: 21px; margin-bottom: 6px; } .bk-side .sub { font-size: 13.5px; color: var(--muted); }
+  .bk-facts { margin-top: 18px; display: flex; flex-direction: column; gap: 11px; } .bk-fact { display: flex; align-items: center; gap: 10px; font-size: 13.5px; } .bk-fact .e { width: 20px; text-align: center; }
+  .bk-price { margin-top: 18px; font-family: var(--fh); font-weight: 800; font-size: 24px; } .bk-price small { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  .bk-main { padding: 26px; }
+  .bk-ct { font-size: 14px; margin-bottom: 14px; }
+  .bk-calhead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; } .bk-calhead .m { font-family: var(--fh); font-weight: 700; font-size: 15px; flex: 1; } .bk-calhead button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+  .bk-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 4px; } .bk-dow span { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .bk-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+  .bk-day { aspect-ratio: 1; border: 0; background: none; border-radius: 9px; font: inherit; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; } .bk-day:hover:not(:disabled) { background: var(--s2); } .bk-day.on { background: var(--grad); color: #fff; } .bk-day.has { position: relative; } .bk-day.has::after { content: ""; position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--primary); } .bk-day.on.has::after { background: #fff; } .bk-day:disabled { color: var(--muted); opacity: .35; cursor: default; }
+
+  .bk-slots { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 6px; } .bk-slot { border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 4px; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--card); } .bk-slot.on { border-color: transparent; background: var(--grad); color: #fff; } .bk-slot.gone { opacity: .4; text-decoration: line-through; cursor: not-allowed; }
+  .bk-empty { font-size: 13px; color: var(--muted); padding: 20px 0; text-align: center; }
+  .bk-label { display: block; font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; } .bk-input { width: 100%; padding: 11px 13px; font: inherit; font-size: 14px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 11px; color: var(--text); outline: none; } .bk-input:focus { border-color: var(--primary); }
+  .bk-go { width: 100%; margin-top: 16px; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; } .bk-go:disabled { opacity: .5; cursor: not-allowed; } .bk-spin { width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: bk-spin .7s linear infinite; }
+  .bk-sel { font-size: 12.5px; color: var(--muted); margin-top: 10px; text-align: center; } .bk-sel b { color: var(--text); }
+
+  .bk-done { text-align: center; padding: 40px 26px; animation: bk-pop .4s cubic-bezier(.2,.8,.2,1); } .bk-check { width: 70px; height: 70px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-size: 32px; margin: 0 auto 16px; } .bk-done h2 { font-size: 23px; } .bk-done p { color: var(--muted); font-size: 14px; margin-top: 8px; } .bk-when { background: var(--s2); border-radius: 12px; padding: 14px; margin: 16px auto 0; max-width: 320px; font-family: var(--fh); font-weight: 700; font-size: 15px; } .bk-pixel { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--green); background: color-mix(in srgb,var(--green) 12%,transparent); padding: 7px 13px; border-radius: 999px; margin-top: 16px; }
+
+  @media (max-width: 720px) { .bk-grid { grid-template-columns: 1fr; } .bk-side { border-right: 0; border-bottom: 1px solid var(--border); } .bk-slots { grid-template-columns: repeat(4,1fr); } }
+</style>
+</helmet>
+
+<div class="bk" data-theme="{{ theme }}">
+  <div class="bk-bg"><div class="bk-blob"></div></div>
+  <button class="bk-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+
+  <div class="bk-wrap">
+    <div class="bk-card">
+      <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+        <div class="bk-done">
+          <div class="bk-check">✓</div>
+          <h2>Session booked!</h2>
+          <p>A calendar invite &amp; payment receipt are on the way to {{ paidEmail }}.</p>
+          <div class="bk-when">{{ whenLabel }}</div>
+          <div class="bk-pixel"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span>Confirmation + invite sent</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+        <div class="bk-grid">
+          <aside class="bk-side">
+            <div class="bk-host"><span class="av">A</span><div><b>Aanya Sharma</b><p>Studio Aanya</p></div></div>
+            <h1>Mix review session</h1>
+            <p class="sub">Bring your track — I'll review your mix live and give you an action plan.</p>
+            <div class="bk-facts">
+              <div class="bk-fact"><span class="e">⏱</span>60 minutes</div>
+              <div class="bk-fact"><span class="e">🎥</span>Google Meet (link on booking)</div>
+              <div class="bk-fact"><span class="e">🌐</span>Asia/Kolkata (IST)</div>
+            </div>
+            <div class="bk-price">₹999 <small>/ session</small></div>
+          </aside>
+
+          <div class="bk-main">
+            <h3 class="bk-ct">Pick a date</h3>
+            <div class="bk-calhead"><span class="m">{{ monthLabel }}</span><button onClick="{{ prevM }}">‹</button><button onClick="{{ nextM }}">›</button></div>
+            <div class="bk-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+            <div class="bk-days">
+              <sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+                <sc-if value="{{ d.blank }}" hint-placeholder-val="{{ false }}"><span></span></sc-if>
+                <sc-if value="{{ d.real }}" hint-placeholder-val="{{ true }}"><button class="bk-day {{ d.onCls }} {{ d.hasCls }}" onClick="{{ d.pick }}" disabled="{{ d.disabled }}">{{ d.n }}</button></sc-if>
+              </sc-for>
+            </div>
+
+            <h3 class="bk-ct" style="margin-top:18px">Pick a time</h3>
+            <sc-if value="{{ hasDay }}" hint-placeholder-val="{{ true }}">
+              <div class="bk-slots">
+                <div class="bk-slot {{ t1 }}" onClick="{{ pick1 }}">10:00</div>
+                <div class="bk-slot gone">11:30</div>
+                <div class="bk-slot {{ t2 }}" onClick="{{ pick2 }}">2:00</div>
+                <div class="bk-slot {{ t3 }}" onClick="{{ pick3 }}">3:30</div>
+                <div class="bk-slot {{ t4 }}" onClick="{{ pick4 }}">5:00</div>
+                <div class="bk-slot gone">6:30</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noDay }}" hint-placeholder-val="{{ false }}"><div class="bk-empty">Select a date to see available times.</div></sc-if>
+
+            <label class="bk-label">Your email</label>
+            <input class="bk-input" type="email" placeholder="you@email.com" value="{{ email }}" onInput="{{ onEmail }}" />
+            <button class="bk-go" onClick="{{ book }}" disabled="{{ bookDisabled }}">
+              <sc-if value="{{ booking }}" hint-placeholder-val="{{ false }}"><span class="bk-spin"></span>Booking…</sc-if>
+              <sc-if value="{{ notBooking }}" hint-placeholder-val="{{ true }}">{{ bookLabel }}</sc-if>
+            </button>
+            <div class="bk-sel">{{ selLabel }}</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:880,&quot;height&quot;:760}}">
+class Component extends DCLogic {
+  state = { theme: "light", day: null, slot: "", email: "", booking: false, done: false, paidEmail: "" };
+  MONTH = "June 2026"; FIRST = 0; DAYS = 30; AVAIL = { 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 30: 1, 18: 1, 19: 1, 20: 1 };
+  valid(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+  book() {
+    if (this.state.booking || !this.state.day || !this.state.slot || !this.valid(this.state.email)) return;
+    this.setState({ booking: true });
+    setTimeout(() => this.setState(s => ({ booking: false, done: true, paidEmail: s.email })), 1500);
+  }
+  renderVals() {
+    const s = this.state, on = (b) => (b ? "on" : "");
+    const days = [];
+    for (let i = 0; i < this.FIRST; i++) days.push({ blank: true, real: false });
+    for (let n = 1; n <= this.DAYS; n++) {
+      const has = !!this.AVAIL[n], past = n < 18;
+      days.push({ blank: false, real: true, n: String(n), hasCls: has && !past ? "has" : "", onCls: s.day === n ? "on" : "", disabled: !has || past, pick: () => this.setState({ day: n, slot: "" }) });
+    }
+    const ready = s.day && s.slot && this.valid(s.email);
+    const whenLabel = (s.day ? this.MONTH.split(" ")[0] + " " + s.day : "—") + " · " + (s.slot || "—") + " IST";
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      done: s.done, notDone: !s.done, paidEmail: s.paidEmail, whenLabel,
+      monthLabel: this.MONTH, prevM: () => {}, nextM: () => {}, days,
+      hasDay: !!s.day, noDay: !s.day,
+      t1: on(s.slot === "10:00"), t2: on(s.slot === "2:00"), t3: on(s.slot === "3:30"), t4: on(s.slot === "5:00"),
+      pick1: () => this.setState({ slot: "10:00" }), pick2: () => this.setState({ slot: "2:00" }), pick3: () => this.setState({ slot: "3:30" }), pick4: () => this.setState({ slot: "5:00" }),
+      email: s.email, onEmail: (e) => this.setState({ email: e.target.value }),
+      book: () => this.book(), booking: s.booking, notBooking: !s.booking, bookDisabled: !ready || s.booking,
+      bookLabel: ready ? "Book · ₹999" : "Pick a date, time & email",
+      selLabel: s.day && s.slot ? ("🔒 Secure payment · " + whenLabel) : "60-min session · ₹999"
+    };
+  }
+}
+</script>
+</body>
+</html>

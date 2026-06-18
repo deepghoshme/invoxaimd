@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes ma-in { from { opacity: .4; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .ma {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--pageBg, #2a2236); color: var(--text); font-family: var(--fb); min-height: 100dvh; display: grid; place-items: center; padding: 28px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .ma[data-theme="dark"] { --bg: #16101f; --card: #221833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --pageBg: #0c0913; }
+  .ma h1,.ma h2,.ma h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .ma p { margin: 0; }
+
+  .ma-toolbar { position: fixed; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 10; }
+  .ma-tgl { width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); color: #fff; cursor: pointer; font-size: 14px; backdrop-filter: blur(8px); }
+
+  /* phone */
+  .ma-phone { width: 380px; max-width: 100%; height: 800px; max-height: 88vh; background: #000; border-radius: 46px; padding: 12px; box-shadow: 0 50px 100px -30px rgba(0,0,0,.7); position: relative; }
+  .ma-screen { width: 100%; height: 100%; background: var(--bg); border-radius: 36px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .ma-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 130px; height: 26px; background: #000; border-radius: 0 0 16px 16px; z-index: 30; }
+  .ma-status { display: flex; align-items: center; justify-content: space-between; padding: 12px 22px 6px; font-size: 12px; font-weight: 700; flex: none; } .ma-status .r { display: flex; gap: 5px; }
+
+  .ma-top { display: flex; align-items: center; gap: 10px; padding: 8px 18px 12px; flex: none; }
+  .ma-av { width: 36px; height: 36px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; font-family: var(--fh); }
+  .ma-top .nm { font-family: var(--fh); font-weight: 700; font-size: 15px; } .ma-top .sub { font-size: 11.5px; color: var(--muted); }
+  .ma-bell { margin-left: auto; width: 34px; height: 34px; border-radius: 10px; background: var(--s2); display: grid; place-items: center; font-size: 15px; }
+
+  .ma-body { flex: 1; overflow-y: auto; padding: 4px 16px 90px; animation: ma-in .3s ease; scrollbar-width: none; } .ma-body::-webkit-scrollbar { display: none; }
+  .ma-h { font-size: 19px; margin: 8px 2px 14px; }
+
+  .ma-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-bottom: 14px; }
+  .ma-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; } .ma-kpi .l { font-size: 11.5px; color: var(--muted); } .ma-kpi .v { font-family: var(--fh); font-size: 20px; font-weight: 700; margin-top: 3px; } .ma-kpi .d { font-size: 11px; font-weight: 600; color: var(--green); margin-top: 5px; }
+  .ma-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 15px; margin-bottom: 13px; }
+  .ma-ct { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; } .ma-ct h3 { font-size: 14px; } .ma-ct a { font-size: 12px; color: var(--primary); font-weight: 600; }
+  .ma-chart { display: flex; align-items: flex-end; gap: 6px; height: 90px; } .ma-chart .b { flex: 1; border-radius: 5px 5px 0 0; background: var(--grad); } .ma-chart .b.dim { background: var(--s2); }
+  .ma-row { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-top: 1px solid var(--border); } .ma-row:first-child { border-top: 0; } .ma-row .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--s2); display: grid; place-items: center; font-size: 17px; flex: none; } .ma-row .nm { font-weight: 600; font-size: 13px; } .ma-row .meta { font-size: 11.5px; color: var(--muted); } .ma-row .amt { margin-left: auto; font-weight: 700; font-family: var(--fh); font-size: 13px; }
+  .ma-pill { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; } .t-paid { background: color-mix(in srgb,var(--green) 16%,transparent); color: var(--green); } .t-pend { background: color-mix(in srgb,var(--secondary) 14%,transparent); color: var(--secondary); }
+  .ma-page { display: flex; align-items: center; gap: 11px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--card); } .ma-page .ic { width: 38px; height: 38px; border-radius: 11px; background: var(--s2); display: grid; place-items: center; font-size: 18px; flex: none; } .ma-page .nm { font-weight: 600; font-size: 13.5px; } .ma-page .u { font-family: ui-monospace,Menlo,monospace; font-size: 11px; color: var(--muted); } .ma-live { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--green); }
+  .ma-walletbig { background: var(--grad); color: #fff; border-radius: 18px; padding: 20px; margin-bottom: 13px; } .ma-walletbig .l { font-size: 12px; opacity: .9; } .ma-walletbig .v { font-family: var(--fh); font-weight: 800; font-size: 32px; margin: 4px 0 12px; } .ma-walletbig button { background: #fff; color: var(--primary); border: 0; border-radius: 10px; padding: 10px 16px; font-family: var(--fh); font-weight: 700; font-size: 13px; }
+  .ma-fab { position: absolute; right: 18px; bottom: 86px; width: 52px; height: 52px; border-radius: 50%; background: var(--grad); color: #fff; border: 0; font-size: 24px; box-shadow: 0 12px 28px -8px rgba(255,77,125,.6); cursor: pointer; z-index: 12; }
+
+  /* tab bar */
+  .ma-tabs { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; background: color-mix(in srgb,var(--card) 92%,transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--border); padding: 8px 8px calc(8px + env(safe-area-inset-bottom,0px)); }
+  .ma-tab { flex: 1; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); font-size: 10px; font-weight: 600; padding: 5px 0; } .ma-tab .e { font-size: 19px; } .ma-tab.on { color: var(--primary); }
+
+  .ma-prof { text-align: center; padding-top: 14px; } .ma-prof .big { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 12px; font-size: 28px; } .ma-prof h2 { font-size: 19px; } .ma-prof p { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .ma-menu { margin-top: 16px; } .ma-mi { display: flex; align-items: center; gap: 12px; padding: 13px 4px; border-top: 1px solid var(--border); font-size: 13.5px; font-weight: 500; } .ma-mi .e { font-size: 17px; width: 24px; text-align: center; } .ma-mi .ch { margin-left: auto; color: var(--muted); }
+</style>
+</helmet>
+
+<div class="ma" data-theme="{{ theme }}">
+  <div class="ma-toolbar"><button class="ma-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button></div>
+
+  <div class="ma-phone">
+    <div class="ma-screen">
+      <div class="ma-notch"></div>
+      <div class="ma-status"><span>9:41</span><span class="r">📶 🔋</span></div>
+      <div class="ma-top"><span class="ma-av">A</span><div><div class="nm">Studio Aanya</div><div class="sub">{{ topSub }}</div></div><span class="ma-bell">🔔</span></div>
+
+      <div class="ma-body" key="{{ tab }}">
+        <!-- HOME -->
+        <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+          <h1 class="ma-h">Today</h1>
+          <div class="ma-kpis">
+            <div class="ma-kpi"><div class="l">Revenue (7d)</div><div class="v">₹48,900</div><div class="d">▲ 18%</div></div>
+            <div class="ma-kpi"><div class="l">Orders</div><div class="v">312</div><div class="d">▲ 9%</div></div>
+          </div>
+          <div class="ma-card">
+            <div class="ma-ct"><h3>This week</h3><a>Details</a></div>
+            <div class="ma-chart"><div class="b dim" style="height:45%"></div><div class="b dim" style="height:62%"></div><div class="b dim" style="height:50%"></div><div class="b dim" style="height:74%"></div><div class="b dim" style="height:58%"></div><div class="b" style="height:100%"></div><div class="b dim" style="height:80%"></div></div>
+          </div>
+          <div class="ma-card">
+            <div class="ma-ct"><h3>Recent orders</h3><a onClick="{{ goOrders }}">All</a></div>
+            <div class="ma-row"><span class="ic">🎧</span><div><div class="nm">Rohan M.</div><div class="meta">Mixing Masterclass</div></div><span class="amt">₹1,499</span></div>
+            <div class="ma-row"><span class="ic">📦</span><div><div class="nm">Sara I.</div><div class="meta">Preset Pack</div></div><span class="amt">₹599</span></div>
+          </div>
+        </sc-if>
+
+        <!-- PAGES -->
+        <sc-if value="{{ isPages }}" hint-placeholder-val="{{ false }}">
+          <h1 class="ma-h">Pages</h1>
+          <div class="ma-page"><span class="ic">🌐</span><div><div class="nm">Home</div><div class="u">aanya.invoxai.io</div></div><span class="ma-live">● Live</span></div>
+          <div class="ma-page"><span class="ic">🛍️</span><div><div class="nm">Store</div><div class="u">/store</div></div><span class="ma-live">● Live</span></div>
+          <div class="ma-page"><span class="ic">🔗</span><div><div class="nm">Link in bio</div><div class="u">/bio</div></div><span class="ma-live">● Live</span></div>
+          <div class="ma-page"><span class="ic">📦</span><div><div class="nm">Mixing Masterclass</div><div class="u">/opp/a7Bx9KmQ</div></div><span class="ma-live">● Live</span></div>
+        </sc-if>
+
+        <!-- ORDERS -->
+        <sc-if value="{{ isOrders }}" hint-placeholder-val="{{ false }}">
+          <h1 class="ma-h">Orders</h1>
+          <div class="ma-card">
+            <div class="ma-row"><span class="ic">🎧</span><div><div class="nm">Rohan Mehta</div><div class="meta">Mixing Masterclass · 18 Jun</div></div><span class="ma-pill t-paid">Paid</span></div>
+            <div class="ma-row"><span class="ic">📦</span><div><div class="nm">Sara Iyer</div><div class="meta">Notion Pack · 18 Jun</div></div><span class="ma-pill t-pend">Pending</span></div>
+            <div class="ma-row"><span class="ic">🎟️</span><div><div class="nm">Dev Kapoor</div><div class="meta">Workshop seat · 17 Jun</div></div><span class="ma-pill t-paid">Paid</span></div>
+            <div class="ma-row"><span class="ic">🎧</span><div><div class="nm">Meera Nair</div><div class="meta">Masterclass · 17 Jun</div></div><span class="ma-pill t-paid">Paid</span></div>
+          </div>
+        </sc-if>
+
+        <!-- WALLET -->
+        <sc-if value="{{ isWallet }}" hint-placeholder-val="{{ false }}">
+          <h1 class="ma-h">Wallet</h1>
+          <div class="ma-walletbig"><div class="l">Available balance</div><div class="v">₹6,420</div><button>＋ Recharge</button></div>
+          <div class="ma-card">
+            <div class="ma-ct"><h3>Recent commission</h3></div>
+            <div class="ma-row"><span class="ic" style="color:var(--green)">↓</span><div><div class="nm">Sale · Masterclass</div><div class="meta">Courses · 6%</div></div><span class="amt" style="color:var(--green)">−₹90</span></div>
+            <div class="ma-row"><span class="ic">↑</span><div><div class="nm">Recharge</div><div class="meta">Razorpay</div></div><span class="amt">+₹2,000</span></div>
+          </div>
+        </sc-if>
+
+        <!-- PROFILE -->
+        <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+          <div class="ma-prof"><span class="ma-av big">A</span><h2>Aanya Sharma</h2><p>aanya@studio.in · Growth plan</p></div>
+          <div class="ma-menu">
+            <div class="ma-mi"><span class="e">⚙</span>Store settings<span class="ch">›</span></div>
+            <div class="ma-mi"><span class="e">💳</span>Payments &amp; gateway<span class="ch">›</span></div>
+            <div class="ma-mi"><span class="e">🌐</span>Domains<span class="ch">›</span></div>
+            <div class="ma-mi"><span class="e">📊</span>Analytics<span class="ch">›</span></div>
+            <div class="ma-mi"><span class="e">↗</span>View my site<span class="ch">›</span></div>
+            <div class="ma-mi" style="color:var(--secondary)"><span class="e">⏻</span>Sign out</div>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}"><button class="ma-fab" onClick="{{ goPages }}">＋</button></sc-if>
+
+      <div class="ma-tabs">
+        <button class="ma-tab {{ tHome }}" onClick="{{ goHome }}"><span class="e">⊞</span>Home</button>
+        <button class="ma-tab {{ tPages }}" onClick="{{ goPages }}"><span class="e">▤</span>Pages</button>
+        <button class="ma-tab {{ tOrders }}" onClick="{{ goOrders }}"><span class="e">🧾</span>Orders</button>
+        <button class="ma-tab {{ tWallet }}" onClick="{{ goWallet }}"><span class="e">👛</span>Wallet</button>
+        <button class="ma-tab {{ tProfile }}" onClick="{{ goProfile }}"><span class="e">👤</span>You</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:440,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = { theme: "light", tab: "home" };
+  renderVals() {
+    const s = this.state, on = (k) => (s.tab === k ? "on" : "");
+    const set = (tab) => () => this.setState({ tab });
+    const subs = { home: "Seller app", pages: "4 pages live", orders: "312 orders", wallet: "₹6,420 balance", profile: "Growth plan" };
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      tab: s.tab, topSub: subs[s.tab] || "Seller app",
+      isHome: s.tab === "home", isPages: s.tab === "pages", isOrders: s.tab === "orders", isWallet: s.tab === "wallet", isProfile: s.tab === "profile",
+      tHome: on("home"), tPages: on("pages"), tOrders: on("orders"), tWallet: on("wallet"), tProfile: on("profile"),
+      goHome: set("home"), goPages: set("pages"), goOrders: set("orders"), goWallet: set("wallet"), goProfile: set("profile")
+    };
+  }
+}
+</script>
+</body>
+</html>

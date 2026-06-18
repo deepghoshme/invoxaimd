@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes bc-in { from { transform: translateY(6px); opacity: .5; } to { transform: none; opacity: 1; } }
+  @keyframes bc-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+
+  .bc {
+    --bg: #f3eee9; --panel: #fff; --p2: #faf6f1; --line: #e7dccf; --ink: #2b1b2e; --mut: #7a6770;
+    --primary: #ff6a3d; --green: #1fb57a;
+    --brand: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --fh: "Sora", sans-serif; --fb: "Inter", sans-serif;
+    background: var(--bg); color: var(--ink); font-family: var(--fb); min-height: 100dvh; display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased; font-size: 14px;
+  }
+  .bc.dark { --bg: #14101c; --panel: #1d1730; --p2: #241c3a; --line: #322843; --ink: #f6eef2; --mut: #b9a8bc; --primary: #ff7e55; }
+  .bc h1,.bc h2,.bc h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .bc p { margin: 0; }
+
+  .bc-top { display: flex; align-items: center; gap: 12px; padding: 11px 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  .bc-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; }
+  .bc-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--brand); }
+  .bc-seg { display: inline-flex; background: var(--p2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+  .bc-seg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--mut); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+  .bc-seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .bc-top-r { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .bc-sw { display: flex; gap: 6px; }
+  .bc-swatch { width: 24px; height: 24px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; }
+  .bc-swatch.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--panel) inset; }
+  .bc-ico { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font-size: 14px; display: grid; place-items: center; }
+  .bc-pub { font: inherit; font-family: var(--fh); font-weight: 700; font-size: 13px; padding: 9px 18px; border-radius: 9px; border: 0; background: var(--brand); color: #fff; cursor: pointer; }
+
+  .bc-stage { flex: 1; display: flex; min-height: 0; }
+  .bc-pal { width: 200px; flex: none; background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 14px; }
+  .bc-pal.hide { display: none; }
+  .bc-pal .h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mut); margin: 4px 0 10px; }
+  .bc-palgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bc-palbtn { border: 1px solid var(--line); background: var(--p2); border-radius: 11px; padding: 12px 6px; cursor: pointer; text-align: center; color: var(--ink); transition: border-color .15s, transform .12s; }
+  .bc-palbtn:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .bc-palbtn .e { font-size: 18px; } .bc-palbtn .n { font-size: 11px; font-weight: 600; margin-top: 5px; }
+
+  /* canvas */
+  .bc-canvaswrap { flex: 1; min-width: 0; overflow: auto; padding: 24px; display: flex; justify-content: center; align-items: flex-start; }
+  .bc-canvaswrap.full { padding: 0; }
+  .bc-canvas { width: 100%; max-width: 760px; background: #fff; border-radius: 14px; box-shadow: 0 30px 70px -34px rgba(43,27,46,.4); border: 1px solid var(--line); overflow: hidden; min-height: 70vh; padding: 24px; }
+  .bc-canvas.mob { max-width: 360px; }
+  .bc-canvaswrap.full .bc-canvas { max-width: 820px; border-radius: 0; border: 0; box-shadow: none; min-height: 100%; }
+  .bc[data-pagetheme="dark"] .bc-canvas { background: #15171c; color: #f2f3f5; }
+  .bc-empty { text-align: center; color: #9a8b85; padding: 60px 20px; font-family: var(--fb); }
+  .bc-empty .e { font-size: 34px; }
+
+  .bc-block { position: relative; padding: 6px; border-radius: 8px; border: 2px solid transparent; animation: bc-in .25s ease; }
+  .bc-block:hover { border-color: color-mix(in srgb,var(--primary) 30%,transparent); }
+  .bc-block.sel { border-color: var(--primary); }
+  .bc-bar { position: absolute; top: -13px; right: 8px; z-index: 3; display: none; gap: 2px; background: var(--ink); border-radius: 7px; padding: 2px; }
+  .bc-block.sel .bc-bar, .bc-block:hover .bc-bar { display: flex; }
+  .bc-bar button { width: 24px; height: 22px; border: 0; background: none; color: #fff; cursor: pointer; font-size: 11px; border-radius: 5px; } .bc-bar button:hover { background: rgba(255,255,255,.18); }
+  .bc-tag { position: absolute; top: -11px; left: 8px; z-index: 3; display: none; font-size: 9px; font-weight: 700; background: var(--primary); color: #fff; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; }
+  .bc-block.sel .bc-tag { display: block; }
+
+  /* block visuals */
+  .bc-h { font-family: var(--fh); font-weight: 800; line-height: 1.12; }
+  .bc-txt { font-size: 15px; line-height: 1.7; color: inherit; opacity: .9; }
+  .bc-btn { display: inline-block; font-family: var(--fb); font-weight: 700; font-size: 14px; padding: 12px 26px; border-radius: 12px; color: #fff; }
+  .bc-btn.outline { background: transparent !important; border: 1.5px solid currentColor; }
+  .bc-imgph { border-radius: 12px; background: repeating-linear-gradient(45deg, #efe6db 0 14px, #f6f0e9 14px 28px); display: grid; place-items: center; color: #9a8b85; font-family: ui-monospace,Menlo,monospace; font-size: 11px; background-size: cover; background-position: center; }
+  .bc[data-pagetheme="dark"] .bc-imgph { background: repeating-linear-gradient(45deg, #23262e 0 14px, #1c1f26 14px 28px); }
+  .bc-divln { border: 0; border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); margin: 0; }
+  .bc-quote { font-family: var(--fh); font-weight: 600; font-size: 20px; line-height: 1.5; } .bc-quote cite { display: block; font-family: var(--fb); font-weight: 500; font-size: 13px; opacity: .6; margin-top: 10px; font-style: normal; }
+  .bc-badges { display: flex; flex-wrap: wrap; gap: 8px; } .bc-badge { font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 999px; background: color-mix(in srgb, var(--ac, #ff6a3d) 12%, transparent); color: var(--ac, #ff6a3d); }
+
+  /* inspector */
+  .bc-insp { width: 280px; flex: none; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 16px; }
+  .bc-insp.hide { display: none; }
+  .bc-insp .ttl { font-family: var(--fh); font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .bc-insp .sub { font-size: 12px; color: var(--mut); margin-bottom: 16px; }
+  .bc-label { display: block; font-size: 12px; font-weight: 700; margin: 12px 0 6px; }
+  .bc-input { width: 100%; padding: 9px 11px; font: inherit; font-size: 13px; background: var(--p2); border: 1.5px solid var(--line); border-radius: 9px; color: var(--ink); outline: none; }
+  .bc-input:focus { border-color: var(--primary); } textarea.bc-input { resize: vertical; min-height: 60px; }
+  .bc-chips { display: flex; gap: 6px; } .bc-chip { flex: 1; text-align: center; border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 4px; font-size: 12px; font-weight: 600; cursor: pointer; } .bc-chip.on { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb,var(--primary) 7%,transparent); }
+  .bc-noinsp { text-align: center; color: var(--mut); padding: 40px 10px; font-size: 13px; }
+  .bc-drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center; cursor: pointer; position: relative; font-size: 12.5px; color: var(--mut); } .bc-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .bc-toastbox { position: fixed; left: 50%; bottom: 24px; z-index: 60; background: #18121f; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 9px; animation: bc-toast .4s ease; }
+  .bc-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+
+  @media (max-width: 920px) { .bc-pal, .bc-insp { position: fixed; z-index: 30; top: 56px; bottom: 0; box-shadow: 0 0 50px -20px rgba(0,0,0,.5); } .bc-pal { left: 0; } .bc-insp { right: 0; } .bc-stage { display: block; } }
+</style>
+</helmet>
+
+<div class="bc {{ darkClass }}" data-pagetheme="{{ pageTheme }}">
+  <div class="bc-top">
+    <div class="bc-brand"><span class="bc-logo"></span>Block Canvas</div>
+    <div class="bc-seg" style="margin-left:8px"><button class="{{ mWeb }}" onClick="{{ setWeb }}">🖥</button><button class="{{ mMob }}" onClick="{{ setMob }}">📱</button></div>
+    <div class="bc-seg"><button class="{{ mEdit }}" onClick="{{ setEdit }}">✎ Edit</button><button class="{{ mPrev }}" onClick="{{ setPrev }}">👁 Preview</button></div>
+    <div class="bc-top-r">
+      <div class="bc-sw">
+        <div class="bc-swatch {{ acO }}" onClick="{{ setAcO }}" style="background:#ff6a3d"></div>
+        <div class="bc-swatch {{ acP }}" onClick="{{ setAcP }}" style="background:#ff4d7d"></div>
+        <div class="bc-swatch {{ acV }}" onClick="{{ setAcV }}" style="background:#7b3fe4"></div>
+        <div class="bc-swatch {{ acB }}" onClick="{{ setAcB }}" style="background:#2a6fdb"></div>
+      </div>
+      <button class="bc-ico" onClick="{{ togglePage }}" title="Page theme">{{ pageIcon }}</button>
+      <button class="bc-ico" onClick="{{ toggleTheme }}">{{ themeIcon }}</button>
+      <button class="bc-pub" onClick="{{ publish }}">Publish ↗</button>
+    </div>
+  </div>
+
+  <div class="bc-stage">
+    <!-- palette -->
+    <aside class="bc-pal {{ chromeHide }}">
+      <div class="h">Add blocks</div>
+      <div class="bc-palgrid">
+        <sc-for list="{{ palette }}" as="p" hint-placeholder-count="8">
+          <div class="bc-palbtn" onClick="{{ p.add }}"><div class="e">{{ p.e }}</div><div class="n">{{ p.label }}</div></div>
+        </sc-for>
+      </div>
+    </aside>
+
+    <!-- canvas -->
+    <div class="bc-canvaswrap {{ prevFull }}">
+      <div class="bc-canvas {{ mobCls }}" style="--ac: {{ ac }}">
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ true }}">
+          <div class="bc-empty"><div class="e">🧱</div><p>Click a block on the left to start building.</p></div>
+        </sc-if>
+        <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="0">
+          <div class="bc-block {{ b.selCls }}" onClick="{{ b.select }}">
+            <span class="bc-tag">{{ b.label }}</span>
+            <span class="bc-bar"><button onClick="{{ b.up }}">▲</button><button onClick="{{ b.down }}">▼</button><button onClick="{{ b.dup }}">⧉</button><button onClick="{{ b.del }}">✕</button></span>
+            <sc-if value="{{ b.isHeading }}" hint-placeholder-val="{{ false }}"><div class="bc-h" style="{{ b.css }}">{{ b.text }}</div></sc-if>
+            <sc-if value="{{ b.isText }}" hint-placeholder-val="{{ false }}"><p class="bc-txt" style="{{ b.css }}">{{ b.text }}</p></sc-if>
+            <sc-if value="{{ b.isButton }}" hint-placeholder-val="{{ false }}"><div style="{{ b.wrapCss }}"><span class="bc-btn {{ b.btnCls }}" style="{{ b.btnCss }}">{{ b.text }}</span></div></sc-if>
+            <sc-if value="{{ b.isImage }}" hint-placeholder-val="{{ false }}"><div class="bc-imgph" style="{{ b.imgCss }}">{{ b.imgLabel }}</div></sc-if>
+            <sc-if value="{{ b.isDivider }}" hint-placeholder-val="{{ false }}"><hr class="bc-divln" /></sc-if>
+            <sc-if value="{{ b.isSpacer }}" hint-placeholder-val="{{ false }}"><div style="{{ b.css }}"></div></sc-if>
+            <sc-if value="{{ b.isQuote }}" hint-placeholder-val="{{ false }}"><blockquote class="bc-quote" style="{{ b.css }}">“{{ b.text }}”<cite>— {{ b.author }}</cite></blockquote></sc-if>
+            <sc-if value="{{ b.isBadges }}" hint-placeholder-val="{{ false }}"><div class="bc-badges" style="{{ b.wrapCss }}"><sc-for list="{{ b.items }}" as="bi" hint-placeholder-count="3"><span class="bc-badge">{{ bi.t }}</span></sc-for></div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- inspector -->
+    <aside class="bc-insp {{ chromeHide }}">
+      <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+        <div class="ttl">{{ selLabel }}</div>
+        <div class="sub">Edit this block</div>
+
+        <sc-if value="{{ selText }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">{{ textLabel }}</label>
+          <textarea class="bc-input" onInput="{{ onText }}">{{ selVal }}</textarea>
+        </sc-if>
+        <sc-if value="{{ selQuoteAuthor }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Author</label>
+          <input class="bc-input" value="{{ selAuthor }}" onInput="{{ onAuthor }}" />
+        </sc-if>
+        <sc-if value="{{ selHasAlign }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Align</label>
+          <div class="bc-chips"><div class="bc-chip {{ alL }}" onClick="{{ setAlL }}">Left</div><div class="bc-chip {{ alC }}" onClick="{{ setAlC }}">Center</div><div class="bc-chip {{ alR }}" onClick="{{ setAlR }}">Right</div></div>
+        </sc-if>
+        <sc-if value="{{ selHeading }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Size</label>
+          <div class="bc-chips"><div class="bc-chip {{ szL }}" onClick="{{ setSzL }}">L</div><div class="bc-chip {{ szM }}" onClick="{{ setSzM }}">M</div><div class="bc-chip {{ szS }}" onClick="{{ setSzS }}">S</div></div>
+        </sc-if>
+        <sc-if value="{{ selButton }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Style</label>
+          <div class="bc-chips"><div class="bc-chip {{ stSolid }}" onClick="{{ setStSolid }}">Solid</div><div class="bc-chip {{ stOutline }}" onClick="{{ setStOutline }}">Outline</div></div>
+        </sc-if>
+        <sc-if value="{{ selImage }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Image</label>
+          <label class="bc-drop">{{ imgDropLabel }}<input type="file" accept="image/*" onChange="{{ onImg }}" /></label>
+          <label class="bc-label">Aspect</label>
+          <div class="bc-chips"><div class="bc-chip {{ rW }}" onClick="{{ setRW }}">16:9</div><div class="bc-chip {{ rS }}" onClick="{{ setRS }}">1:1</div><div class="bc-chip {{ rT }}" onClick="{{ setRT }}">4:3</div></div>
+        </sc-if>
+        <sc-if value="{{ selSpacer }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Height · {{ spacerH }}px</label>
+          <input class="bc-input" type="range" min="8" max="120" value="{{ spacerH }}" onInput="{{ onSpacer }}" />
+        </sc-if>
+        <sc-if value="{{ selBadges }}" hint-placeholder-val="{{ false }}">
+          <label class="bc-label">Badges (comma-separated)</label>
+          <input class="bc-input" value="{{ badgesVal }}" onInput="{{ onBadges }}" />
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}">
+        <div class="bc-noinsp">Select a block to edit its content &amp; style — or add one from the left.</div>
+      </sc-if>
+    </aside>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="bc-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", pageTheme: "light", device: "web", mode: "edit", ac: "#ff6a3d", sel: null,
+    blocks: [
+      { id: 1, type: "heading", text: "Build anything, block by block", align: "center", size: "L" },
+      { id: 2, type: "text", text: "Drag in headings, text, buttons, images and more — then style each block on the right.", align: "center" },
+      { id: 3, type: "button", text: "Get started", align: "center", style: "solid" }
+    ],
+    nextId: 4, toast: false, toastMsg: ""
+  };
+
+  PAL = [
+    { type: "heading", e: "🔤", label: "Heading" }, { type: "text", e: "📝", label: "Text" },
+    { type: "button", e: "🔘", label: "Button" }, { type: "image", e: "🖼️", label: "Image" },
+    { type: "quote", e: "❝", label: "Quote" }, { type: "badges", e: "🏷️", label: "Badges" },
+    { type: "divider", e: "➖", label: "Divider" }, { type: "spacer", e: "↕️", label: "Spacer" }
+  ];
+  LABELS = { heading: "Heading", text: "Text", button: "Button", image: "Image", quote: "Quote", badges: "Badges", divider: "Divider", spacer: "Spacer" };
+
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 1800); }
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  defaults(type) {
+    const d = { heading: { text: "New heading", align: "left", size: "M" }, text: { text: "New paragraph text.", align: "left" }, button: { text: "Button", align: "left", style: "solid" }, image: { ratio: "16/9", src: null }, quote: { text: "A great quote goes here.", author: "Someone", align: "left" }, badges: { items: "Fast,Secure,Trusted", align: "left" }, divider: {}, spacer: { h: 40 } };
+    return d[type] || {};
+  }
+  add(type) { this.setState(s => { const b = { id: s.nextId, type, ...this.defaults(type) }; return { blocks: [...s.blocks, b], nextId: s.nextId + 1, sel: b.id }; }); this.fire("＋ " + this.LABELS[type] + " added"); }
+  upd(id, patch) { this.setState(s => ({ blocks: s.blocks.map(b => b.id === id ? { ...b, ...patch } : b) })); }
+  move(id, dir) { this.setState(s => { const a = [...s.blocks]; const i = a.findIndex(b => b.id === id); const j = i + dir; if (j < 0 || j >= a.length) return {}; [a[i], a[j]] = [a[j], a[i]]; return { blocks: a }; }); }
+  dup(id) { this.setState(s => { const i = s.blocks.findIndex(b => b.id === id); const copy = { ...s.blocks[i], id: s.nextId }; const a = [...s.blocks]; a.splice(i + 1, 0, copy); return { blocks: a, nextId: s.nextId + 1, sel: copy.id }; }); }
+  del(id) { this.setState(s => ({ blocks: s.blocks.filter(b => b.id !== id), sel: s.sel === id ? null : s.sel })); }
+
+  renderVals() {
+    const s = this.state, on = (b) => (b ? "on" : "");
+    const HSZ = { L: "40px", M: "30px", S: "22px" };
+    const stop = (fn) => (e) => { if (e && e.stopPropagation) e.stopPropagation(); fn(); };
+    const blocks = s.blocks.map(b => {
+      const align = b.align || "left";
+      const base = { id: b.id, label: this.LABELS[b.type], selCls: s.sel === b.id ? "sel" : "",
+        select: () => this.setState({ sel: b.id }), up: stop(() => this.move(b.id, -1)), down: stop(() => this.move(b.id, 1)), dup: stop(() => this.dup(b.id)), del: stop(() => this.del(b.id)),
+        isHeading: b.type === "heading", isText: b.type === "text", isButton: b.type === "button", isImage: b.type === "image", isDivider: b.type === "divider", isSpacer: b.type === "spacer", isQuote: b.type === "quote", isBadges: b.type === "badges",
+        text: b.text, author: b.author };
+      if (b.type === "heading") base.css = "text-align:" + align + ";font-size:" + HSZ[b.size || "M"];
+      if (b.type === "text") base.css = "text-align:" + align;
+      if (b.type === "quote") base.css = "text-align:" + align;
+      if (b.type === "button") { base.wrapCss = "text-align:" + align; base.btnCls = b.style === "outline" ? "outline" : ""; base.btnCss = b.style === "outline" ? ("color:" + s.ac) : ("background:" + s.ac); }
+      if (b.type === "image") { base.imgCss = "aspect-ratio:" + (b.ratio || "16/9") + (b.src ? (";background-image:url('" + b.src + "')") : ""); base.imgLabel = b.src ? "" : "IMAGE"; }
+      if (b.type === "spacer") base.css = "height:" + (b.h || 40) + "px";
+      if (b.type === "badges") base.items = String(b.items || "").split(",").map(t => ({ t: t.trim() })).filter(x => x.t);
+      if (b.type === "badges") base.wrapCss = "justify-content:" + (align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start");
+      return base;
+    });
+
+    const sel = s.blocks.find(b => b.id === s.sel) || null;
+    const t = sel ? sel.type : null;
+    const setAlign = (a) => this.upd(s.sel, { align: a });
+
+    return {
+      darkClass: s.theme === "dark" ? "dark" : "", themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggleTheme: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      pageTheme: s.pageTheme, pageIcon: s.pageTheme === "dark" ? "🌙" : "☀", togglePage: () => this.setState(st => ({ pageTheme: st.pageTheme === "dark" ? "light" : "dark" })),
+      mWeb: on(s.device === "web"), mMob: on(s.device === "mobile"), mobCls: s.device === "mobile" ? "mob" : "",
+      setWeb: () => this.setState({ device: "web" }), setMob: () => this.setState({ device: "mobile" }),
+      mEdit: on(s.mode === "edit"), mPrev: on(s.mode === "preview"), setEdit: () => this.setState({ mode: "edit" }), setPrev: () => this.setState({ mode: "preview" }),
+      chromeHide: s.mode === "preview" ? "hide" : "", prevFull: s.mode === "preview" ? "full" : "",
+      ac: s.ac, acO: on(s.ac === "#ff6a3d"), acP: on(s.ac === "#ff4d7d"), acV: on(s.ac === "#7b3fe4"), acB: on(s.ac === "#2a6fdb"),
+      setAcO: () => this.setState({ ac: "#ff6a3d" }), setAcP: () => this.setState({ ac: "#ff4d7d" }), setAcV: () => this.setState({ ac: "#7b3fe4" }), setAcB: () => this.setState({ ac: "#2a6fdb" }),
+      publish: () => this.fire("🎉 Published — " + s.blocks.length + " blocks live"),
+
+      palette: this.PAL.map(p => ({ e: p.e, label: p.label, add: () => this.add(p.type) })),
+      blocks, empty: s.blocks.length === 0,
+
+      hasSel: !!sel, noSel: !sel, selLabel: sel ? this.LABELS[t] : "",
+      selText: sel && ["heading", "text", "button", "quote", "badges"].includes(t) && t !== "badges",
+      textLabel: t === "button" ? "Button text" : (t === "quote" ? "Quote" : "Text"),
+      selVal: sel ? (sel.text || "") : "", onText: (e) => this.upd(s.sel, { text: e.target.value }),
+      selQuoteAuthor: t === "quote", selAuthor: sel ? (sel.author || "") : "", onAuthor: (e) => this.upd(s.sel, { author: e.target.value }),
+      selHasAlign: sel && ["heading", "text", "button", "quote", "badges"].includes(t),
+      alL: on(sel && sel.align === "left"), alC: on(sel && sel.align === "center"), alR: on(sel && sel.align === "right"),
+      setAlL: () => setAlign("left"), setAlC: () => setAlign("center"), setAlR: () => setAlign("right"),
+      selHeading: t === "heading", szL: on(sel && sel.size === "L"), szM: on(sel && sel.size === "M"), szS: on(sel && sel.size === "S"),
+      setSzL: () => this.upd(s.sel, { size: "L" }), setSzM: () => this.upd(s.sel, { size: "M" }), setSzS: () => this.upd(s.sel, { size: "S" }),
+      selButton: t === "button", stSolid: on(sel && sel.style !== "outline"), stOutline: on(sel && sel.style === "outline"),
+      setStSolid: () => this.upd(s.sel, { style: "solid" }), setStOutline: () => this.upd(s.sel, { style: "outline" }),
+      selImage: t === "image", imgDropLabel: (sel && sel.src) ? "✓ Image set · replace" : "Upload image", onImg: (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => this.upd(s.sel, { src: ev.target.result }); r.readAsDataURL(f); },
+      rW: on(sel && sel.ratio === "16/9"), rS: on(sel && sel.ratio === "1/1"), rT: on(sel && sel.ratio === "4/3"),
+      setRW: () => this.upd(s.sel, { ratio: "16/9" }), setRS: () => this.upd(s.sel, { ratio: "1/1" }), setRT: () => this.upd(s.sel, { ratio: "4/3" }),
+      selSpacer: t === "spacer", spacerH: sel ? (sel.h || 40) : 40, onSpacer: (e) => this.upd(s.sel, { h: parseInt(e.target.value, 10) }),
+      selBadges: t === "badges", badgesVal: sel ? (sel.items || "") : "", onBadges: (e) => this.upd(s.sel, { items: e.target.value }),
+
+      toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

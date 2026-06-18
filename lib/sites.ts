@@ -183,6 +183,7 @@ export type Order = {
   id: string;
   store_id: string;
   page_id: string | null;
+  product_id?: string | null;
   page_type: string;
   buyer_email: string | null;
   buyer_name: string | null;
@@ -193,9 +194,13 @@ export type Order = {
   gateway: string;
   gateway_order_id: string | null;
   gateway_payment_id: string | null;
+  gateway_signature: string | null;
   status: string;
   commission_rate: number | null;
   commission_amount: number | null;
+  paid_at: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 /** Insert a new order (service role — public checkout has no session). */

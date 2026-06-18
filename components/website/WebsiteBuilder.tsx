@@ -742,6 +742,35 @@ export default function WebsiteBuilder({
               );
             })}
           </div>
+
+          {/* Suggest more */}
+          <div style={{ margin: "18px 0 0", padding: "14px 16px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 10 }}>Ideas to level up your website</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {([
+                { icon: "💬", label: "Add a WhatsApp chat button", hint: "Let visitors message you directly from any page.", action: () => set({ whatsapp: { on: true, number: "", icon: "💬", label: "Chat with us" } }) },
+                { icon: "📸", label: "Add a testimonials section", hint: "Social proof builds trust and lifts conversions.", action: () => { set({ sections: { ...sections, testimonials: true } }); openPanel("testimonials"); } },
+                { icon: "❓", label: "Add a FAQ section", hint: "Answer common questions to reduce support requests.", action: () => { set({ sections: { ...sections, faq: true } }); openPanel("faq"); } },
+                { icon: "📧", label: "Add a newsletter signup", hint: "Collect emails and grow your list from your website.", action: () => { set({ sections: { ...sections, newsletter: true } }); openPanel("newsletter"); } },
+                { icon: "🔢", label: "Add social-proof stats", hint: "Show numbers like students enrolled, years of experience, etc.", action: () => { set({ sections: { ...sections, stats: true } }); openPanel("stats"); } },
+              ] as { icon: string; label: string; hint: string; action: () => void }[]).map(({ icon, label, hint, action }) => (
+                <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 2 }}>{hint}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={action}
+                    style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: "var(--primary)", color: "#fff", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {Preview()}

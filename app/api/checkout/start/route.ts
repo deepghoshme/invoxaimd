@@ -52,7 +52,8 @@ export async function POST(req: Request) {
         notes: { order_id: order.id, store_id: order.store_id },
       },
     );
-  } catch {
+  } catch (e) {
+    console.error("[checkout/start] Razorpay order creation failed:", e);
     return NextResponse.json({ error: "Payment gateway error. Try again." }, { status: 502 });
   }
 

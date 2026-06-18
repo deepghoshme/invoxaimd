@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes pt-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8%,6%) scale(1.2); } }
+  @keyframes pt-a2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-7%,5%) scale(1.15); } }
+  @keyframes pt-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes pt-pop { from { transform: scale(.92); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+  @keyframes pt-spin { to { transform: rotate(360deg); } }
+
+  .pt {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow-xl: 0 40px 90px -40px rgba(43,27,46,.45);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.55;
+    -webkit-font-smoothing: antialiased; position: relative;
+  }
+  .pt[data-theme="dark"] {
+    --bg: #0f1115; --card: #1c1f26; --s2: #23262e;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f2f3f5; --muted: #9aa0ab; --border: rgba(255,255,255,.1); --green: #36c98e;
+    --shadow-xl: 0 50px 100px -40px rgba(0,0,0,.85);
+  }
+  .pt h1,.pt h2,.pt h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .pt p { margin: 0; }
+
+  .pt-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .pt-blob { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(85px); opacity: .34; }
+  .pt-blob.b1 { background: var(--gold); top: -18vmax; left: -10vmax; animation: pt-a1 26s ease-in-out infinite; }
+  .pt-blob.b2 { background: var(--secondary); bottom: -18vmax; right: -10vmax; animation: pt-a2 30s ease-in-out infinite; }
+  .pt-blob.b3 { background: var(--accent); top: 30%; right: 20%; opacity: .22; animation: pt-a1 34s ease-in-out infinite reverse; }
+
+  .pt-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 12px 22px; background: color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .pt-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; }
+  .pt-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); }
+  .pt-seg { margin: 0 auto; display: inline-flex; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; }
+  .pt-seg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 8px 15px; border-radius: 999px; cursor: pointer; }
+  .pt-seg button.on { background: var(--grad); color: #fff; }
+  .pt-tgl { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .pt-wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 36px 22px 70px; }
+  .pt-card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow-xl); overflow: hidden; }
+  .pt-hero { padding: 28px 28px 0; }
+  .pt-kick { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .pt-h1 { font-size: 30px; font-weight: 800; margin: 10px 0 6px; }
+  .pt-sub { color: var(--muted); font-size: 15px; }
+  .pt-body { padding: 24px 28px 28px; }
+  .pt-h3 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+
+  .pt-label { display: block; font-size: 12.5px; font-weight: 700; margin: 14px 0 6px; }
+  .pt-input { width: 100%; padding: 12px 14px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1.5px solid var(--border); border-radius: 11px; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .pt-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent); }
+  textarea.pt-input { resize: vertical; min-height: 88px; }
+  .pt-ff { display: flex; gap: 12px; } .pt-ff > * { flex: 1; }
+
+  .pt-go { position: relative; overflow: hidden; width: 100%; margin-top: 18px; background: var(--grad); color: #fff; border: 0; border-radius: 13px; padding: 15px; font-family: var(--fh); font-weight: 800; font-size: 15.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pt-go:disabled { opacity: .5; cursor: not-allowed; }
+  .pt-go .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .4; filter: blur(3px); animation: pt-shine 3s ease-in-out infinite; }
+  .pt-secure { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 11px; }
+
+  /* booking calendar */
+  .pt-days { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+  .pt-day { border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 6px; text-align: center; cursor: pointer; background: var(--card); }
+  .pt-day.on { border-color: var(--primary); background: color-mix(in srgb,var(--primary) 8%,transparent); }
+  .pt-day .dow { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; } .pt-day .dnum { font-family: var(--fh); font-weight: 800; font-size: 18px; margin-top: 3px; }
+  .pt-slots { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 8px; }
+  .pt-slot { border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 4px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600; background: var(--card); }
+  .pt-slot.on { border-color: transparent; background: var(--grad); color: #fff; }
+  .pt-slot.gone { opacity: .4; text-decoration: line-through; cursor: not-allowed; }
+
+  /* event */
+  .pt-poster { aspect-ratio: 21/9; background: linear-gradient(120deg,#2a1830,#7b3fe4 60%,#ff4d7d); position: relative; display: flex; align-items: flex-end; padding: 20px 24px; }
+  .pt-poster .pin { position: absolute; top: 14px; left: 14px; background: rgba(255,255,255,.92); color: #2b1b2e; font-size: 11px; font-weight: 800; padding: 5px 11px; border-radius: 999px; }
+  .pt-poster .pt { color: #fff; }
+  .pt-evmeta { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: var(--muted); margin: 16px 0; }
+  .pt-evmeta b { color: var(--text); }
+  .pt-seats { margin: 16px 0; } .pt-seats .lab { font-size: 13px; font-weight: 700; margin-bottom: 6px; } .pt-seats .bar { height: 8px; border-radius: 999px; background: var(--s2); overflow: hidden; } .pt-seats .fill { height: 100%; border-radius: 999px; background: var(--grad); }
+  .pt-tier { display: flex; align-items: center; gap: 13px; border: 1.5px solid var(--border); border-radius: 13px; padding: 14px; cursor: pointer; margin-bottom: 9px; }
+  .pt-tier.on { border-color: var(--primary); background: color-mix(in srgb,var(--primary) 6%,transparent); }
+  .pt-tier .rd { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); flex: none; display: grid; place-items: center; }
+  .pt-tier.on .rd { border-color: var(--primary); } .pt-tier.on .rd::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+  .pt-tier .tn { font-family: var(--fh); font-weight: 700; font-size: 14.5px; } .pt-tier .td { font-size: 12.5px; color: var(--muted); } .pt-tier .tp { margin-left: auto; font-family: var(--fh); font-weight: 800; font-size: 16px; }
+  .pt-qty { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  .pt-qbtn { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-size: 18px; cursor: pointer; }
+  .pt-qn { font-family: var(--fh); font-weight: 800; font-size: 20px; min-width: 28px; text-align: center; }
+
+  /* payment segmented */
+  .pt-pseg { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; margin-bottom: 6px; }
+  .pt-pseg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 13px; color: var(--muted); padding: 9px 18px; border-radius: 999px; cursor: pointer; }
+  .pt-pseg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+  .pt-amount { font-family: var(--fh); font-weight: 800; font-size: 40px; letter-spacing: -.02em; }
+  .pt-amrow { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 13px; padding: 6px 16px; }
+  .pt-amrow .cur { font-family: var(--fh); font-weight: 800; font-size: 28px; color: var(--muted); }
+  .pt-amrow input { flex: 1; border: 0; background: transparent; font-family: var(--fh); font-weight: 800; font-size: 32px; color: var(--text); outline: none; width: 100%; }
+
+  /* totals + success */
+  .pt-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; margin-top: 16px; border-top: 1px solid var(--border); }
+  .pt-total .tv { font-family: var(--fh); font-weight: 800; font-size: 24px; }
+  .pt-done { text-align: center; padding: 30px 24px; animation: pt-pop .4s ease; }
+  .pt-check { width: 66px; height: 66px; border-radius: 50%; background: color-mix(in srgb,var(--green) 18%,transparent); color: var(--green); display: grid; place-items: center; font-size: 32px; margin: 0 auto 16px; }
+  .pt-done h2 { font-size: 24px; } .pt-done p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .pt-ticket { margin: 18px auto 0; max-width: 320px; border: 1.5px dashed var(--border); border-radius: 14px; padding: 16px; display: flex; gap: 14px; align-items: center; text-align: left; }
+  .pt-ticket .qr { width: 56px; height: 56px; border-radius: 10px; background: repeating-linear-gradient(45deg,var(--text) 0 4px,transparent 4px 8px); opacity: .85; flex: none; }
+  .pt-spin { width: 17px; height: 17px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: pt-spin .7s linear infinite; }
+  .pt-pixel { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--green); background: color-mix(in srgb,var(--green) 12%,transparent); padding: 7px 13px; border-radius: 999px; margin-top: 16px; }
+
+  @media (max-width: 560px) {
+    .pt-days, .pt-slots { grid-template-columns: repeat(3,1fr); }
+    .pt-seg { order: 3; width: 100%; margin: 8px 0 0; justify-content: center; flex-wrap: wrap; }
+    .pt-top { flex-wrap: wrap; }
+    .pt-h1 { font-size: 25px; }
+  }
+</style>
+</helmet>
+
+<div class="pt" data-theme="{{ theme }}">
+  <div class="pt-bg"><div class="pt-blob b1"></div><div class="pt-blob b2"></div><div class="pt-blob b3"></div></div>
+
+  <div class="pt-top">
+    <div class="pt-brand"><span class="pt-logo"></span>Studio Aanya</div>
+    <div class="pt-seg">
+      <button class="{{ tBook }}" onClick="{{ goBook }}">📅 Booking</button>
+      <button class="{{ tEvent }}" onClick="{{ goEvent }}">🎟️ Event</button>
+      <button class="{{ tLead }}" onClick="{{ goLead }}">📝 Lead form</button>
+      <button class="{{ tPay }}" onClick="{{ goPay }}">💳 Payment</button>
+    </div>
+    <button class="pt-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+  </div>
+
+  <div class="pt-wrap">
+
+    <!-- ===== BOOKING ===== -->
+    <sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}">
+      <div class="pt-card">
+        <sc-if value="{{ bookDone }}" hint-placeholder-val="{{ false }}">
+          <div class="pt-done"><div class="pt-check">✓</div><h2>Session booked!</h2><p>{{ bookWhen }} · 60 min with Aanya. A calendar invite &amp; payment receipt are on the way.</p><div class="pt-pixel">● Confirmation sent</div></div>
+        </sc-if>
+        <sc-if value="{{ bookForm }}" hint-placeholder-val="{{ true }}">
+          <div class="pt-hero"><div class="pt-kick">1-to-1 booking</div><h1 class="pt-h1">Book a mix-review session</h1><p class="pt-sub">60 minutes, live. I'll review your track and give you an action plan.</p></div>
+          <div class="pt-body">
+            <div class="pt-h3">Choose a day</div>
+            <div class="pt-days">
+              <sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+                <div class="pt-day {{ d.on }}" onClick="{{ d.pick }}"><div class="dow">{{ d.dow }}</div><div class="dnum">{{ d.num }}</div></div>
+              </sc-for>
+            </div>
+            <div class="pt-h3" style="margin-top:20px">Choose a time</div>
+            <div class="pt-slots">
+              <div class="pt-slot {{ s1 }}" onClick="{{ pickS1 }}">10:00</div>
+              <div class="pt-slot gone">11:30</div>
+              <div class="pt-slot {{ s2 }}" onClick="{{ pickS2 }}">2:00</div>
+              <div class="pt-slot {{ s3 }}" onClick="{{ pickS3 }}">4:30</div>
+            </div>
+            <label class="pt-label">Your email</label>
+            <input class="pt-input" type="email" placeholder="you@email.com" value="{{ email }}" onInput="{{ onEmail }}" />
+            <div class="pt-total"><span style="color:var(--muted)">60-min session</span><span class="tv">₹999</span></div>
+            <button class="pt-go" onClick="{{ book }}" disabled="{{ bookDisabled }}">
+              <sc-if value="{{ booking }}" hint-placeholder-val="{{ false }}"><span class="pt-spin"></span>Booking…</sc-if>
+              <sc-if value="{{ notBooking }}" hint-placeholder-val="{{ true }}">{{ bookLabel }}<span class="sh"></span></sc-if>
+            </button>
+            <div class="pt-secure">🔒 Secure payment · instant calendar invite</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ===== EVENT ===== -->
+    <sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">
+      <div class="pt-card">
+        <sc-if value="{{ evtDone }}" hint-placeholder-val="{{ false }}">
+          <div class="pt-done"><div class="pt-check">🎟️</div><h2>You're going!</h2><p>{{ evtQty }} ticket(s) confirmed for the Live Mixing Workshop.</p>
+            <div class="pt-ticket"><div class="qr"></div><div><div style="font-family:var(--fh);font-weight:700">Live Mixing Workshop</div><div style="font-size:12.5px;color:var(--muted);margin-top:3px">28 Jun · 6:00 PM IST · Online</div><div style="font-size:12px;color:var(--muted);margin-top:6px">Order #{{ evtId }}</div></div></div>
+            <div class="pt-pixel">● Purchase event fired</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ evtForm }}" hint-placeholder-val="{{ true }}">
+          <div class="pt-poster"><span class="pin">⚡ Selling fast</span><div class="pt"><div style="font-size:12px;font-weight:700;opacity:.9;color:#fff">LIVE WORKSHOP</div><h1 style="color:#fff;font-size:30px;margin-top:4px">Mix a Track, Start to Finish</h1></div></div>
+          <div class="pt-body">
+            <div class="pt-evmeta"><span>📅 <b>28 June 2026</b></span><span>🕕 <b>6:00 PM IST</b></span><span>📍 <b>Online · Zoom</b></span></div>
+            <div class="pt-seats"><div class="lab">🔥 {{ evtLeft }} of 50 seats left</div><div class="bar"><div class="fill" style="width: {{ evtPct }}"></div></div></div>
+            <div class="pt-h3" style="margin-top:18px">Choose your ticket</div>
+            <div class="pt-tier {{ tierGen }}" onClick="{{ pickGen }}"><span class="rd"></span><div><div class="tn">General</div><div class="td">Live access + recording</div></div><span class="tp">₹799</span></div>
+            <div class="pt-tier {{ tierVip }}" onClick="{{ pickVip }}"><span class="rd"></span><div><div class="tn">VIP · Q&amp;A</div><div class="td">+ 30-min live Q&amp;A &amp; project files</div></div><span class="tp">₹1,499</span></div>
+            <div class="pt-h3" style="margin-top:18px">Tickets</div>
+            <div class="pt-qty"><button class="pt-qbtn" onClick="{{ qMinus }}">−</button><span class="pt-qn">{{ evtQty }}</span><button class="pt-qbtn" onClick="{{ qPlus }}">+</button></div>
+            <div class="pt-total"><span style="color:var(--muted)">Total</span><span class="tv">{{ evtTotal }}</span></div>
+            <button class="pt-go" onClick="{{ register }}">Register · {{ evtTotal }}<span class="sh"></span></button>
+            <div class="pt-secure">🔒 Secure checkout · instant ticket</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ===== LEAD FORM ===== -->
+    <sc-if value="{{ isLead }}" hint-placeholder-val="{{ false }}">
+      <div class="pt-card">
+        <sc-if value="{{ leadDone }}" hint-placeholder-val="{{ false }}">
+          <div class="pt-done"><div class="pt-check">✓</div><h2>Thanks, {{ leadName }}!</h2><p>You're on the waitlist. We'll email you the moment doors open — check your inbox for a confirmation.</p><div class="pt-pixel">● Lead captured → CRM</div></div>
+        </sc-if>
+        <sc-if value="{{ leadForm }}" hint-placeholder-val="{{ true }}">
+          <div class="pt-hero"><div class="pt-kick">Lead form</div><h1 class="pt-h1">Join the production cohort waitlist</h1><p class="pt-sub">Limited seats. Tell us about you and we'll be in touch first.</p></div>
+          <div class="pt-body">
+            <label class="pt-label">Full name</label>
+            <input class="pt-input" placeholder="Your name" value="{{ lName }}" onInput="{{ onLName }}" />
+            <div class="pt-ff">
+              <div><label class="pt-label">Email</label><input class="pt-input" type="email" placeholder="you@email.com" value="{{ lEmail }}" onInput="{{ onLEmail }}" /></div>
+              <div><label class="pt-label">Phone</label><input class="pt-input" placeholder="98765 43210" value="{{ lPhone }}" onInput="{{ onLPhone }}" /></div>
+            </div>
+            <label class="pt-label">What do you want to learn?</label>
+            <textarea class="pt-input" placeholder="Tell us your goals…">{{ lMsg }}</textarea>
+            <button class="pt-go" onClick="{{ submitLead }}" disabled="{{ leadDisabled }}">{{ leadLabel }}<span class="sh"></span></button>
+            <div class="pt-secure">We'll never share your details.</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ===== PAYMENT ===== -->
+    <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+      <div class="pt-card">
+        <sc-if value="{{ payDone }}" hint-placeholder-val="{{ false }}">
+          <div class="pt-done"><div class="pt-check">✓</div><h2>Payment received</h2><p>{{ payAmt }} paid to Studio Aanya. A receipt is on its way to your email.</p><div class="pt-orderid" style="font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:11px 14px;margin:16px auto 0;display:inline-block">Ref #{{ payId }}</div><div class="pt-pixel">● Purchase event fired</div></div>
+        </sc-if>
+        <sc-if value="{{ payForm }}" hint-placeholder-val="{{ true }}">
+          <div class="pt-hero"><div class="pt-kick">Payment page</div><h1 class="pt-h1">Pay Studio Aanya</h1><p class="pt-sub">Custom invoice &amp; consultation payment.</p></div>
+          <div class="pt-body">
+            <div class="pt-pseg"><button class="{{ pFixed }}" onClick="{{ setFixed }}">Fixed · ₹2,500</button><button class="{{ pCustom }}" onClick="{{ setCustom }}">Enter amount</button></div>
+            <sc-if value="{{ isFixed }}" hint-placeholder-val="{{ true }}">
+              <div style="text-align:center;padding:14px 0"><div style="font-size:12.5px;color:var(--muted)">Amount due</div><div class="pt-amount">₹2,500</div></div>
+            </sc-if>
+            <sc-if value="{{ isCustom }}" hint-placeholder-val="{{ false }}">
+              <label class="pt-label">Amount (₹)</label>
+              <div class="pt-amrow"><span class="cur">₹</span><input inputmode="numeric" placeholder="0" value="{{ customAmt }}" onInput="{{ onCustom }}" /></div>
+            </sc-if>
+            <label class="pt-label">Your name</label>
+            <input class="pt-input" placeholder="Name on the payment" value="{{ payName }}" onInput="{{ onPayName }}" />
+            <label class="pt-label">Email</label>
+            <input class="pt-input" type="email" placeholder="you@email.com" value="{{ payEmail }}" onInput="{{ onPayEmail }}" />
+            <label class="pt-label">Note (optional)</label>
+            <input class="pt-input" placeholder="What's this for?" />
+            <button class="pt-go" onClick="{{ pay }}" disabled="{{ payDisabled }}">
+              <sc-if value="{{ paying }}" hint-placeholder-val="{{ false }}"><span class="pt-spin"></span>Processing…</sc-if>
+              <sc-if value="{{ notPaying }}" hint-placeholder-val="{{ true }}">🔒 Pay {{ payAmt }}<span class="sh"></span></sc-if>
+            </button>
+            <div class="pt-secure">Powered by Razorpay · 256-bit encrypted</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light", tab: "book",
+    // booking
+    bDay: 1, bSlot: "", email: "", booking: false, bookDone: false,
+    // event
+    tier: "gen", evtQty: 1, evtDone: false, evtId: "",
+    // lead
+    lName: "", lEmail: "", lPhone: "", lMsg: "", leadDone: false,
+    // pay
+    payMode: "fixed", customAmt: "", payName: "", payEmail: "", paying: false, payDone: false, payId: ""
+  };
+
+  DAYS = [["Mon","23"],["Tue","24"],["Wed","25"],["Thu","26"],["Fri","27"]];
+  money(n) { return "₹" + n.toLocaleString("en-IN"); }
+  rid() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
+  validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+  book() {
+    if (this.state.booking) return;
+    this.setState({ booking: true });
+    setTimeout(() => this.setState({ booking: false, bookDone: true }), 1500);
+  }
+  register() { this.setState({ evtDone: true, evtId: this.rid() }); }
+  submitLead() { if (this.state.lName && this.validEmail(this.state.lEmail)) this.setState({ leadDone: true }); }
+  pay() {
+    if (this.state.paying) return;
+    this.setState({ paying: true });
+    setTimeout(() => this.setState({ paying: false, payDone: true, payId: this.rid() }), 1600);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tab = (k) => (s.tab === k ? "on" : "");
+    const days = this.DAYS.map((d, i) => ({ dow: d[0], num: d[1], on: s.bDay === i ? "on" : "", pick: () => this.setState({ bDay: i }) }));
+    const bookReady = s.bSlot && this.validEmail(s.email);
+    const evtPrice = s.tier === "vip" ? 1499 : 799;
+    const evtTotalN = evtPrice * s.evtQty;
+    const payAmtN = s.payMode === "fixed" ? 2500 : (parseInt(s.customAmt, 10) || 0);
+
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      tBook: tab("book"), tEvent: tab("event"), tLead: tab("lead"), tPay: tab("pay"),
+      goBook: () => this.setState({ tab: "book" }), goEvent: () => this.setState({ tab: "event" }),
+      goLead: () => this.setState({ tab: "lead" }), goPay: () => this.setState({ tab: "pay" }),
+      isBook: s.tab === "book", isEvent: s.tab === "event", isLead: s.tab === "lead", isPay: s.tab === "pay",
+
+      // booking
+      bookDone: s.bookDone, bookForm: !s.bookDone, days,
+      s1: s.bSlot === "10:00" ? "on" : "", s2: s.bSlot === "2:00" ? "on" : "", s3: s.bSlot === "4:30" ? "on" : "",
+      pickS1: () => this.setState({ bSlot: "10:00" }), pickS2: () => this.setState({ bSlot: "2:00" }), pickS3: () => this.setState({ bSlot: "4:30" }),
+      email: s.email, onEmail: (e) => this.setState({ email: e.target.value }),
+      book: () => this.book(), booking: s.booking, notBooking: !s.booking,
+      bookDisabled: !bookReady || s.booking,
+      bookLabel: bookReady ? "Book session · ₹999" : "Pick a slot & add email",
+      bookWhen: this.DAYS[s.bDay][0] + " " + this.DAYS[s.bDay][1] + " Jun · " + (s.bSlot || "—"),
+
+      // event
+      evtDone: s.evtDone, evtForm: !s.evtDone,
+      tierGen: s.tier === "gen" ? "on" : "", tierVip: s.tier === "vip" ? "on" : "",
+      pickGen: () => this.setState({ tier: "gen" }), pickVip: () => this.setState({ tier: "vip" }),
+      evtQty: s.evtQty, qMinus: () => this.setState(st => ({ evtQty: Math.max(1, st.evtQty - 1) })), qPlus: () => this.setState(st => ({ evtQty: Math.min(8, st.evtQty + 1) })),
+      evtTotal: this.money(evtTotalN), evtLeft: 8, evtPct: "84%",
+      register: () => this.register(), evtId: s.evtId,
+
+      // lead
+      leadDone: s.leadDone, leadForm: !s.leadDone,
+      lName: s.lName, lEmail: s.lEmail, lPhone: s.lPhone, lMsg: s.lMsg,
+      onLName: (e) => this.setState({ lName: e.target.value }), onLEmail: (e) => this.setState({ lEmail: e.target.value }),
+      onLPhone: (e) => this.setState({ lPhone: e.target.value.replace(/[^0-9 ]/g, "") }), onLMsg: (e) => this.setState({ lMsg: e.target.value }),
+      leadName: s.lName || "there",
+      submitLead: () => this.submitLead(),
+      leadDisabled: !(s.lName && this.validEmail(s.lEmail)),
+      leadLabel: (s.lName && this.validEmail(s.lEmail)) ? "Join the waitlist" : "Fill name & email",
+
+      // pay
+      payDone: s.payDone, payForm: !s.payDone,
+      pFixed: s.payMode === "fixed" ? "on" : "", pCustom: s.payMode === "custom" ? "on" : "",
+      setFixed: () => this.setState({ payMode: "fixed" }), setCustom: () => this.setState({ payMode: "custom" }),
+      isFixed: s.payMode === "fixed", isCustom: s.payMode === "custom",
+      customAmt: s.customAmt, onCustom: (e) => this.setState({ customAmt: e.target.value.replace(/[^0-9]/g, "") }),
+      payName: s.payName, payEmail: s.payEmail,
+      onPayName: (e) => this.setState({ payName: e.target.value }), onPayEmail: (e) => this.setState({ payEmail: e.target.value }),
+      payAmt: this.money(payAmtN),
+      pay: () => this.pay(), paying: s.paying, notPaying: !s.paying,
+      payDisabled: s.paying || payAmtN <= 0 || !this.validEmail(s.payEmail),
+      payId: s.payId
+    };
+  }
+}
+</script>
+</body>
+</html>

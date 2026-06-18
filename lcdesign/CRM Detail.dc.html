@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes cr-in { from { opacity: .4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .cr {
+    --bg: #fff9f4; --surface: #fff; --surface2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a; --red: #e5476f;
+    --greenbg: #e5f7ef; --redbg: #fde9ee;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 68%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 8px 24px rgba(255,106,61,.07);
+    background: var(--bg); color: var(--text); font-family: "Inter", system-ui, sans-serif; font-size: 14px; line-height: 1.45; min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .cr.dark { --bg: #16101f; --surface: #211833; --surface2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #322843; --greenbg: #15301f; --redbg: #3a1822; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); }
+  .cr h1,.cr h2,.cr h3 { margin: 0; font-family: "Sora", sans-serif; letter-spacing: -.02em; }
+  .cr p { margin: 0; }
+
+  .cr-top { display: flex; align-items: center; gap: 12px; padding: 13px 24px; background: color-mix(in srgb,var(--surface) 88%,transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; }
+  .cr-brand { display: flex; align-items: center; gap: 9px; font-family: "Sora", sans-serif; font-weight: 800; font-size: 16px; }
+  .cr-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); }
+  .cr-crumb { font-size: 13px; color: var(--muted); } .cr-crumb b { color: var(--text); }
+  .cr-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .cr-wrap { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100dvh - 57px); }
+  .cr-list { border-right: 1px solid var(--border); background: var(--surface); overflow-y: auto; }
+  .cr-search { display: flex; align-items: center; gap: 8px; margin: 14px; padding: 9px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); }
+  .cr-search input { border: 0; background: transparent; outline: 0; font: inherit; color: var(--text); width: 100%; }
+  .cr-row { display: flex; align-items: center; gap: 11px; padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; }
+  .cr-row:hover { background: var(--surface2); } .cr-row.on { background: var(--surface2); border-left-color: var(--primary); }
+  .cr-av { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; font-family: "Sora", sans-serif; flex: none; }
+  .cr-row .nm { font-weight: 600; font-size: 13.5px; } .cr-row .em { font-size: 12px; color: var(--muted); } .cr-row .sp { margin-left: auto; font-weight: 700; font-family: "Sora", sans-serif; font-size: 13px; }
+
+  .cr-detail { overflow-y: auto; padding: 24px; animation: cr-in .3s ease; }
+  .cr-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .cr-head .big { width: 60px; height: 60px; border-radius: 50%; font-size: 22px; }
+  .cr-head h1 { font-size: 22px; } .cr-head .sub { color: var(--muted); font-size: 13px; margin-top: 3px; display: flex; gap: 10px 16px; flex-wrap: wrap; }
+  .cr-actions { margin-left: auto; display: flex; gap: 8px; }
+  .cr-btn { font: inherit; font-weight: 600; font-size: 13px; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 9px 14px; border-radius: 9px; cursor: pointer; }
+  .cr-btn.grad { background: var(--grad); color: #fff; border-color: transparent; }
+  .cr-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+  .cr-tag.vip { background: color-mix(in srgb,var(--gold) 22%,transparent); color: #9a6b00; } .cr.dark .cr-tag.vip { color: var(--gold); }
+  .cr-tag.repeat { background: color-mix(in srgb,var(--accent) 16%,transparent); color: var(--accent); }
+
+  .cr-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+  .cr-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 15px; box-shadow: var(--shadow); }
+  .cr-kpi .l { font-size: 12px; color: var(--muted); } .cr-kpi .v { font-family: "Sora", sans-serif; font-size: 21px; font-weight: 700; margin-top: 4px; }
+
+  .cr-cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; }
+  .cr-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+  .cr-ct { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; } .cr-ct h3 { font-size: 15px; } .cr-ct a { font-size: 12.5px; color: var(--primary); font-weight: 600; cursor: pointer; }
+  .cr table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cr th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; padding: 0 8px 10px; }
+  .cr td { padding: 11px 8px; border-top: 1px solid var(--border); }
+  .cr-cat { font-size: 11px; font-weight: 600; color: var(--accent); background: color-mix(in srgb,var(--accent) 12%,transparent); padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+  .cr-pill { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; } .t-paid { background: var(--greenbg); color: var(--green); } .t-pend { background: var(--redbg); color: var(--red); }
+  .cr-kv { display: flex; justify-content: space-between; font-size: 13px; padding: 9px 0; border-top: 1px solid var(--border); } .cr-kv:first-child { border-top: 0; } .cr-kv .k { color: var(--muted); }
+  .cr-bar { height: 8px; border-radius: 999px; background: var(--surface2); overflow: hidden; margin-top: 4px; } .cr-bar i { display: block; height: 100%; background: var(--grad); }
+  .cr-tl { display: flex; gap: 11px; padding: 10px 0; } .cr-tl .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); flex: none; margin-top: 4px; position: relative; } .cr-tl .dot::after { content: ""; position: absolute; left: 50%; top: 12px; transform: translateX(-50%); width: 2px; height: 26px; background: var(--border); } .cr-tl:last-child .dot::after { display: none; }
+  .cr-tl .tx b { font-size: 13px; } .cr-tl .tx p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  @media (max-width: 900px) { .cr-wrap { grid-template-columns: 1fr; } .cr-list { max-height: 220px; } .cr-kpis { grid-template-columns: 1fr 1fr; } .cr-cols { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="cr {{ darkClass }}">
+  <div class="cr-top">
+    <div class="cr-brand"><span class="cr-logo"></span>invoxai</div>
+    <span class="cr-crumb">Dashboard / <b>CRM</b> / Customer</span>
+    <button class="cr-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+  </div>
+
+  <div class="cr-wrap">
+    <aside class="cr-list">
+      <div class="cr-search">🔍<input placeholder="Search customers" value="{{ query }}" onInput="{{ onQuery }}" /></div>
+      <sc-for list="{{ rows }}" as="c" hint-placeholder-count="6">
+        <div class="cr-row {{ c.on }}" onClick="{{ c.select }}"><span class="cr-av">{{ c.initial }}</span><div><div class="nm">{{ c.name }}</div><div class="em">{{ c.email }}</div></div><span class="sp">{{ c.spend }}</span></div>
+      </sc-for>
+    </aside>
+
+    <main class="cr-detail" key="{{ selId }}">
+      <div class="cr-head">
+        <span class="cr-av big">{{ d.initial }}</span>
+        <div>
+          <h1>{{ d.name }}</h1>
+          <div class="sub"><span>✉ {{ d.email }}</span><span>📞 {{ d.phone }}</span><span>📍 {{ d.city }}</span></div>
+          <div style="display:flex;gap:7px;margin-top:8px"><sc-if value="{{ d.isVip }}" hint-placeholder-val="{{ false }}"><span class="cr-tag vip">★ VIP</span></sc-if><sc-if value="{{ d.isRepeat }}" hint-placeholder-val="{{ true }}"><span class="cr-tag repeat">Repeat buyer</span></sc-if></div>
+        </div>
+        <div class="cr-actions"><button class="cr-btn">✉ Email</button><button class="cr-btn grad">＋ Add note</button></div>
+      </div>
+
+      <div class="cr-kpis">
+        <div class="cr-kpi"><div class="l">Lifetime spend</div><div class="v">{{ d.spend }}</div></div>
+        <div class="cr-kpi"><div class="l">Orders</div><div class="v">{{ d.orders }}</div></div>
+        <div class="cr-kpi"><div class="l">Avg order</div><div class="v">{{ d.avg }}</div></div>
+        <div class="cr-kpi"><div class="l">First seen</div><div class="v">{{ d.since }}</div></div>
+      </div>
+
+      <div class="cr-cols">
+        <div class="cr-card">
+          <div class="cr-ct"><h3>Order history</h3><a>Export</a></div>
+          <table>
+            <thead><tr><th>Order</th><th>Product</th><th>Category</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ d.history }}" as="o" hint-placeholder-count="3">
+                <tr><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">#{{ o.id }}</td><td style="font-weight:600">{{ o.product }}</td><td><span class="cr-cat">{{ o.cat }}</span></td><td style="color:var(--muted)">{{ o.date }}</td><td style="font-weight:700">{{ o.amount }}</td><td><span class="cr-pill {{ o.statusCls }}">{{ o.status }}</span></td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="cr-card" style="margin-bottom:16px">
+            <div class="cr-ct"><h3>Categories bought</h3></div>
+            <sc-for list="{{ d.cats }}" as="ct" hint-placeholder-count="3">
+              <div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:2px"><span style="font-weight:600">{{ ct.name }}</span><span style="color:var(--muted)">{{ ct.pct }}</span></div><div class="cr-bar"><i style="width: {{ ct.pct }}"></i></div></div>
+            </sc-for>
+          </div>
+          <div class="cr-card">
+            <div class="cr-ct"><h3>Activity</h3></div>
+            <sc-for list="{{ d.timeline }}" as="t" hint-placeholder-count="3">
+              <div class="cr-tl"><span class="dot"></span><div class="tx"><b>{{ t.title }}</b><p>{{ t.when }}</p></div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = { theme: "light", sel: "c1", query: "" };
+  CUST = [
+    { id: "c1", name: "Rohan Mehta", email: "rohan@gmail.com", phone: "+91 98765 43210", city: "Mumbai", spend: 4497, orders: 3, since: "Mar 2026", vip: true,
+      history: [["A7B2K9","Mixing Masterclass","Courses","18 Jun","₹1,499","paid"],["Kp2mZ8","Preset Pack Vol.2","Digital","12 Jun","₹599","paid"],["Bz91Lr","Live Workshop · Seat","Events","2 Jun","₹799","paid"]],
+      cats: [["Courses","58%"],["Digital","28%"],["Events","14%"]],
+      timeline: [["Bought Mixing Masterclass","18 Jun · ₹1,499"],["Opened abandoned-cart email","11 Jun"],["First purchase","2 Jun"]] },
+    { id: "c2", name: "Sara Iyer", email: "sara@outlook.com", phone: "+91 99887 22110", city: "Pune", spend: 399, orders: 1, since: "Jun 2026", vip: false, repeat: false,
+      history: [["Sx41Qa","Notion Templates Pack","Digital","18 Jun","₹399","pending"]],
+      cats: [["Digital","100%"]],
+      timeline: [["Started checkout","18 Jun"],["Visited store","17 Jun"]] },
+    { id: "c3", name: "Dev Kapoor", email: "dev@gmail.com", phone: "+91 90011 55667", city: "Delhi", spend: 2298, orders: 2, since: "May 2026", vip: false,
+      history: [["Dv77Wm","Live Workshop · Seat","Events","17 Jun","₹799","paid"],["Tq09Xz","12-Week Plan","Courses","20 May","₹1,499","paid"]],
+      cats: [["Courses","65%"],["Events","35%"]],
+      timeline: [["Bought Workshop seat","17 Jun"],["First purchase","20 May"]] },
+    { id: "c4", name: "Meera Nair", email: "meera@gmail.com", phone: "+91 98200 33445", city: "Kochi", spend: 5996, orders: 4, since: "Feb 2026", vip: true,
+      history: [["Mn22Aa","Mixing Masterclass","Courses","17 Jun","₹1,499","paid"],["Mn21Bb","Bundle","Courses","30 May","₹2,499","paid"],["Mn20Cc","Preset Pack","Digital","14 Apr","₹599","paid"]],
+      cats: [["Courses","78%"],["Digital","22%"]],
+      timeline: [["Renewed membership","17 Jun"],["Bought Bundle","30 May"],["First purchase","Feb 2026"]] }
+  ];
+  money(n) { return "₹" + n.toLocaleString("en-IN"); }
+  renderVals() {
+    const s = this.state;
+    const q = s.query.toLowerCase();
+    const filtered = this.CUST.filter(c => !q || c.name.toLowerCase().includes(q) || c.email.includes(q));
+    const rows = filtered.map(c => ({ initial: c.name[0], name: c.name, email: c.email, spend: this.money(c.spend), on: s.sel === c.id ? "on" : "", select: () => this.setState({ sel: c.id }) }));
+    const c = this.CUST.find(x => x.id === s.sel) || this.CUST[0];
+    const statusCls = (st) => st === "paid" ? "t-paid" : "t-pend";
+    const d = {
+      initial: c.name[0], name: c.name, email: c.email, phone: c.phone, city: c.city,
+      spend: this.money(c.spend), orders: String(c.orders), avg: this.money(Math.round(c.spend / c.orders)), since: c.since,
+      isVip: !!c.vip, isRepeat: c.orders > 1,
+      history: c.history.map(h => ({ id: h[0], product: h[1], cat: h[2], date: h[3], amount: h[4], status: h[5] === "paid" ? "Paid" : "Pending", statusCls: statusCls(h[5]) })),
+      cats: c.cats.map(x => ({ name: x[0], pct: x[1] })),
+      timeline: c.timeline.map(t => ({ title: t[0], when: t[1] }))
+    };
+    return {
+      darkClass: s.theme === "dark" ? "dark" : "", themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      query: s.query, onQuery: (e) => this.setState({ query: e.target.value }),
+      rows, selId: s.sel, d
+    };
+  }
+}
+</script>
+</body>
+</html>

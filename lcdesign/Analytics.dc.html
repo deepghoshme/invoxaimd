@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes an-bar { from { height: 6%; } }
+  @keyframes an-grow { from { width: 0; } }
+  .an {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a; --red: #e5476f;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 68%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 8px 24px rgba(255,106,61,.07);
+    background: var(--bg); color: var(--text); font-family: "Inter", system-ui, sans-serif; font-size: 14px; line-height: 1.45; min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .an.dark { --bg: #16101f; --card: #211833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #322843; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); }
+  .an h1,.an h2,.an h3 { margin: 0; font-family: "Sora", sans-serif; letter-spacing: -.02em; }
+  .an p { margin: 0; }
+  .an-wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  .an-nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--card) 88%,transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  .an-nav-in { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .an-brand { display: flex; align-items: center; gap: 9px; font-family: "Sora", sans-serif; font-weight: 800; font-size: 16px; }
+  .an-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); } .an-crumb { font-size: 13px; color: var(--muted); } .an-crumb b { color: var(--text); }
+  .an-r { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .an-sel { font: inherit; font-size: 12.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 8px 12px; border-radius: 9px; cursor: pointer; }
+  .an-tgl { width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .an-main { padding: 22px 0 60px; }
+  .an-pageseg { display: inline-flex; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; margin-bottom: 18px; flex-wrap: wrap; }
+  .an-pageseg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 7px 14px; border-radius: 999px; cursor: pointer; } .an-pageseg button.on { background: var(--grad); color: #fff; }
+
+  .an-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 16px; }
+  .an-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 17px; box-shadow: var(--shadow); }
+  .an-kpi .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 11px; color: #fff; font-size: 15px; }
+  .an-kpi .l { color: var(--muted); font-size: 12.5px; } .an-kpi .v { font-family: "Sora", sans-serif; font-size: 23px; font-weight: 700; margin-top: 3px; } .an-kpi .d { font-size: 11.5px; font-weight: 600; margin-top: 7px; } .an-up { color: var(--green); } .an-down { color: var(--red); }
+
+  .an-cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; }
+  .an-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .an-ct { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; } .an-ct h3 { font-size: 15px; } .an-ct a { font-size: 12.5px; color: var(--primary); font-weight: 600; cursor: pointer; }
+
+  .an-chart { display: flex; align-items: flex-end; gap: 7px; height: 170px; }
+  .an-chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .an-chart .bar { width: 100%; max-width: 28px; border-radius: 6px 6px 0 0; background: var(--grad); animation: an-bar .7s ease both; } .an-chart .bar.dim { background: var(--s2); } .an-chart .lab { font-size: 10.5px; color: var(--muted); }
+
+  /* funnel */
+  .an-funnel { display: flex; flex-direction: column; gap: 10px; }
+  .an-step { } .an-step .top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; } .an-step .top b { font-weight: 600; } .an-step .top .n { color: var(--muted); }
+  .an-step .track { height: 30px; border-radius: 8px; background: var(--s2); overflow: hidden; } .an-step .fill { height: 100%; border-radius: 8px; background: var(--grad); display: flex; align-items: center; padding-left: 11px; color: #fff; font-size: 12px; font-weight: 700; animation: an-grow .8s ease both; }
+  .an-step .drop { font-size: 11px; color: var(--red); margin-top: 3px; }
+
+  /* sources / bars */
+  .an-srow { margin-bottom: 14px; } .an-srow .top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 6px; } .an-srow .top b { font-weight: 600; } .an-srow .top .v { color: var(--muted); } .an-srow .track { height: 8px; border-radius: 999px; background: var(--s2); overflow: hidden; } .an-srow .fill { height: 100%; border-radius: 999px; animation: an-grow .8s ease both; }
+
+  /* donut */
+  .an-donut-row { display: flex; align-items: center; gap: 18px; } .an-donut { width: 130px; height: 130px; border-radius: 50%; position: relative; flex: none; } .an-donut::after { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: var(--card); } .an-donut .ctr { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; text-align: center; } .an-donut .ctr b { font-family: "Sora", sans-serif; font-size: 18px; } .an-donut .ctr span { font-size: 10px; color: var(--muted); display: block; }
+  .an-legend { display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; color: var(--muted); } .an-legend span { display: flex; align-items: center; gap: 8px; } .an-lk { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  .an table { width: 100%; border-collapse: collapse; font-size: 13px; } .an th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; padding: 0 8px 10px; } .an td { padding: 11px 8px; border-top: 1px solid var(--border); } .an td.r { text-align: right; font-weight: 600; }
+  .an-path { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--primary); }
+
+  @media (max-width: 860px) { .an-kpis { grid-template-columns: 1fr 1fr; } .an-cols { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="an {{ darkClass }}">
+  <nav class="an-nav">
+    <div class="an-wrap an-nav-in">
+      <div class="an-brand"><span class="an-logo"></span>invoxai</div>
+      <span class="an-crumb">Dashboard / <b>Analytics</b></span>
+      <div class="an-r"><select class="an-sel"><option>Last 30 days</option><option>Last 7 days</option><option>This year</option></select><button class="an-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button></div>
+    </div>
+  </nav>
+
+  <main class="an-wrap an-main">
+    <div class="an-pageseg">
+      <button class="{{ pAll }}" onClick="{{ setAll }}">All pages</button>
+      <button class="{{ pStore }}" onClick="{{ setStore }}">Store</button>
+      <button class="{{ pOpp }}" onClick="{{ setOpp }}">Mixing Masterclass</button>
+      <button class="{{ pBio }}" onClick="{{ setBio }}">Bio</button>
+    </div>
+
+    <div class="an-kpis">
+      <div class="an-kpi"><div class="ic" style="background:var(--grad)">👁</div><div class="l">Visitors</div><div class="v">{{ kVisitors }}</div><div class="d an-up">▲ 22%</div></div>
+      <div class="an-kpi"><div class="ic" style="background:var(--accent)">🖱</div><div class="l">Page views</div><div class="v">{{ kViews }}</div><div class="d an-up">▲ 18%</div></div>
+      <div class="an-kpi"><div class="ic" style="background:var(--secondary)">🛒</div><div class="l">Conversion</div><div class="v">{{ kConv }}</div><div class="d an-up">▲ 0.7%</div></div>
+      <div class="an-kpi"><div class="ic" style="background:var(--gold)">₹</div><div class="l">Revenue</div><div class="v">{{ kRev }}</div><div class="d an-up">▲ 24%</div></div>
+    </div>
+
+    <div class="an-cols">
+      <div>
+        <div class="an-card">
+          <div class="an-ct"><h3>Visitors · last 14 days</h3><a>Daily ▾</a></div>
+          <div class="an-chart">
+            <div class="col"><div class="bar dim" style="height:40%"></div><span class="lab">1</span></div>
+            <div class="col"><div class="bar dim" style="height:52%"></div><span class="lab">3</span></div>
+            <div class="col"><div class="bar dim" style="height:46%"></div><span class="lab">5</span></div>
+            <div class="col"><div class="bar dim" style="height:64%"></div><span class="lab">7</span></div>
+            <div class="col"><div class="bar dim" style="height:58%"></div><span class="lab">9</span></div>
+            <div class="col"><div class="bar dim" style="height:76%"></div><span class="lab">11</span></div>
+            <div class="col"><div class="bar dim" style="height:70%"></div><span class="lab">13</span></div>
+            <div class="col"><div class="bar dim" style="height:84%"></div><span class="lab">15</span></div>
+            <div class="col"><div class="bar dim" style="height:78%"></div><span class="lab">17</span></div>
+            <div class="col"><div class="bar" style="height:100%"></div><span class="lab">Today</span></div>
+          </div>
+        </div>
+
+        <div class="an-card">
+          <div class="an-ct"><h3>Conversion funnel</h3><span style="font-size:12px;color:var(--muted)">{{ funnelNote }}</span></div>
+          <div class="an-funnel">
+            <div class="an-step"><div class="top"><b>Page views</b><span class="n">{{ f1 }}</span></div><div class="track"><div class="fill" style="width:100%">100%</div></div></div>
+            <div class="an-step"><div class="top"><b>Clicked buy / CTA</b><span class="n">{{ f2 }}</span></div><div class="track"><div class="fill" style="width:46%">46%</div></div><div class="drop">▼ 54% drop-off</div></div>
+            <div class="an-step"><div class="top"><b>Started checkout</b><span class="n">{{ f3 }}</span></div><div class="track"><div class="fill" style="width:28%">28%</div></div><div class="drop">▼ 18% drop-off</div></div>
+            <div class="an-step"><div class="top"><b>Purchased</b><span class="n">{{ f4 }}</span></div><div class="track"><div class="fill" style="width:19%">19%</div></div><div class="drop" style="color:var(--green)">✓ {{ kConv }} conversion</div></div>
+          </div>
+        </div>
+
+        <div class="an-card" style="margin-bottom:0">
+          <div class="an-ct"><h3>Top pages</h3><a>View all</a></div>
+          <table>
+            <thead><tr><th>Page</th><th class="r">Views</th><th class="r">Conv.</th><th class="r">Revenue</th></tr></thead>
+            <tbody>
+              <tr><td><span class="an-path">/opp/mixing-masterclass</span></td><td class="r">9,420</td><td class="r">4.9%</td><td class="r">₹2.4L</td></tr>
+              <tr><td><span class="an-path">/store</span></td><td class="r">7,180</td><td class="r">3.2%</td><td class="r">₹1.1L</td></tr>
+              <tr><td><span class="an-path">/led/masterclass-ad</span></td><td class="r">6,240</td><td class="r">4.8%</td><td class="r">₹98K</td></tr>
+              <tr><td><span class="an-path">/bio</span></td><td class="r">5,610</td><td class="r">—</td><td class="r">—</td></tr>
+              <tr><td><span class="an-path">/courses</span></td><td class="r">3,090</td><td class="r">2.6%</td><td class="r">₹61K</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="an-card">
+          <div class="an-ct"><h3>Traffic sources</h3></div>
+          <div class="an-srow"><div class="top"><b>Instagram / Meta ads</b><span class="v">42%</span></div><div class="track"><div class="fill" style="width:42%;background:var(--grad)"></div></div></div>
+          <div class="an-srow"><div class="top"><b>Google organic</b><span class="v">28%</span></div><div class="track"><div class="fill" style="width:28%;background:var(--accent)"></div></div></div>
+          <div class="an-srow"><div class="top"><b>Direct / bio</b><span class="v">19%</span></div><div class="track"><div class="fill" style="width:19%;background:var(--secondary)"></div></div></div>
+          <div class="an-srow"><div class="top"><b>WhatsApp</b><span class="v">11%</span></div><div class="track"><div class="fill" style="width:11%;background:var(--gold)"></div></div></div>
+        </div>
+
+        <div class="an-card">
+          <div class="an-ct"><h3>Devices</h3></div>
+          <div class="an-donut-row">
+            <div class="an-donut" style="background:conic-gradient(var(--primary) 0 78%, var(--accent) 78% 94%, var(--gold) 94% 100%)"><div class="ctr"><b>78%</b><span>mobile</span></div></div>
+            <div class="an-legend">
+              <span><span class="an-lk" style="background:var(--primary)"></span>Mobile · 78%</span>
+              <span><span class="an-lk" style="background:var(--accent)"></span>Desktop · 16%</span>
+              <span><span class="an-lk" style="background:var(--gold)"></span>Tablet · 6%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="an-card" style="margin-bottom:0">
+          <div class="an-ct"><h3>Pixel events</h3></div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">PageView</span><b>28,410</b></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">ViewContent</span><b>21,090</b></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">InitiateCheckout</span><b>3,940</b></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Purchase</span><b style="color:var(--green)">1,284</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1080,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = { theme: "light", page: "all" };
+  DATA = {
+    all: { visitors: "12,480", views: "28,410", conv: "3.9%", rev: "₹4.8L", f: ["28,410", "13,069", "7,955", "5,398"], note: "across all pages" },
+    store: { visitors: "5,210", views: "7,180", conv: "3.2%", rev: "₹1.1L", f: ["7,180", "3,303", "2,010", "1,365"], note: "/store" },
+    opp: { visitors: "6,940", views: "9,420", conv: "4.9%", rev: "₹2.4L", f: ["9,420", "4,333", "2,638", "1,791"], note: "/opp/mixing-masterclass" },
+    bio: { visitors: "4,180", views: "5,610", conv: "—", rev: "—", f: ["5,610", "2,580", "0", "0"], note: "/bio · no checkout" }
+  };
+  renderVals() {
+    const s = this.state, d = this.DATA[s.page], on = (b) => (b ? "on" : "");
+    return {
+      darkClass: s.theme === "dark" ? "dark" : "", themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      pAll: on(s.page === "all"), pStore: on(s.page === "store"), pOpp: on(s.page === "opp"), pBio: on(s.page === "bio"),
+      setAll: () => this.setState({ page: "all" }), setStore: () => this.setState({ page: "store" }), setOpp: () => this.setState({ page: "opp" }), setBio: () => this.setState({ page: "bio" }),
+      kVisitors: d.visitors, kViews: d.views, kConv: d.conv, kRev: d.rev,
+      f1: d.f[0], f2: d.f[1], f3: d.f[2], f4: d.f[3], funnelNote: d.note
+    };
+  }
+}
+</script>
+</body>
+</html>

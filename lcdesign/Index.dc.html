@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes ix-a1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8%,6%) scale(1.2); } }
+  @keyframes ix-a2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-7%,5%) scale(1.15); } }
+
+  .ix {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4 100%);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 16px 36px -22px rgba(43,27,46,.28);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .ix[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6);
+  }
+  .ix h1,.ix h2,.ix h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .ix p { margin: 0; }
+  .ix a { text-decoration: none; color: inherit; }
+  .ix-wrap { max-width: 1080px; margin: 0 auto; padding: 0 26px; }
+
+  .ix-hero { position: relative; overflow: hidden; padding: 50px 0 38px; }
+  .ix-aurora { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .ix-blob { position: absolute; width: 36vmax; height: 36vmax; border-radius: 50%; filter: blur(85px); opacity: .26; }
+  .ix-blob.b1 { background: var(--gold); top: -16vmax; left: -8vmax; animation: ix-a1 26s ease-in-out infinite; }
+  .ix-blob.b2 { background: var(--accent); top: -12vmax; right: -8vmax; animation: ix-a2 30s ease-in-out infinite; }
+  .ix-hero-in { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+  .ix-brand { display: flex; align-items: center; gap: 12px; }
+  .ix-logo { width: 44px; height: 44px; border-radius: 13px; background: var(--grad); box-shadow: 0 10px 26px -8px rgba(255,77,125,.6); }
+  .ix-brand b { font-family: var(--fh); font-weight: 800; font-size: 26px; letter-spacing: -.03em; display: block; }
+  .ix-brand span { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .ix-tgl { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 15px; }
+  .ix-lead { position: relative; z-index: 1; color: var(--muted); font-size: 16px; max-width: 60ch; margin-top: 18px; }
+
+  /* spec strip */
+  .ix-spec { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin: 24px 0 8px; position: relative; z-index: 1; }
+  .ix-spec .s { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  .ix-spec .l { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .ix-spec .v { font-family: var(--fh); font-weight: 700; font-size: 14px; margin-top: 5px; }
+
+  .ix-sec { padding: 30px 0 8px; }
+  .ix-sec-h { display: flex; align-items: baseline; gap: 11px; margin-bottom: 16px; }
+  .ix-sec-h h2 { font-size: 17px; } .ix-sec-h .c { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+  .ix-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  .ix-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column; gap: 4px; }
+  .ix-card:hover { transform: translateY(-5px); box-shadow: 0 24px 50px -28px rgba(43,27,46,.4); border-color: color-mix(in srgb,var(--primary) 40%,var(--border)); }
+  .ix-card .top { display: flex; align-items: center; gap: 11px; }
+  .ix-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; color: #fff; flex: none; }
+  .ix-card h3 { font-size: 15px; } .ix-card .rt { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
+  .ix-card p { font-size: 13px; color: var(--muted); margin-top: 8px; flex: 1; }
+  .ix-open { display: inline-flex; align-items: center; gap: 6px; font-family: var(--fh); font-weight: 700; font-size: 12.5px; color: var(--primary); margin-top: 12px; }
+
+  .ix-foot { padding: 36px 0 50px; text-align: center; color: var(--muted); font-size: 13px; }
+  .ix-foot b { color: var(--text); }
+
+  @media (max-width: 820px) { .ix-grid { grid-template-columns: 1fr 1fr; } .ix-spec { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 540px) { .ix-grid { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="ix" data-theme="{{ theme }}">
+  <header class="ix-hero">
+    <div class="ix-aurora"><div class="ix-blob b1"></div><div class="ix-blob b2"></div></div>
+    <div class="ix-wrap">
+      <div class="ix-hero-in">
+        <div class="ix-brand"><span class="ix-logo"></span><div><b>invoxai</b><span>Design system &amp; build spec · 18 screens</span></div></div>
+        <button class="ix-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+      </div>
+      <p class="ix-lead">Every surface of the invoxai platform as interactive, on-brand prototypes — the visual source of truth for the Next.js + Supabase build. Click any card to open it.</p>
+      <div class="ix-spec">
+        <div class="s"><div class="l">Stack</div><div class="v">Next.js · Supabase · Caddy</div></div>
+        <div class="s"><div class="l">Hosting</div><div class="v">Hostinger KVM VPS · SSR + CDN</div></div>
+        <div class="s"><div class="l">Theme</div><div class="v">Sunset / Twilight · Sora + Inter</div></div>
+        <div class="s"><div class="l">Domains</div><div class="v">name.invoxai.io + custom</div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="ix-wrap">
+    <section class="ix-sec">
+      <div class="ix-sec-h"><h2>Marketing &amp; entry</h2><span class="c">invoxai.io</span></div>
+      <div class="ix-grid">
+        <a class="ix-card" href="Marketing%20Landing.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🚀</span><div><h3>Marketing landing</h3><div class="rt">invoxai.io</div></div></div><p>Animated hero, product story, 6 revenue streams, pricing.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Login.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">🔑</span><div><h3>Login / sign-in</h3><div class="rt">Google + Email OTP</div></div></div><p>Split-screen auth with two-step OTP verification.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Onboarding%20Wizard.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">✨</span><div><h3>Onboarding wizard</h3><div class="rt">/onboarding</div></div></div><p>OTP → store → subdomain → category → billing.</p><span class="ix-open">Open ↗</span></a>
+      </div>
+    </section>
+
+    <section class="ix-sec">
+      <div class="ix-sec-h"><h2>Dashboards</h2><span class="c">app · admin · buyer</span></div>
+      <div class="ix-grid">
+        <a class="ix-card" href="Seller%20Dashboard.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">◳</span><div><h3>Seller dashboard</h3><div class="rt">app.invoxai.io</div></div></div><p>13 working menu pages — pages, store, CRM, wallet, payments, domains.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Admin%20Panel.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">⚙</span><div><h3>Admin panel</h3><div class="rt">admin.invoxai.io</div></div></div><p>10 pages — revenue, users, plans, commission, gateways, health.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Buyer%20Corner.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">◷</span><div><h3>Buyer corner</h3><div class="rt">orders &amp; access</div></div></div><p>One identity across every store — purchases, spend, downloads.</p><span class="ix-open">Open ↗</span></a>
+      </div>
+    </section>
+
+    <section class="ix-sec">
+      <div class="ix-sec-h"><h2>Builders &amp; system</h2><span class="c">create + reference</span></div>
+      <div class="ix-grid">
+        <a class="ix-card" href="Website%20Builder.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🎨</span><div><h3>Website builder</h3><div class="rt">/studio/website</div></div></div><p>Two-pane editor, 6 animated backgrounds, Builder→Published flow.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Template%20Gallery.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">▦</span><div><h3>Template gallery</h3><div class="rt">15 templates</div></div></div><p>Flagship templates across every page type, filterable.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Design%20System.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">◑</span><div><h3>Design system</h3><div class="rt">tokens + components</div></div></div><p>Colors, type, components — both themes, the source of truth.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Page%20Builder.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">✎</span><div><h3>Page builder</h3><div class="rt">create → build → publish</div></div></div><p>10 page types, 240+ themes, content/design/SEO/pixels, auto-widgets.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Block%20Canvas.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">🧱</span><div><h3>Block canvas</h3><div class="rt">Elementor-style</div></div></div><p>Drag blocks, reorder/duplicate/delete, per-block inspector.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Curriculum%20Builder.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🎓</span><div><h3>Curriculum builder</h3><div class="rt">modules · lessons</div></div></div><p>Build course modules &amp; lessons, reorder, free-preview, live preview.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Template%20Marketplace.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">🛒</span><div><h3>Template marketplace</h3><div class="rt">browse · buy · own</div></div></div><p>Premium templates with preview, buy-to-unlock &amp; My Templates.</p><span class="ix-open">Open ↗</span></a>
+      </div>
+    </section>
+
+    <section class="ix-sec">
+      <div class="ix-sec-h"><h2>Public page templates</h2><span class="c">name.invoxai.io/…</span></div>
+      <div class="ix-grid">
+        <a class="ix-card" href="Bio%20Page.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🔗</span><div><h3>Link-in-bio</h3><div class="rt">/bio</div></div></div><p>Animated aurora bio with social proof + click tracking.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Store%20Page.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">🛍️</span><div><h3>Store</h3><div class="rt">/store</div></div></div><p>Storefront, category filters, add-to-cart + drawer.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Product%20Page.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">📦</span><div><h3>One-page product</h3><div class="rt">/opp/{id}</div></div></div><p>Two-column with inline checkout, urgency &amp; pixels.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Courses%20Page.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🎓</span><div><h3>Courses</h3><div class="rt">/courses</div></div></div><p>Course landing + lesson player with progress.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Checkout%20Page.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">💳</span><div><h3>Checkout</h3><div class="rt">/{type}/checkout/{id}</div></div></div><p>Order bump, coupon, totals → pay → confirmation.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Multi-Step%20Checkout.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🧾</span><div><h3>Multi-step checkout</h3><div class="rt">review → details → pay</div></div></div><p>3-step flow with progress, order bump, coupon &amp; live summary.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Public%20Templates.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">🎟️</span><div><h3>Booking · Event · Lead · Pay</h3><div class="rt">/book /env /ldf /pay</div></div></div><p>Four interactive public pages behind a switcher.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="VIP%20Channel.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">⭐</span><div><h3>VIP channel</h3><div class="rt">/vpc/{id}</div></div></div><p>Paid community — join → pay → auto-grant invite.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Landing%20Page.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">🎯</span><div><h3>Landing page</h3><div class="rt">/led/{id}</div></div></div><p>Ad-conversion page — urgency, social proof, sticky CTA.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Booking%20Public.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">📅</span><div><h3>Booking (public)</h3><div class="rt">/book/{id}</div></div></div><p>Calendar + time slots → book a 1-to-1 session → pay → confirmation.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Event%20Ticket.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">🎟️</span><div><h3>Event ticket</h3><div class="rt">QR pass</div></div></div><p>Buyer's ticket — poster, details, QR + admit code, add-to-calendar.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="System%20Pages.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🛠️</span><div><h3>System pages</h3><div class="rt">404 · maintenance</div></div></div><p>On-brand 404 and maintenance-mode screens with a switcher.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Pitch%20Deck.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">📊</span><div><h3>Pitch deck</h3><div class="rt">10 slides</div></div></div><p>Investor story — problem, solution, model, ask.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Legal%20Pages.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">⚖️</span><div><h3>Legal pages</h3><div class="rt">/privacy /terms /refund</div></div></div><p>Privacy, Terms, Refund, Shipping, Cookies &amp; Contact — every public page.</p><span class="ix-open">Open ↗</span></a>
+      </div>
+    </section>
+
+    <section class="ix-sec">
+      <div class="ix-sec-h"><h2>Growth &amp; data tools</h2><span class="c">CRM · coupons · email · analytics</span></div>
+      <div class="ix-grid">
+        <a class="ix-card" href="CRM%20Detail.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">👤</span><div><h3>CRM · customer</h3><div class="rt">master-detail</div></div></div><p>Customer profile, lifetime spend, order history, categories &amp; timeline.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Buyer%20Order%20Detail.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">🧾</span><div><h3>Buyer order detail</h3><div class="rt">order view</div></div></div><p>Items, payment summary, invoice, access/downloads, seller + support.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Coupon%20Builder.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">🎟️</span><div><h3>Coupon builder</h3><div class="rt">?coupon=CODE</div></div></div><p>%/flat codes, live discount preview &amp; auto-apply discount links.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Cart%20Email%20Composer.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">✉️</span><div><h3>Cart recovery email</h3><div class="rt">abandoned cart</div></div></div><p>Merge-tag subject/body, live email preview, delay trigger &amp; coupon.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Analytics.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">📈</span><div><h3>Analytics</h3><div class="rt">funnel · sources</div></div></div><p>Per-page funnel, traffic sources, device split, top pages &amp; pixel events.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="AB%20Test.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">🧪</span><div><h3>A/B test</h3><div class="rt">split · winner</div></div></div><p>Two variants, traffic-split slider, conversion results &amp; winner verdict.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Notifications.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🔔</span><div><h3>Notifications</h3><div class="rt">activity feed</div></div></div><p>Orders, low balance, reviews &amp; payouts · filters, unread, mark-all-read.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Reviews.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">⭐</span><div><h3>Reviews</h3><div class="rt">rating · reply</div></div></div><p>Rating summary, filters &amp; per-review reply / feature / hide actions.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Domain%20Connect.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">🌐</span><div><h3>Domain connect</h3><div class="rt">CNAME → SSL</div></div></div><p>Add domain → DNS records → verify + auto-SSL → set primary with 301s.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Gateway%20Connect.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">💳</span><div><h3>Gateway connect</h3><div class="rt">your own gateway</div></div></div><p>Razorpay/Cashfree/Stripe/PayU/PhonePe · keys, test &amp; connect.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Email%20Templates.dc.html"><div class="top"><span class="ix-ico" style="background:var(--grad)">✉️</span><div><h3>Email templates</h3><div class="rt">transactional</div></div></div><p>OTP, welcome, receipt, invoice, daily wallet invoice &amp; weekly report.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Wallet%20Recharge.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">👛</span><div><h3>Wallet recharge</h3><div class="rt">commission wallet</div></div></div><p>Top-up amounts + bonus tiers, pay flow &amp; auto-recharge settings.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Mobile%20App.dc.html"><div class="top"><span class="ix-ico" style="background:var(--accent)">📱</span><div><h3>Mobile app</h3><div class="rt">seller · phone shell</div></div></div><p>Seller dashboard in a phone frame with a working bottom tab bar.</p><span class="ix-open">Open ↗</span></a>
+        <a class="ix-card" href="Team%20Roles.dc.html"><div class="top"><span class="ix-ico" style="background:var(--secondary)">👥</span><div><h3>Team &amp; roles</h3><div class="rt">invite · permissions</div></div></div><p>Invite teammates, role dropdowns &amp; an Admin/Editor/Viewer matrix.</p><span class="ix-open">Open ↗</span></a>
+      </div>
+    </section>
+  </div>
+
+  <div class="ix-foot"><b>invoxai.io</b> · 43 design components · Sunset/Twilight · India-first, built for the world 🇮🇳</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1080,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { theme: "light" };
+  renderVals() {
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -178,6 +178,35 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus }: { in
               </div>
             ))}
           </div>
+
+          {/* Suggest more */}
+          <div style={{ margin: "18px 0 0", padding: "14px 16px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 10 }}>Ideas to boost your store</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                { icon: "📢", label: "Add a discount banner", hint: "Show a time-limited offer at the top to drive urgency.", action: () => set({ banner: [...banner, { heading: "Limited time offer — 20% off!", sub: "Use code SAVE20 at checkout", cta: "Shop now", url: "#" }] }) },
+                { icon: "🏷️", label: "Add brand / press logos", hint: "Show logos from press mentions or brand partners to build trust.", action: () => set({ sections: { ...sections, logos: true } }) },
+                { icon: "⭐", label: "Enable the top-selling section", hint: "Highlight your best-performing products automatically.", action: () => set({ sections: { ...sections, topselling: true } }) },
+                { icon: "📱", label: "Turn on the mobile app nav bar", hint: "Gives mobile shoppers a permanent bottom navigation bar.", action: () => set({ bottomNav: true }) },
+                { icon: "📣", label: "Add an announcement bar", hint: "Notify visitors of shipping deals, new arrivals, or events.", action: () => set({ announce: { on: true, text: "Free shipping on orders over ₹999" } }) },
+              ].map(({ icon, label, hint, action }) => (
+                <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10 }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 2 }}>{hint}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={action}
+                    style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: "var(--primary)", color: "#fff", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {Preview()}

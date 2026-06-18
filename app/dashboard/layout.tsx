@@ -39,6 +39,7 @@ const NAV: DxNavGroup[] = [
     { label: "Pixels & SEO", icon: "pixel", href: "/dashboard/seo" },
   ] },
   { label: "Account", items: [
+    { label: "Notifications", icon: "bell", href: "/dashboard/notifications" },
     { label: "Domains", icon: "globe", href: "/dashboard/domains" },
     { label: "Plan & billing", icon: "rupee", href: "/dashboard/billing" },
     { label: "Settings", icon: "cog", href: "/dashboard/settings" },

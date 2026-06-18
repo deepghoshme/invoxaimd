@@ -9,6 +9,7 @@
   --color-bg: #fff9f4;
   --color-card: #ffffff;
   --color-surface: #ffffff;
+  --color-surface2: #fff3ec;
   --color-primary: #ff6a3d;
   --color-primary-hover: #f0532a;
   --color-secondary: #ff4d7d;
@@ -17,27 +18,29 @@
   --color-text: #2b1b2e;
   --color-muted: #7a6770;
   --color-border: #f0e1d6;
+  --color-green: #1fb57a;
+  --color-greenbg: #e5f7ef;
+  --color-red: #e5476f;
+  --color-redbg: #fde9ee;
 
-  --brand-gradient: linear-gradient(
-    135deg,
-    #ffb23e 0%,
-    #ff6a3d 38%,
-    #ff4d7d 72%,
-    #7b3fe4 100%
-  );
+  --brand-gradient: linear-gradient(135deg, #ffb23e 0%, #ff6a3d 38%, #ff4d7d 72%, #7b3fe4 100%);
+
+  /* ---- Elevation ---- */
+  --shadow: 0 1px 2px rgba(43, 27, 46, 0.04), 0 12px 32px -16px rgba(43, 27, 46, 0.18);
+  --shadow-pop: 0 18px 50px -22px rgba(43, 27, 46, 0.42);
 
   /* ---- Typography ---- */
   --font-heading: var(--font-sora), "Sora", system-ui, sans-serif;
   --font-body: var(--font-inter), "Inter", system-ui, sans-serif;
 
-  /* ---- Shape & spacing ---- */
+  /* ---- Shape & spacing (8/16/24/40/64) ---- */
   --radius: 16px;
   --radius-sm: 10px;
-  --space-1: 0.5rem;
-  --space-2: 1rem;
-  --space-3: 1.5rem;
-  --space-4: 2.5rem;
-  --space-5: 4rem;
+  --space-1: 0.5rem;   /* 8px */
+  --space-2: 1rem;     /* 16px */
+  --space-3: 1.5rem;   /* 24px */
+  --space-4: 2.5rem;   /* 40px */
+  --space-5: 4rem;     /* 64px */
 
   color-scheme: light;
 }
@@ -47,14 +50,22 @@
   --color-bg: #16101f;
   --color-card: #221833;
   --color-surface: #221833;
+  --color-surface2: #2a2040;
   --color-primary: #ff7e55;
-  --color-primary-hover: #ff6a3d;
+  --color-primary-hover: #ff8e69;
   --color-secondary: #ff6aa0;
   --color-accent: #a06bff;
-  --color-highlight: #ffb23e;
+  --color-highlight: #ffc773;
   --color-text: #f6eef2;
   --color-muted: #b9a8bc;
   --color-border: #34264a;
+  --color-green: #36c98e;
+  --color-greenbg: #15301f;
+  --color-red: #ff6f93;
+  --color-redbg: #3a1822;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 36px -18px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 22px 60px -22px rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
 }
@@ -64,14 +75,22 @@
     --color-bg: #16101f;
     --color-card: #221833;
     --color-surface: #221833;
+    --color-surface2: #2a2040;
     --color-primary: #ff7e55;
-    --color-primary-hover: #ff6a3d;
+    --color-primary-hover: #ff8e69;
     --color-secondary: #ff6aa0;
     --color-accent: #a06bff;
-    --color-highlight: #ffb23e;
+    --color-highlight: #ffc773;
     --color-text: #f6eef2;
     --color-muted: #b9a8bc;
     --color-border: #34264a;
+    --color-green: #36c98e;
+    --color-greenbg: #15301f;
+    --color-red: #ff6f93;
+    --color-redbg: #3a1822;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 36px -18px rgba(0, 0, 0, 0.6);
+    --shadow-pop: 0 22px 60px -22px rgba(0, 0, 0, 0.7);
 
     color-scheme: dark;
   }
@@ -103,8 +122,9 @@ h2,
 h3,
 h4 {
   font-family: var(--font-heading);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0;
 }
 
 a {
@@ -122,8 +142,7 @@ a:hover {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--space-4);
-  box-shadow: 0 1px 2px rgba(43, 27, 46, 0.04),
-    0 12px 32px -16px rgba(43, 27, 46, 0.18);
+  box-shadow: var(--shadow);
 }
 
 .field {
@@ -160,7 +179,7 @@ a:hover {
 .input:focus,
 .select:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 106, 61, 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .input-suffix {
@@ -173,7 +192,7 @@ a:hover {
 }
 .input-suffix:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 106, 61, 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 .input-suffix input {
   flex: 1;
@@ -196,16 +215,20 @@ a:hover {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.8rem 1.4rem;
+  padding: 0.7rem 1.25rem;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.875rem;  /* 14px — matches spec */
   border-radius: var(--radius-sm);
   border: 1.5px solid transparent;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s, border-color 0.15s, filter 0.15s, transform 0.12s;
 }
-.btn:disabled {
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:disabled,
+.btn-disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -221,6 +244,9 @@ a:hover {
   background: var(--brand-gradient);
   color: #fff;
 }
+.btn-gradient:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
 .btn-ghost {
   background: transparent;
   border-color: var(--color-border);
@@ -229,25 +255,33 @@ a:hover {
 .btn-ghost:hover:not(:disabled) {
   border-color: var(--color-muted);
 }
+.btn-sm {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.78rem;
+}
+.btn-lg {
+  padding: 0.875rem 1.625rem;
+  font-size: 0.97rem;
+}
 .btn-block {
   width: 100%;
 }
 
 .alert {
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 0.875rem;
   border-radius: var(--radius-sm);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   margin-bottom: var(--space-2);
 }
-.alert-error {
-  background: rgba(255, 77, 125, 0.1);
-  border: 1px solid rgba(255, 77, 125, 0.35);
-  color: #b3214e;
-}
 .alert-ok {
-  background: rgba(46, 174, 122, 0.12);
-  border: 1px solid rgba(46, 174, 122, 0.35);
-  color: #1c7d57;
+  background: color-mix(in srgb, var(--color-green) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-green) 40%, transparent);
+  color: var(--color-green);
+}
+.alert-error {
+  background: color-mix(in srgb, var(--color-secondary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-secondary) 38%, transparent);
+  color: var(--color-secondary);
 }
 
 .muted {
@@ -283,23 +317,60 @@ a:hover {
 .dash-main { flex: 1; padding: var(--space-3); max-width: 1100px; width: 100%; margin: 0 auto; }
 .dash-list { display: flex; flex-direction: column; gap: 0.5rem; margin: var(--space-2) 0; }
 
-/* ---- Status pill ---- */
+/* ---- Status pill / badge-pill (all variants) ---- */
 .badge-pill {
-  font-size: 0.72rem;
+  font-size: 0.72rem;   /* 11.5px */
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.7rem;
   border-radius: 999px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   flex-shrink: 0;
 }
-.badge-pill.is-live {
-  background: rgba(46, 174, 122, 0.15);
-  color: #1c7d57;
+/* status */
+.badge-pill.is-live  { background: var(--color-greenbg); color: var(--color-green); }
+.badge-pill.is-draft { background: var(--color-surface2); color: var(--color-muted); border: 1px solid var(--color-border); }
+/* transaction */
+.badge-pill.t-paid { background: var(--color-greenbg); color: var(--color-green); }
+.badge-pill.t-pend { background: var(--color-redbg);   color: var(--color-red); }
+.badge-pill.t-neu  { background: var(--color-surface2); color: var(--color-muted); }
+/* category */
+.cat-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 13%, transparent);
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  display: inline-flex;
+  white-space: nowrap;
 }
-.badge-pill.is-draft {
-  background: var(--color-bg);
-  color: var(--color-muted);
-  border: 1px solid var(--color-border);
+/* discount */
+.off-badge {
+  background: var(--color-secondary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.18rem 0.55rem;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+/* trust */
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+.trust-badge .ic {
+  color: var(--color-primary);
+  font-weight: 800;
 }
 
 /* ---- One-page product (opp) + checkout ---- */
@@ -1481,6 +1552,60 @@ a:hover {
   0%, 100% { transform: scale(1); box-shadow: 0 8px 20px -10px rgba(255, 77, 125, 0.6); }
   50% { transform: scale(1.025); box-shadow: 0 12px 28px -8px rgba(255, 77, 125, 0.85); }
 }
+
+/* ---- Design-system canonical keyframes ---- */
+/* Button shimmer — the .shine child slides across */
+@keyframes ds-shine {
+  0%       { left: -55%; }
+  60%, 100% { left: 160%; }
+}
+/* Generic DS pulse */
+@keyframes ds-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+/* LiveProof dot pulse */
+@keyframes ds-lp {
+  0%   { box-shadow: 0 0 0 0 rgba(31, 181, 122, 0.55); }
+  70%  { box-shadow: 0 0 0 9px rgba(31, 181, 122, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(31, 181, 122, 0); }
+}
+/* Aurora blob morph */
+@keyframes ds-aurora {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(8%, 6%) scale(1.15); }
+}
+
+/* ---- Shimmer .shine child element ---- */
+/* Usage: <button class="btn btn-gradient btn-shimmer"><span class="shine"></span>…</button> */
+.btn-shimmer .shine {
+  position: absolute;
+  top: 0;
+  left: -55%;
+  width: 32%;
+  height: 100%;
+  transform: skewX(-18deg);
+  background: #fff;
+  opacity: 0.5;
+  filter: blur(3px);
+  animation: ds-shine 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ---- Reveal on scroll ---- */
+/* Add .reveal to any element; JS adds .revealed when it enters the viewport */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
 /* Big sold-out / disabled Buy state */
 .btn-soldout {
   background: var(--color-border);
@@ -1953,5 +2078,210 @@ a:hover {
 }
 .chip-toggle.on {
   border-color: var(--color-primary);
-  background: var(--color-bg);
+  background: var(--color-surface2, var(--color-bg));
+  color: var(--color-primary);
 }
+
+/* =============================================================
+   DS COMPONENTS — added for Sunset/Twilight design system parity
+   ============================================================= */
+
+/* ---- Switch / toggle (50×28, gradient when on) ---- */
+/* NOTE: .switch already exists above; these rules complete the spec */
+.switch-grad.on {
+  background: var(--brand-gradient);
+}
+
+/* ---- Countdown timer ---- */
+/* .cd already defined in urgency section; these are the DS canonical names */
+.ds-cd { display: flex; flex-direction: column; gap: 8px; }
+.ds-cd .ds-cd-title { font-size: 0.8rem; font-weight: 700; color: var(--color-secondary); }
+.ds-cd .ds-cd-row { display: flex; gap: 7px; }
+.ds-cd .ds-cd-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+  padding: 9px 8px;
+  border-radius: 12px;
+  background: var(--brand-gradient);
+  color: #fff;
+}
+.ds-cd .ds-cd-num {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.3rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ds-cd .ds-cd-lbl {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.92;
+  margin-top: 4px;
+}
+
+/* ---- Seat-scarcity bar ---- */
+/* .seats already exists; .ds-seats are the canonical DS names */
+.ds-seats { display: flex; flex-direction: column; gap: 7px; }
+.ds-seats .ds-seats-lab { font-size: 0.84rem; font-weight: 700; }
+.ds-seats .ds-seats-bar { height: 8px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+.ds-seats .ds-seats-fill { height: 100%; border-radius: 999px; background: var(--brand-gradient); }
+
+/* ---- LiveProof social-proof widget (inline, non-fixed variant) ---- */
+/* The fixed/animated version is .liveproof above. .ds-liveproof is the
+   inline design-system version for use inside page sections. */
+.ds-liveproof {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  max-width: 300px;
+  padding: 11px 15px;
+  border-radius: 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-pop);
+}
+.ds-liveproof .ds-lp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-green);
+  animation: ds-lp 1.8s infinite;
+  flex: none;
+}
+.ds-liveproof b { font-size: 0.84rem; }
+.ds-liveproof .ds-lp-sub { font-size: 0.75rem; color: var(--color-muted); }
+
+/* ---- KPI card (standalone, design-system spec) ---- */
+/* Used outside .dx context — e.g. public dashboard embeds */
+.kpi-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.kpi-card .kpi-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+}
+.kpi-card .kpi-lbl { color: var(--color-muted); font-size: 0.78rem; font-weight: 500; }
+.kpi-card .kpi-val {
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+.kpi-card .kpi-delta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 8px;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.kpi-up   { color: var(--color-green); }
+.kpi-down { color: var(--color-red); }
+
+/* ---- Plan card (with ribbon + featured state) ---- */
+.plan-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--color-card);
+  position: relative;
+  box-shadow: var(--shadow);
+}
+.plan-card.featured {
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 2px rgba(43, 27, 46, 0.04), 0 20px 44px -22px rgba(255, 106, 61, 0.5);
+}
+.plan-card .plan-name { font-family: var(--font-heading); font-weight: 700; font-size: 1rem; }
+.plan-card .plan-price {
+  font-family: var(--font-heading);
+  font-size: 1.875rem;
+  font-weight: 800;
+  margin: 8px 0 2px;
+  letter-spacing: -0.02em;
+}
+.plan-card .plan-price small { font-size: 0.8rem; color: var(--color-muted); font-weight: 500; }
+.plan-ribbon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand-gradient);
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+.plan-card ul {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.plan-card ul li { display: flex; gap: 9px; }
+.plan-card ul li::before { content: "✓"; color: var(--color-green); font-weight: 800; }
+
+/* ---- Progress steps (dot bar) ---- */
+/* .steps already exists; .ds-steps is the DS-canonical alias */
+.ds-steps { display: flex; gap: 7px; }
+.ds-steps .ds-step-dot { flex: 1; height: 6px; border-radius: 3px; background: var(--color-border); }
+.ds-steps .ds-step-dot.active { background: var(--brand-gradient); }
+
+/* ---- Aurora blobs (design-system canonical) ---- */
+/* The existing .aurora / .aurora-blob are the commerce-page implementation.
+   .ds-aurora-wrap + .ds-blob are the reusable DS variant. */
+.ds-aurora-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.ds-blob {
+  position: absolute;
+  width: 46vmax;
+  height: 46vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+}
+.ds-blob.b1 { background: var(--color-highlight); top: -12vmax; left: -8vmax; animation: ds-aurora 30s ease-in-out infinite; }
+.ds-blob.b2 { background: var(--color-primary);   top: -6vmax; right: -10vmax; animation: ds-aurora 34s ease-in-out infinite reverse; }
+.ds-blob.b3 { background: var(--color-secondary);  bottom: -14vmax; left: 8vmax; animation: ds-aurora 28s ease-in-out infinite; }
+.ds-blob.b4 { background: var(--color-accent);     bottom: -16vmax; right: -6vmax; opacity: 0.4; animation: ds-aurora 32s ease-in-out infinite reverse; }
+
+/* ---- Gradient text utility ---- */
+.grad-text {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Backward-compat aliases ---- */
+/* These map old class names / var names so existing components keep working */
+/* --color-surface already exists; surface2 is the new addition above */
+/* .t-paid, .t-pend, .t-neu — still live in dx.css for .dx context;
+   the .badge-pill variants in globals cover the global context */
+/* .segment / .chip-toggle / .switch / .brand-badge / .liveproof / .buybar /
+   .steps / .step-dot — all original names kept; ds-* are the canonical DS aliases */

@@ -1,3 +1,5 @@
+"use client";
+import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon";
 
 export function Phead({ title, sub, action }: { title: string; sub?: string; action?: React.ReactNode }) {
@@ -67,17 +69,44 @@ export function Table({ cols, rows, empty = "No data yet" }: { cols: string[]; r
   );
 }
 
-export function AreaChart() {
+/**
+ * AreaChart — accepts an optional `points` array of numbers (one per x-bucket).
+ * Falls back to a static demo curve when no points are provided.
+ * The chart fills the full SVG width (600 × 170) with a 10px vertical pad.
+ */
+export function AreaChart({ points }: { points?: number[] } = {}) {
+  const W = 600, H = 170, PAD_T = 10, PAD_B = 20;
+  const chartH = H - PAD_T - PAD_B; // usable vertical pixels
+
+  // Static demo path used when no real data is available.
+  const DEMO_LINE = "M0 145 L60 128 120 134 180 100 240 108 300 70 360 82 420 50 480 60 540 32 600 38";
+  const DEMO_AREA = `${DEMO_LINE} L600 170 L0 170 Z`;
+
+  let linePath = DEMO_LINE;
+  let areaPath = DEMO_AREA;
+
+  if (points && points.length >= 2) {
+    const max = Math.max(...points, 1);
+    const step = W / (points.length - 1);
+    const coords = points.map((v, i) => {
+      const x = Math.round(i * step);
+      const y = Math.round(PAD_T + chartH - (v / max) * chartH);
+      return `${x} ${y}`;
+    });
+    linePath = `M${coords.join(" L")}`;
+    areaPath = `${linePath} L${W} ${H} L0 ${H} Z`;
+  }
+
   return (
-    <svg viewBox="0 0 600 170" width="100%">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%">
       <defs>
         <linearGradient id="dxag" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="var(--primary)" stopOpacity="0.28" />
           <stop offset="1" stopColor="var(--primary)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d="M0 145 L60 128 120 134 180 100 240 108 300 70 360 82 420 50 480 60 540 32 600 38 L600 170 L0 170 Z" fill="url(#dxag)" />
-      <path d="M0 145 L60 128 120 134 180 100 240 108 300 70 360 82 420 50 480 60 540 32 600 38" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={areaPath} fill="url(#dxag)" />
+      <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -204,5 +233,428 @@ export function ComingSoon({ title }: { title: string }) {
         </p>
       </Card>
     </>
+  );
+}
+
+/* =================================================================
+   Design System components — Sunset/Twilight spec
+   ================================================================= */
+
+/**
+ * Switch — 50×28 gradient toggle (design spec).
+ * Controlled: pass `on` + `onChange`.
+ * Uncontrolled: pass no props (internal state).
+ */
+export function Switch({
+  on,
+  onChange,
+  disabled,
+  label,
+}: {
+  on?: boolean;
+  onChange?: (v: boolean) => void;
+  disabled?: boolean;
+  label?: string;
+}) {
+  const [internal, setInternal] = useState(false);
+  const controlled = on !== undefined;
+  const isOn = controlled ? on : internal;
+  const toggle = () => {
+    if (disabled) return;
+    const next = !isOn;
+    if (!controlled) setInternal(next);
+    onChange?.(next);
+  };
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isOn}
+        disabled={disabled}
+        onClick={toggle}
+        className={`switch${isOn ? " on" : ""}`}
+      >
+        <span className="switch-knob" />
+      </button>
+      {label && <span style={{ fontSize: 13.5, fontWeight: 600 }}>{label}</span>}
+    </span>
+  );
+}
+
+/**
+ * Segment — pill segmented control.
+ * options: array of { value, label }
+ */
+export function Segment<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="segment">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className={value === o.value ? "on" : ""}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * ChipToggle — section toggle chip used in builders.
+ */
+export function ChipToggle({
+  on,
+  children,
+  onChange,
+}: {
+  on?: boolean;
+  children: React.ReactNode;
+  onChange?: (v: boolean) => void;
+}) {
+  const [internal, setInternal] = useState(!!on);
+  const controlled = on !== undefined;
+  const isOn = controlled ? on : internal;
+  return (
+    <div
+      className={`chip-toggle${isOn ? " on" : ""}`}
+      onClick={() => {
+        const next = !isOn;
+        if (!controlled) setInternal(next);
+        onChange?.(next);
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Alert — ok or error inline feedback. */
+export function Alert({
+  kind,
+  children,
+}: {
+  kind: "ok" | "error";
+  children: React.ReactNode;
+}) {
+  return <div className={`alert alert-${kind}`}>{children}</div>;
+}
+
+/** BadgePill — status / transaction / category / trust badges. */
+export function BadgePill({
+  kind,
+  children,
+}: {
+  kind: "live" | "draft" | "paid" | "pend" | "neu";
+  children: React.ReactNode;
+}) {
+  const cls = kind === "live" ? "is-live" : kind === "draft" ? "is-draft" : `t-${kind}`;
+  return <span className={`badge-pill ${cls}`}>{children}</span>;
+}
+
+/** KpiCard — standalone KPI card outside .dx context. */
+export function KpiCard({
+  icon,
+  label,
+  value,
+  delta,
+  down,
+  iconBg = "var(--brand-gradient)",
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  delta?: string;
+  down?: boolean;
+  iconBg?: string;
+}) {
+  return (
+    <div className="kpi-card">
+      <div className="kpi-ic" style={{ background: iconBg }}>
+        {icon}
+      </div>
+      <div className="kpi-lbl">{label}</div>
+      <div className="kpi-val">{value}</div>
+      {delta && (
+        <div className={`kpi-delta ${down ? "kpi-down" : "kpi-up"}`}>
+          {down ? "▼" : "▲"} {delta}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** PlanCard — with optional ribbon and featured border/shadow. */
+export function PlanCard({
+  name,
+  price,
+  period,
+  ribbon,
+  featured,
+  features,
+  action,
+}: {
+  name: string;
+  price: string;
+  period?: string;
+  ribbon?: string;
+  featured?: boolean;
+  features: string[];
+  action: React.ReactNode;
+}) {
+  return (
+    <div className={`plan-card${featured ? " featured" : ""}`}>
+      {ribbon && <span className="plan-ribbon">{ribbon}</span>}
+      <div className="plan-name">{name}</div>
+      <div className="plan-price">
+        {price}
+        {period && <small> {period}</small>}
+      </div>
+      <ul>
+        {features.map((f) => (
+          <li key={f}>{f}</li>
+        ))}
+      </ul>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Countdown — live countdown timer.
+ * Pass `targetMs` (Date.now() + ms) or `seconds` (total seconds to count down).
+ */
+export function Countdown({
+  seconds: initSec = 0,
+  targetMs,
+  label = "Offer ends in",
+}: {
+  seconds?: number;
+  targetMs?: number;
+  label?: string;
+}) {
+  const [t, setT] = useState(() =>
+    targetMs ? Math.max(0, Math.floor((targetMs - Date.now()) / 1000)) : initSec
+  );
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setT((prev) => {
+        if (targetMs) return Math.max(0, Math.floor((targetMs - Date.now()) / 1000));
+        return prev > 0 ? prev - 1 : 0;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [targetMs]);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  return (
+    <div className="ds-cd">
+      <span className="ds-cd-title">⏳ {label}</span>
+      <div className="ds-cd-row">
+        {h > 0 && (
+          <div className="ds-cd-box">
+            <span className="ds-cd-num">{pad(h)}</span>
+            <span className="ds-cd-lbl">Hrs</span>
+          </div>
+        )}
+        <div className="ds-cd-box">
+          <span className="ds-cd-num">{pad(m)}</span>
+          <span className="ds-cd-lbl">Min</span>
+        </div>
+        <div className="ds-cd-box">
+          <span className="ds-cd-num">{pad(s)}</span>
+          <span className="ds-cd-lbl">Sec</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** SeatBar — seat scarcity progress bar. */
+export function SeatBar({
+  total,
+  remaining,
+  label,
+}: {
+  total: number;
+  remaining: number;
+  label?: string;
+}) {
+  const pct = Math.round(((total - remaining) / total) * 100);
+  const hint = label ?? `🔥 Only ${remaining} of ${total} seats left`;
+  return (
+    <div className="ds-seats">
+      <span className="ds-seats-lab">{hint}</span>
+      <div className="ds-seats-bar">
+        <div className="ds-seats-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/** LiveProof — inline social-proof widget (non-fixed variant). */
+export function LiveProof({
+  name,
+  sub,
+}: {
+  name: string;
+  sub?: string;
+}) {
+  return (
+    <div className="ds-liveproof">
+      <span className="ds-lp-dot" />
+      <div>
+        <b>{name}</b>
+        {sub && <div className="ds-lp-sub">{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * BuyBar — sticky design-system buy bar (not fixed; wrap in your own
+ * position:fixed or position:sticky container as needed).
+ */
+export function BuyBar({
+  price,
+  wasPrice,
+  offLabel,
+  caption,
+  ctaLabel = "Buy now →",
+  onBuy,
+  disabled,
+}: {
+  price: string;
+  wasPrice?: string;
+  offLabel?: string;
+  caption?: string;
+  ctaLabel?: string;
+  onBuy?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="buybar">
+      <div className="buybar-price">
+        <div className="bb-row">
+          <span className="bb-now">{price}</span>
+          {wasPrice && <span className="bb-was">{wasPrice}</span>}
+          {offLabel && <span className="bb-off">{offLabel}</span>}
+        </div>
+        {caption && <div className="bb-cap">{caption}</div>}
+      </div>
+      <button
+        type="button"
+        className="buybar-btn"
+        onClick={onBuy}
+        disabled={disabled}
+      >
+        {ctaLabel}
+      </button>
+    </div>
+  );
+}
+
+/** BrandBadge — "Built with invoxai" chip. */
+export function BrandBadge({ href = "https://invoxai.io" }: { href?: string }) {
+  return (
+    <a className="brand-badge" href={href} target="_blank" rel="noopener noreferrer">
+      <span className="brand-badge-mark" />
+      <span className="brand-badge-prefix">Built with</span>
+      <span className="brand-badge-text">invoxai</span>
+    </a>
+  );
+}
+
+/** ProgressSteps — dot-bar step indicator. */
+export function ProgressSteps({
+  total,
+  current,
+}: {
+  total: number;
+  current: number; /* 1-based */
+}) {
+  return (
+    <div className="ds-steps">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`ds-step-dot${i < current ? " active" : ""}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * AuroraBackground — animated blob background.
+ * Wrap page sections that need the aurora effect.
+ * Children render above it (z-index: 1).
+ */
+export function AuroraBackground({
+  children,
+  className = "",
+  style,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div style={{ position: "relative", overflow: "hidden", ...style }} className={className}>
+      <div className="ds-aurora-wrap">
+        <div className="ds-blob b1" />
+        <div className="ds-blob b2" />
+        <div className="ds-blob b3" />
+        <div className="ds-blob b4" />
+      </div>
+      <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+    </div>
+  );
+}
+
+/**
+ * RevealOnScroll — wraps children in .reveal; adds .revealed when visible.
+ * Requires IntersectionObserver (all modern browsers).
+ */
+export function RevealOnScroll({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number; /* ms */
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => el.classList.add("revealed"), delay);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [delay]);
+  return (
+    <div ref={ref} className="reveal">
+      {children}
+    </div>
   );
 }

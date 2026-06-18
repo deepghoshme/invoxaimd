@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Phead, Kpis, Card, Table, Tag, Live, Buyer, Templates, AreaChart, PageType } from "./ui";
+import { Phead, Kpis, Card, Table, Tag, Live, Buyer, Templates, AreaChart, Donut, PageType } from "./ui";
 import NewProductButton from "@/app/dashboard/pages/products/NewProductButton";
 
 const inr = (paise?: number | null) => "₹" + Math.round((paise ?? 0) / 100).toLocaleString("en-IN");
@@ -200,27 +200,107 @@ export const SELLER_PAGES: Record<string, () => Promise<React.ReactNode>> = {
     </>
   ),
 
-  analytics: async () => (
-    <>
-      <Phead title="Analytics" sub="Visitors, conversions, devices." />
-      <Kpis items={[{ icon: "eye", color: "var(--primary)", label: "Visitors", value: "0" }, { icon: "chart", color: "var(--secondary)", label: "Page views", value: "0" }, { icon: "bag", color: "var(--green)", label: "Conversion", value: "0%" }, { icon: "spark", color: "var(--accent)", label: "Avg time", value: "—" }]} />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Traffic" link="30 days"><AreaChart /></Card></div>
-        <div><Card title="Devices"><div className="dx-empty">No device data yet.</div></Card></div>
-      </div>
-    </>
-  ),
+  analytics: async () => {
+    const { sb, store } = await ctx();
+
+    // ── Fetch all page_events for this store ─────────────────────────────────
+    const { data: events } = store
+      ? await sb
+          .from("page_events")
+          .select("kind, device, created_at")
+          .eq("store_id", store.id)
+      : { data: [] };
+
+    // ── Fetch paid orders for conversion / revenue ────────────────────────────
+    const { data: paidOrders } = store
+      ? await sb
+          .from("orders")
+          .select("amount, created_at")
+          .eq("store_id", store.id)
+          .eq("status", "paid")
+      : { data: [] };
+
+    // ── Aggregate KPIs ────────────────────────────────────────────────────────
+    let views = 0, clicks = 0;
+    const dev: Record<string, number> = { mobile: 0, desktop: 0, tablet: 0 };
+    // keyed by "YYYY-MM-DD" → view count (last 30 days)
+    const dailyViews: Record<string, number> = {};
+    const now = new Date();
+
+    (events ?? []).forEach((e) => {
+      if (e.kind === "view") {
+        views++;
+        if (e.device && dev[e.device] !== undefined) dev[e.device]++;
+        // bucket by calendar date
+        const day = e.created_at.slice(0, 10); // "YYYY-MM-DD"
+        dailyViews[day] = (dailyViews[day] ?? 0) + 1;
+      } else {
+        clicks++;
+      }
+    });
+
+    const orderCount = (paidOrders ?? []).length;
+    const revenue = (paidOrders ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
+    const ctr = views ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
+
+    // ── Build 30-day points array for the chart ───────────────────────────────
+    // Generate the last 30 calendar dates (oldest → newest) so x-axis is correct.
+    const chartPoints: number[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      chartPoints.push(dailyViews[key] ?? 0);
+    }
+    const hasChartData = chartPoints.some((v) => v > 0);
+
+    // ── Device donut ──────────────────────────────────────────────────────────
+    const devTotal = dev.mobile + dev.desktop + dev.tablet;
+    const pct = (n: number) => (devTotal ? Math.round((n / devTotal) * 100) : 0);
+
+    return (
+      <>
+        <Phead title="Analytics" sub="Visitors, conversions, and devices across all your pages." />
+        <Kpis items={[
+          { icon: "eye",   color: "var(--primary)",   label: "Total views",  value: views.toLocaleString("en-IN") },
+          { icon: "link",  color: "var(--secondary)",  label: "Link clicks",  value: clicks.toLocaleString("en-IN") },
+          { icon: "spark", color: "var(--green)",      label: "CTR",          value: ctr },
+          { icon: "bag",   color: "var(--accent)",     label: "Paid orders",  value: orderCount.toLocaleString("en-IN") },
+        ]} />
+        <div className="dx-grid dx-cols">
+          <div>
+            <Card title="Traffic" link="last 30 days">
+              <AreaChart points={hasChartData ? chartPoints : undefined} />
+            </Card>
+          </div>
+          <div>
+            <Card title="Devices">
+              {devTotal === 0 ? (
+                <div className="dx-empty">No device data yet.</div>
+              ) : (
+                <Donut segments={[
+                  { label: "Mobile",  pct: pct(dev.mobile),  color: "var(--primary)" },
+                  { label: "Desktop", pct: pct(dev.desktop), color: "var(--secondary)" },
+                  { label: "Tablet",  pct: pct(dev.tablet),  color: "var(--accent)" },
+                ]} />
+              )}
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  },
 
   // page-type management views (no backend yet)
   // NOTE: `website` has a dedicated route at app/dashboard/website/ (static
   // segment wins over this catch-all), so no stub is needed here.
   // NOTE: `store` has a dedicated route at app/dashboard/store/ (overrides this).
-  courses: async () => PageType({ title: "Courses", sub: "Sell and host courses.", kpis: [{ icon: "book", color: "var(--primary)", label: "Courses", value: "0" }, { icon: "users", color: "var(--secondary)", label: "Students", value: "0" }], cols: ["Course", "Lessons", "Students", "Price"], rows: [], templates: TPL }),
-  booking: async () => PageType({ title: "1-to-1 booking", sub: "Sell consulting slots.", kpis: [{ icon: "cal", color: "var(--primary)", label: "Bookings", value: "0" }], cols: ["Service", "Duration", "Price", "Booked"], rows: [], templates: TPL }),
-  events: async () => PageType({ title: "Events", sub: "Sell tickets and seats.", kpis: [{ icon: "cal", color: "var(--primary)", label: "Events", value: "0" }], cols: ["Event", "Date", "Seats", "Sold"], rows: [], templates: TPL }),
-  payment: async () => PageType({ title: "Payment pages", sub: "Standalone “pay me” links.", kpis: [{ icon: "card", color: "var(--primary)", label: "Pages", value: "0" }], cols: ["Page", "URL", "Amount", "Paid"], rows: [], templates: TPL }),
-  leadform: async () => PageType({ title: "Lead forms", sub: "Capture leads (no payment).", kpis: [{ icon: "form", color: "var(--primary)", label: "Forms", value: "0" }, { icon: "users", color: "var(--secondary)", label: "Leads", value: "0" }], cols: ["Form", "Fields", "Leads"], rows: [], templates: TPL }),
-  vip: async () => PageType({ title: "VIP community", sub: "Paid Telegram / WhatsApp access.", kpis: [{ icon: "crown", color: "var(--primary)", label: "Communities", value: "0" }], cols: ["Community", "Platform", "Price", "Members"], rows: [], templates: TPL }),
-  landing: async () => PageType({ title: "Landing pages", sub: "Campaign pages for your ads.", kpis: [{ icon: "rocket", color: "var(--primary)", label: "Pages", value: "0" }], cols: ["Page", "URL", "Visitors", "Conversion"], rows: [], templates: TPL }),
+  courses: async () => <PageType title="Courses" sub="Sell and host courses." kpis={[{ icon: "book", color: "var(--primary)", label: "Courses", value: "0" }, { icon: "users", color: "var(--secondary)", label: "Students", value: "0" }]} cols={["Course", "Lessons", "Students", "Price"]} rows={[]} templates={TPL} />,
+  booking: async () => <PageType title="1-to-1 booking" sub="Sell consulting slots." kpis={[{ icon: "cal", color: "var(--primary)", label: "Bookings", value: "0" }]} cols={["Service", "Duration", "Price", "Booked"]} rows={[]} templates={TPL} />,
+  events: async () => <PageType title="Events" sub="Sell tickets and seats." kpis={[{ icon: "cal", color: "var(--primary)", label: "Events", value: "0" }]} cols={["Event", "Date", "Seats", "Sold"]} rows={[]} templates={TPL} />,
+  payment: async () => <PageType title="Payment pages" sub={'Standalone "pay me" links.'} kpis={[{ icon: "card", color: "var(--primary)", label: "Pages", value: "0" }]} cols={["Page", "URL", "Amount", "Paid"]} rows={[]} templates={TPL} />,
+  leadform: async () => <PageType title="Lead forms" sub="Capture leads (no payment)." kpis={[{ icon: "form", color: "var(--primary)", label: "Forms", value: "0" }, { icon: "users", color: "var(--secondary)", label: "Leads", value: "0" }]} cols={["Form", "Fields", "Leads"]} rows={[]} templates={TPL} />,
+  vip: async () => <PageType title="VIP community" sub="Paid Telegram / WhatsApp access." kpis={[{ icon: "crown", color: "var(--primary)", label: "Communities", value: "0" }]} cols={["Community", "Platform", "Price", "Members"]} rows={[]} templates={TPL} />,
+  landing: async () => <PageType title="Landing pages" sub="Campaign pages for your ads." kpis={[{ icon: "rocket", color: "var(--primary)", label: "Pages", value: "0" }]} cols={["Page", "URL", "Visitors", "Conversion"]} rows={[]} templates={TPL} />,
   upsell: async () => (<><Phead title="Upsell" sub="Offer add-ons at checkout." action={<button className="btn grad">+ New offer</button>} /><Card title="Upsell offers"><Table cols={["Trigger product", "Offer", "Discount", "Conversion"]} rows={[]} empty="No upsell offers yet." /></Card></>),
 };

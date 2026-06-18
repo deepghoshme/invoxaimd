@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes mk-aurora1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(7vw,5vh) scale(1.18); } }
+  @keyframes mk-aurora2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-6vw,6vh) scale(1.12); } }
+  @keyframes mk-aurora3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5vw,-5vh) scale(1.2); } }
+  @keyframes mk-float { 0%,100% { transform: translateY(0) rotate(var(--rot,0deg)); } 50% { transform: translateY(-14px) rotate(var(--rot,0deg)); } }
+  @keyframes mk-shine { 0% { left: -60%; } 55%,100% { left: 130%; } }
+  @keyframes mk-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes mk-pulse { 0% { box-shadow: 0 0 0 0 rgba(31,181,122,.5); } 70% { box-shadow: 0 0 0 10px rgba(31,181,122,0); } 100% { box-shadow: 0 0 0 0 rgba(31,181,122,0); } }
+  @keyframes mk-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+  @keyframes mk-bargrow { from { height: 8%; } }
+
+  .mk {
+    --bg: #fff9f4; --card: #ffffff; --s2: #fff3ec;
+    --primary: #ff6a3d; --primaryh: #f0532a; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6;
+    --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e 0%,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4 100%);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 18px 44px -22px rgba(43,27,46,.28);
+    --shadow-xl: 0 40px 90px -40px rgba(43,27,46,.45);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb);
+    -webkit-font-smoothing: antialiased; line-height: 1.6; min-height: 100dvh; overflow-x: clip;
+    transition: none;
+  }
+  .mk[data-theme="dark"] {
+    --bg: #16101f; --card: #221833; --s2: #2a2040;
+    --primary: #ff7e55; --primaryh: #ff8e69; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773;
+    --text: #f6eef2; --muted: #b9a8bc; --border: #34264a;
+    --green: #36c98e;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 20px 50px -24px rgba(0,0,0,.65);
+    --shadow-xl: 0 50px 100px -40px rgba(0,0,0,.8);
+  }
+  .mk h1,.mk h2,.mk h3,.mk h4 { font-family: var(--fh); line-height: 1.08; letter-spacing: -.03em; margin: 0; }
+  .mk p { margin: 0; }
+  .mk a { color: inherit; text-decoration: none; }
+  .mk-wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(34px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* nav */
+  .mk-nav { position: sticky; top: 0; z-index: 60; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--bg) 78%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+  .mk-nav-in { display: flex; align-items: center; gap: 14px; height: 68px; }
+  .mk-brand { display: flex; align-items: center; gap: 10px; font-family: var(--fh); font-weight: 800; font-size: 20px; letter-spacing: -.03em; }
+  .mk-logo { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); box-shadow: 0 6px 16px -6px rgba(255,77,125,.6); }
+  .mk-links { display: flex; gap: 4px; margin-left: 22px; }
+  .mk-links a { padding: 8px 13px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s, background .15s; }
+  .mk-links a:hover { color: var(--text); background: var(--s2); }
+  .mk-nav-r { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .mk-tgl { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 15px; display: grid; place-items: center; }
+  .mk-tgl:hover { border-color: var(--muted); }
+  .mk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 18px; font-family: var(--fh); font-weight: 600; font-size: 14px; border-radius: 10px; border: 1.5px solid transparent; cursor: pointer; transition: filter .15s, background .15s, border-color .15s, transform .12s; }
+  .mk-btn:active { transform: translateY(1px); }
+  .mk-btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
+  .mk-btn-ghost:hover { border-color: var(--muted); }
+  .mk-btn-grad { position: relative; overflow: hidden; background: var(--grad); color: #fff; box-shadow: 0 10px 26px -10px rgba(255,77,125,.6); }
+  .mk-btn-grad:hover { filter: brightness(1.05); }
+  .mk-btn-grad .sh { position: absolute; top: 0; left: -60%; width: 34%; height: 100%; transform: skewX(-18deg); background: #fff; opacity: .45; filter: blur(3px); animation: mk-shine 3.4s ease-in-out infinite; }
+  .mk-burger { display: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 17px; }
+
+  /* hero */
+  .mk-hero { position: relative; overflow: hidden; padding: 70px 0 90px; }
+  .mk-aurora { position: absolute; inset: -10% -5% 0; z-index: 0; pointer-events: none; }
+  .mk-blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .5; }
+  .mk-blob.b1 { width: 42vmax; height: 42vmax; background: var(--gold); top: -16vmax; left: -8vmax; animation: mk-aurora1 26s ease-in-out infinite; }
+  .mk-blob.b2 { width: 38vmax; height: 38vmax; background: var(--secondary); top: -10vmax; right: -10vmax; animation: mk-aurora2 30s ease-in-out infinite; }
+  .mk-blob.b3 { width: 40vmax; height: 40vmax; background: var(--accent); bottom: -22vmax; left: 18vmax; opacity: .38; animation: mk-aurora3 24s ease-in-out infinite; }
+  .mk-hero-in { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; }
+  .mk-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); font-size: 12.5px; font-weight: 600; color: var(--muted); box-shadow: var(--shadow); }
+  .mk-eyebrow .pin { font-size: 10px; font-weight: 800; color: #fff; background: var(--grad); padding: 3px 8px; border-radius: 999px; letter-spacing: .03em; white-space: nowrap; }
+  .mk-h1 { font-size: clamp(38px, 5.2vw, 62px); font-weight: 800; margin: 22px 0 0; }
+  .mk-h1 .g { background: linear-gradient(115deg,#ff6a3d,#ff4d7d 50%,#7b3fe4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mk[data-theme="dark"] .mk-h1 .g { background: linear-gradient(115deg,#ff8e69,#ff6aa0 50%,#a06bff); -webkit-background-clip: text; background-clip: text; }
+  .mk-sub { font-size: 18px; color: var(--muted); margin-top: 20px; max-width: 30em; }
+  .mk-cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; align-items: center; }
+  .mk-claim { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 26px; font-size: 13.5px; color: var(--muted); }
+  .mk-claim span { display: inline-flex; align-items: center; gap: 7px; }
+  .mk-claim .tick { color: var(--green); font-weight: 800; }
+
+  /* hero visual */
+  .mk-stage { position: relative; height: 460px; }
+  .mk-browser { position: absolute; inset: 18px 0 18px 24px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-xl); overflow: hidden; }
+  .mk-bbar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .mk-dot3 { width: 10px; height: 10px; border-radius: 50%; }
+  .mk-url { margin-left: 10px; flex: 1; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: var(--muted); background: var(--s2); padding: 5px 11px; border-radius: 999px; }
+  .mk-store { padding: 16px; }
+  .mk-store-hero { height: 92px; border-radius: 12px; background: var(--grad); position: relative; overflow: hidden; }
+  .mk-store-hero::after { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 80% at 80% 20%, rgba(255,255,255,.35), transparent 60%); }
+  .mk-store-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 13px; }
+  .mk-pcard { border: 1px solid var(--border); border-radius: 11px; overflow: hidden; }
+  .mk-pcard .im { height: 56px; background: var(--s2); }
+  .mk-pcard .tx { padding: 8px 9px; }
+  .mk-pcard .tx .l { height: 7px; border-radius: 4px; background: var(--border); }
+  .mk-pcard .tx .p { margin-top: 7px; font-size: 11px; font-weight: 800; color: var(--primary); font-family: var(--fh); }
+
+  .mk-fcard { position: absolute; background: var(--card); border: 1px solid var(--border); border-radius: 15px; box-shadow: var(--shadow-xl); padding: 13px 15px; }
+  .mk-fcard.c1 { top: 6px; right: -6px; --rot: 2deg; animation: mk-float 6.5s ease-in-out infinite; }
+  .mk-fcard.c2 { bottom: 22px; left: -16px; --rot: -3deg; animation: mk-float 7.8s ease-in-out infinite .6s; }
+  .mk-fcard.c3 { bottom: -10px; right: 26px; --rot: 2deg; animation: mk-float 7.1s ease-in-out infinite .3s; }
+  .mk-fc-row { display: flex; align-items: center; gap: 10px; }
+  .mk-fc-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-size: 16px; flex: none; }
+  .mk-fc-t b { font-size: 13.5px; font-family: var(--fh); display: block; }
+  .mk-fc-t span { font-size: 11.5px; color: var(--muted); }
+  .mk-spark { display: flex; align-items: flex-end; gap: 4px; height: 38px; margin-top: 4px; }
+  .mk-spark i { width: 7px; border-radius: 3px; background: var(--grad); animation: mk-bargrow 1s ease both; }
+
+  /* trust marquee */
+  .mk-trust { padding: 30px 0 8px; }
+  .mk-trust .lbl { text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+  .mk-marq { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+  .mk-marq-tr { display: flex; gap: 56px; width: max-content; animation: mk-marquee 28s linear infinite; }
+  .mk-marq-tr b { font-family: var(--fh); font-weight: 700; font-size: 21px; color: var(--muted); opacity: .65; white-space: nowrap; }
+
+  /* section frame */
+  .mk-sec { padding: 84px 0; }
+  .mk-sec-head { text-align: center; max-width: 660px; margin: 0 auto 50px; }
+  .mk-kick { font-size: 12.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--primary); margin-bottom: 12px; }
+  .mk-sec-head h2 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 800; }
+  .mk-sec-head p { color: var(--muted); font-size: 17px; margin-top: 14px; }
+
+  /* surfaces (3) */
+  .mk-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  .mk-surface { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
+  .mk-surface:hover { transform: translateY(-6px); box-shadow: var(--shadow-xl); }
+  .mk-surface .sic { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; color: #fff; font-size: 20px; margin-bottom: 16px; }
+  .mk-surface h3 { font-size: 19px; }
+  .mk-surface p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .mk-surface .url { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: var(--primary); margin-top: 12px; }
+
+  /* page types grid */
+  .mk-types { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; }
+  .mk-type { background: var(--card); border: 1px solid var(--border); border-radius: 15px; padding: 18px 16px; transition: transform .2s, border-color .2s; cursor: default; }
+  .mk-type:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+  .mk-type .ti { font-size: 22px; }
+  .mk-type b { display: block; font-family: var(--fh); font-size: 14.5px; margin-top: 11px; }
+  .mk-type .pth { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* features split */
+  .mk-feat { display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; }
+  .mk-feat.rev { direction: rtl; } .mk-feat.rev > * { direction: ltr; }
+  .mk-feat-list { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; }
+  .mk-feat-li { display: flex; gap: 14px; }
+  .mk-feat-li .fi { width: 40px; height: 40px; border-radius: 11px; background: var(--s2); display: grid; place-items: center; font-size: 18px; flex: none; color: var(--primary); }
+  .mk-feat-li b { font-family: var(--fh); font-size: 15px; }
+  .mk-feat-li p { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+  .mk-panel { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 22px; box-shadow: var(--shadow-xl); }
+
+  /* wallet visual */
+  .mk-wallet-top { display: flex; align-items: center; justify-content: space-between; }
+  .mk-wallet-bal { font-family: var(--fh); font-weight: 800; font-size: 30px; letter-spacing: -.02em; }
+  .mk-ledger { margin-top: 16px; display: flex; flex-direction: column; gap: 2px; }
+  .mk-led-row { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .mk-led-row .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; font-size: 13px; }
+  .mk-led-row .am { margin-left: auto; font-weight: 700; font-family: var(--fh); }
+
+  /* pixel/seo chips */
+  .mk-chips { display: flex; flex-wrap: wrap; gap: 9px; }
+  .mk-chip { font-size: 12.5px; font-weight: 600; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--border); background: var(--s2); }
+  .mk-chip .d { color: var(--green); margin-right: 5px; }
+
+  /* pricing */
+  .mk-plans { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; align-items: stretch; }
+  .mk-plan { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 26px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .mk-plan.feat { border-color: var(--primary); box-shadow: 0 1px 2px rgba(43,27,46,.04), 0 30px 60px -28px rgba(255,106,61,.5); transform: scale(1.03); }
+  .mk-plan .rib { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: #fff; background: var(--grad); padding: 5px 14px; border-radius: 999px; white-space: nowrap; }
+  .mk-plan .pn { font-family: var(--fh); font-weight: 700; font-size: 17px; }
+  .mk-plan .pp { font-family: var(--fh); font-weight: 800; font-size: 38px; letter-spacing: -.02em; margin: 12px 0 2px; }
+  .mk-plan .pp small { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .mk-plan .pd { color: var(--muted); font-size: 13.5px; }
+  .mk-plan ul { list-style: none; padding: 0; margin: 20px 0 24px; display: flex; flex-direction: column; gap: 11px; font-size: 14px; flex: 1; }
+  .mk-plan ul li { display: flex; gap: 10px; } .mk-plan ul li::before { content: "✓"; color: var(--green); font-weight: 800; }
+
+  /* testimonials */
+  .mk-tgrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+  .mk-quote { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 22px; box-shadow: var(--shadow); }
+  .mk-quote .st { color: var(--gold); letter-spacing: 1px; }
+  .mk-quote p { font-size: 14.5px; margin: 12px 0 16px; }
+  .mk-quote .who { display: flex; align-items: center; gap: 11px; }
+  .mk-quote .av { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-family: var(--fh); flex: none; }
+  .mk-quote .who b { font-size: 13.5px; display: block; font-family: var(--fh); } .mk-quote .who span { font-size: 12px; color: var(--muted); }
+
+  /* stats band */
+  .mk-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; text-align: center; }
+  .mk-stat .n { font-family: var(--fh); font-weight: 800; font-size: clamp(30px,4vw,46px); letter-spacing: -.02em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mk-stat .l { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  /* CTA band */
+  .mk-ctaband { position: relative; overflow: hidden; border-radius: 28px; padding: 64px 40px; text-align: center; background: var(--grad); color: #fff; box-shadow: var(--shadow-xl); }
+  .mk-ctaband::after { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 120% at 80% 0%, rgba(255,255,255,.3), transparent 60%); }
+  .mk-ctaband > * { position: relative; z-index: 1; }
+  .mk-ctaband h2 { font-size: clamp(30px,4vw,46px); font-weight: 800; }
+  .mk-ctaband p { font-size: 18px; opacity: .92; margin-top: 14px; }
+  .mk-cb-input { margin: 28px auto 0; max-width: 460px; display: flex; gap: 9px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3); border-radius: 14px; padding: 7px; backdrop-filter: blur(8px); }
+  .mk-cb-input input { flex: 1; border: 0; background: transparent; color: #fff; font: inherit; font-size: 15px; padding: 10px 14px; outline: none; }
+  .mk-cb-input input::placeholder { color: rgba(255,255,255,.75); }
+  .mk-cb-input .sfx { display: flex; align-items: center; color: rgba(255,255,255,.85); font-family: ui-monospace, Menlo, monospace; font-size: 13px; padding-right: 6px; }
+  .mk-cb-go { background: #fff; color: var(--primary); border: 0; border-radius: 10px; padding: 12px 20px; font-family: var(--fh); font-weight: 700; font-size: 14.5px; cursor: pointer; white-space: nowrap; }
+
+  /* footer */
+  .mk-foot { border-top: 1px solid var(--border); padding: 56px 0 36px; }
+  .mk-foot-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 30px; }
+  .mk-foot-col h5 { font-family: var(--fh); font-size: 13px; font-weight: 700; margin: 0 0 14px; }
+  .mk-foot-col a { display: block; color: var(--muted); font-size: 13.5px; padding: 5px 0; transition: color .15s; }
+  .mk-foot-col a:hover { color: var(--primary); }
+  .mk-foot p.d { color: var(--muted); font-size: 13.5px; margin-top: 14px; max-width: 28em; }
+  .mk-foot-bot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+
+  /* mobile menu */
+  .mk-mmenu { display: none; }
+  @media (max-width: 920px) {
+    .mk-hero-in { grid-template-columns: 1fr; }
+    .mk-stage { height: 400px; margin-top: 20px; }
+    .mk-3 { grid-template-columns: 1fr; }
+    .mk-types { grid-template-columns: repeat(2,1fr); }
+    .mk-feat, .mk-feat.rev { grid-template-columns: 1fr; direction: ltr; gap: 30px; }
+    .mk-plans { grid-template-columns: 1fr; } .mk-plan.feat { transform: none; }
+    .mk-tgrid { grid-template-columns: 1fr; }
+    .mk-stats { grid-template-columns: 1fr 1fr; gap: 30px 18px; }
+    .mk-foot-top { grid-template-columns: 1fr 1fr; }
+    .mk-links { display: none; }
+    .mk-burger { display: grid; place-items: center; }
+    .mk-nav-r .mk-btn-ghost { display: none; }
+    .mk-mmenu.open { display: block; position: fixed; inset: 68px 0 auto; z-index: 59; background: var(--bg); border-bottom: 1px solid var(--border); padding: 14px 28px 22px; box-shadow: var(--shadow-xl); }
+    .mk-mmenu.open a { display: block; padding: 12px 6px; font-weight: 600; border-bottom: 1px solid var(--border); }
+  }
+  @media (max-width: 560px) {
+    .mk-types { grid-template-columns: 1fr; }
+    .mk-stats { grid-template-columns: 1fr 1fr; }
+    .mk-wrap { padding: 0 18px; }
+  }
+</style>
+</helmet>
+
+<div class="mk" data-theme="{{ theme }}">
+
+  <!-- NAV -->
+  <nav class="mk-nav">
+    <div class="mk-wrap mk-nav-in">
+      <a class="mk-brand"><span class="mk-logo"></span>invoxai</a>
+      <div class="mk-links">
+        <a href="#surfaces">Platform</a>
+        <a href="#types">Page types</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+      </div>
+      <div class="mk-nav-r">
+        <button class="mk-tgl" onClick="{{ toggle }}" title="Toggle theme">{{ themeIcon }}</button>
+        <a class="mk-btn mk-btn-ghost">Log in</a>
+        <a class="mk-btn mk-btn-grad">Start free<span class="sh"></span></a>
+        <button class="mk-burger" onClick="{{ toggleMenu }}">☰</button>
+      </div>
+    </div>
+  </nav>
+  <div class="mk-mmenu {{ menuClass }}">
+    <a href="#surfaces" onClick="{{ closeMenu }}">Platform</a>
+    <a href="#types" onClick="{{ closeMenu }}">Page types</a>
+    <a href="#features" onClick="{{ closeMenu }}">Features</a>
+    <a href="#pricing" onClick="{{ closeMenu }}">Pricing</a>
+    <a onClick="{{ closeMenu }}">Log in</a>
+  </div>
+
+  <!-- HERO -->
+  <header class="mk-hero">
+    <div class="mk-aurora"><div class="mk-blob b1"></div><div class="mk-blob b2"></div><div class="mk-blob b3"></div></div>
+    <div class="mk-wrap mk-hero-in">
+      <div>
+        <span class="mk-eyebrow"><span class="pin">India-first</span> All-in-one creator &amp; commerce platform</span>
+        <h1 class="mk-h1">Sell anything.<br>On <span class="g">your own domain.</span><br>Keep more of every sale.</h1>
+        <p class="mk-sub">Build stores, courses, bookings, paid communities and link-in-bio pages — host them on your subdomain or custom domain, add Meta &amp; Google pixels with no code, and connect your own payment gateway. SEO-ready and ad-ready from day one.</p>
+        <div class="mk-cta-row">
+          <a class="mk-btn mk-btn-grad mk-btn-lg" style="padding:14px 26px;font-size:15.5px">Start free — no card<span class="sh"></span></a>
+          <a class="mk-btn mk-btn-ghost" style="padding:14px 22px;font-size:15px">▷ See it in action</a>
+        </div>
+        <div class="mk-claim">
+          <span><span class="tick">✓</span> Free subdomain included</span>
+          <span><span class="tick">✓</span> Your gateway, your money</span>
+          <span><span class="tick">✓</span> No-code ad pixels</span>
+        </div>
+      </div>
+
+      <div class="mk-stage">
+        <div class="mk-browser">
+          <div class="mk-bbar">
+            <span class="mk-dot3" style="background:#ff5f57"></span><span class="mk-dot3" style="background:#febc2e"></span><span class="mk-dot3" style="background:#28c840"></span>
+            <span class="mk-url">aanya.invoxai.io/store</span>
+          </div>
+          <div class="mk-store">
+            <div class="mk-store-hero"></div>
+            <div class="mk-store-row">
+              <div class="mk-pcard"><div class="im"></div><div class="tx"><div class="l" style="width:80%"></div><div class="p">₹499</div></div></div>
+              <div class="mk-pcard"><div class="im"></div><div class="tx"><div class="l" style="width:65%"></div><div class="p">₹1,299</div></div></div>
+              <div class="mk-pcard"><div class="im"></div><div class="tx"><div class="l" style="width:72%"></div><div class="p">₹899</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mk-fcard c1">
+          <div class="mk-fc-row">
+            <span class="mk-fc-ic" style="background:var(--green)">₹</span>
+            <div class="mk-fc-t"><b>Payment received</b><span>₹1,499 · Razorpay</span></div>
+          </div>
+        </div>
+        <div class="mk-fcard c2">
+          <div class="mk-fc-t"><b style="margin-bottom:2px">This week</b><span>Visitors · Sales</span></div>
+          <div class="mk-spark">
+            <i style="height:40%"></i><i style="height:62%"></i><i style="height:48%"></i><i style="height:78%"></i><i style="height:58%"></i><i style="height:92%"></i><i style="height:70%"></i>
+          </div>
+        </div>
+        <div class="mk-fcard c3">
+          <div class="mk-fc-row">
+            <span class="mk-fc-ic" style="background:var(--accent)">◎</span>
+            <div class="mk-fc-t"><b>Page published</b><span>SEO + pixels live</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TRUST -->
+  <section class="mk-trust">
+    <div class="mk-wrap"><div class="lbl">Trusted by independent sellers, coaches &amp; D2C brands</div></div>
+    <div class="mk-marq"><div class="mk-marq-tr">
+      <b>Studio Aanya</b><b>FitWithDev</b><b>NoteCraft</b><b>The Spice Co.</b><b>Lumen Courses</b><b>Mehta Audio</b><b>Bloom &amp; Co</b><b>CodeKaro</b>
+      <b>Studio Aanya</b><b>FitWithDev</b><b>NoteCraft</b><b>The Spice Co.</b><b>Lumen Courses</b><b>Mehta Audio</b><b>Bloom &amp; Co</b><b>CodeKaro</b>
+    </div></div>
+  </section>
+
+  <!-- SURFACES -->
+  <section class="mk-sec" id="surfaces">
+    <div class="mk-wrap">
+      <div class="mk-sec-head reveal">
+        <div class="mk-kick">One account, three surfaces</div>
+        <h2>Run the whole business in one place</h2>
+        <p>Sellers build and grow. Buyers track every order. You stay in control. Each surface is isolated, fast, and server-rendered.</p>
+      </div>
+      <div class="mk-3">
+        <div class="mk-surface reveal"><div class="sic" style="background:var(--grad)">◳</div><h3>Seller dashboard</h3><p>Page builders, products, wallet, CRM, analytics, gateways and email — everything to launch and scale.</p><div class="url">app.invoxai.io</div></div>
+        <div class="mk-surface reveal"><div class="sic" style="background:var(--accent)">◷</div><h3>Buyer corner</h3><p>One identity across every store. Buyers see purchase history, totals and downloads — login with Google or OTP.</p><div class="url">orders &amp; downloads</div></div>
+        <div class="mk-surface reveal"><div class="sic" style="background:var(--secondary)">⚙</div><h3>Admin control</h3><p>Plans, per-category commission, branding, the 6 revenue streams, health monitoring and platform email.</p><div class="url">admin.invoxai.io</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE TYPES -->
+  <section class="mk-sec" id="types" style="background:var(--s2)">
+    <div class="mk-wrap">
+      <div class="mk-sec-head reveal">
+        <div class="mk-kick">Ten ways to sell</div>
+        <h2>A page type for every offer</h2>
+        <p>Launch flagship templates today, mix and match across your site, and add custom-slug links you can run ads straight to.</p>
+      </div>
+      <div class="mk-types">
+        <div class="mk-type reveal"><div class="ti">🔗</div><b>Link-in-bio</b><div class="pth">/bio</div></div>
+        <div class="mk-type reveal"><div class="ti">🛍️</div><b>Digital store</b><div class="pth">/store</div></div>
+        <div class="mk-type reveal"><div class="ti">📦</div><b>One-page product</b><div class="pth">/opp/{id}</div></div>
+        <div class="mk-type reveal"><div class="ti">🎓</div><b>Courses</b><div class="pth">/courses</div></div>
+        <div class="mk-type reveal"><div class="ti">📅</div><b>1-to-1 booking</b><div class="pth">/book/{id}</div></div>
+        <div class="mk-type reveal"><div class="ti">🎟️</div><b>Event booking</b><div class="pth">/env/{id}</div></div>
+        <div class="mk-type reveal"><div class="ti">💳</div><b>Payment page</b><div class="pth">/pay/{id}</div></div>
+        <div class="mk-type reveal"><div class="ti">📝</div><b>Lead form</b><div class="pth">/ldf/{id}</div></div>
+        <div class="mk-type reveal"><div class="ti">⭐</div><b>VIP channel</b><div class="pth">/vpc/{id}</div></div>
+        <div class="mk-type reveal"><div class="ti">🚀</div><b>Landing page</b><div class="pth">/led/{id}</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE 1: wallet -->
+  <section class="mk-sec" id="features">
+    <div class="mk-wrap">
+      <div class="mk-feat">
+        <div class="reveal">
+          <div class="mk-kick">Your money, your gateway</div>
+          <h2 style="font-size:clamp(26px,3.4vw,38px);font-weight:800">Buyers pay you directly. We only take a small cut.</h2>
+          <div class="mk-feat-list">
+            <div class="mk-feat-li"><span class="fi">🔌</span><div><b>Connect your own gateway</b><p>Razorpay, Cashfree, Stripe, PayU or PhonePe — payouts land in your account, not ours.</p></div></div>
+            <div class="mk-feat-li"><span class="fi">👛</span><div><b>Prepaid commission wallet</b><p>A small per-category commission is deducted from your wallet on each sale — fully auditable ledger, daily invoice.</p></div></div>
+            <div class="mk-feat-li"><span class="fi">🧾</span><div><b>Every order recorded</b><p>Orders, customers and total spend flow straight into your CRM and analytics.</p></div></div>
+          </div>
+        </div>
+        <div class="mk-panel reveal">
+          <div class="mk-wallet-top"><div><div style="font-size:12.5px;color:var(--muted);font-weight:600">Commission wallet</div><div class="mk-wallet-bal">₹6,420.00</div></div><span class="mk-btn mk-btn-grad" style="padding:9px 15px;font-size:13px">Recharge</span></div>
+          <div class="mk-ledger">
+            <div class="mk-led-row"><span class="ic" style="background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)">↓</span><div><div style="font-weight:600">Sale · Mixing Masterclass</div><div style="color:var(--muted);font-size:12px">Courses · 6% commission</div></div><span class="am" style="color:var(--green)">−₹90</span></div>
+            <div class="mk-led-row"><span class="ic" style="background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)">↓</span><div><div style="font-weight:600">Sale · Notion Pack</div><div style="color:var(--muted);font-size:12px">Digital · 4% commission</div></div><span class="am" style="color:var(--green)">−₹16</span></div>
+            <div class="mk-led-row"><span class="ic" style="background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)">↑</span><div><div style="font-weight:600">Wallet recharge</div><div style="color:var(--muted);font-size:12px">Razorpay · today</div></div><span class="am">+₹2,000</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE 2: pixels/seo -->
+  <section class="mk-sec" style="background:var(--s2)">
+    <div class="mk-wrap">
+      <div class="mk-feat rev">
+        <div class="reveal">
+          <div class="mk-kick">Built for paid &amp; organic traffic</div>
+          <h2 style="font-size:clamp(26px,3.4vw,38px);font-weight:800">Run ads on day one. Rank on Google by month two.</h2>
+          <div class="mk-feat-list">
+            <div class="mk-feat-li"><span class="fi">🎯</span><div><b>No-code ad pixels</b><p>Drop in Meta &amp; Google pixel IDs per page. View, click and Purchase events fire automatically — including on checkout.</p></div></div>
+            <div class="mk-feat-li"><span class="fi">🔍</span><div><b>SEO on every page</b><p>Meta title, description, slug, Open Graph, Twitter cards, canonical, robots and schema.org — all seller-editable.</p></div></div>
+            <div class="mk-feat-li"><span class="fi">⚡</span><div><b>SSR + CDN fast</b><p>Server-rendered for Core Web Vitals and clean, lowercase URLs that convert ad clicks.</p></div></div>
+          </div>
+        </div>
+        <div class="mk-panel reveal">
+          <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:12px">Live on this page</div>
+          <div class="mk-chips">
+            <span class="mk-chip"><span class="d">●</span>Meta Pixel</span>
+            <span class="mk-chip"><span class="d">●</span>Google Ads</span>
+            <span class="mk-chip"><span class="d">●</span>Purchase event</span>
+            <span class="mk-chip"><span class="d">●</span>OG image</span>
+            <span class="mk-chip"><span class="d">●</span>schema.org Product</span>
+            <span class="mk-chip"><span class="d">●</span>Canonical</span>
+            <span class="mk-chip"><span class="d">●</span>sitemap.xml</span>
+          </div>
+          <div style="margin-top:18px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+            <div style="background:var(--s2);padding:9px 12px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted)">Google preview</div>
+            <div style="padding:13px">
+              <div style="color:var(--accent);font-size:13px">aanya.invoxai.io › store › mixing-masterclass</div>
+              <div style="color:#1a0dab;font-size:16px;margin:3px 0 2px">Mixing Masterclass — Learn to Mix Like a Pro</div>
+              <div style="color:var(--muted);font-size:12.5px">Master EQ, compression and space in 12 lessons. Lifetime access, instant download…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="mk-sec">
+    <div class="mk-wrap">
+      <div class="mk-stats">
+        <div class="mk-stat reveal"><div class="n" data-count="10">10</div><div class="l">Page types to sell with</div></div>
+        <div class="mk-stat reveal"><div class="n" data-count="6">6</div><div class="l">Revenue streams, one wallet</div></div>
+        <div class="mk-stat reveal"><div class="n" data-count="5">5</div><div class="l">Payment gateways supported</div></div>
+        <div class="mk-stat reveal"><div class="n" data-suffix="min">2</div><div class="l">From signup to live page</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="mk-sec" id="pricing" style="background:var(--s2)">
+    <div class="mk-wrap">
+      <div class="mk-sec-head reveal">
+        <div class="mk-kick">Simple pricing</div>
+        <h2>Start free. Pay less as you grow.</h2>
+        <p>Lower commission on higher tiers. One subdomain and one custom domain included on every paid plan.</p>
+      </div>
+      <div class="mk-plans">
+        <div class="mk-plan reveal">
+          <div class="pn">Starter</div>
+          <div class="pp">Free</div>
+          <div class="pd">Everything to launch your first page.</div>
+          <ul><li>1 free subdomain</li><li>Bio + one-page product</li><li>Lead forms &amp; pixels</li><li>6% commission per sale</li></ul>
+          <a class="mk-btn mk-btn-ghost" style="width:100%">Get started</a>
+        </div>
+        <div class="mk-plan feat reveal">
+          <span class="rib">Most popular</span>
+          <div class="pn">Growth</div>
+          <div class="pp">₹899<small> /mo</small></div>
+          <div class="pd">For sellers running ads &amp; scaling.</div>
+          <ul><li>Custom domain included</li><li>Store, courses &amp; events</li><li>Abandoned-cart recovery</li><li>Coupons &amp; discount links</li><li>3% commission per sale</li></ul>
+          <a class="mk-btn mk-btn-grad" style="width:100%">Start 14-day trial<span class="sh"></span></a>
+        </div>
+        <div class="mk-plan reveal">
+          <div class="pn">Scale</div>
+          <div class="pp">₹2,499<small> /mo</small></div>
+          <div class="pd">For brands &amp; agencies.</div>
+          <ul><li>5 custom domains</li><li>Premium templates</li><li>Seller brand email + automation</li><li>Priority support</li><li>1.5% commission per sale</li></ul>
+          <a class="mk-btn mk-btn-ghost" style="width:100%">Choose Scale</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="mk-sec">
+    <div class="mk-wrap">
+      <div class="mk-sec-head reveal">
+        <div class="mk-kick">Loved by sellers</div>
+        <h2>From first sale to full-time</h2>
+      </div>
+      <div class="mk-tgrid">
+        <div class="mk-quote reveal"><div class="st">★★★★★</div><p>“I moved off three different tools. Store, course and checkout now live on one domain — and Razorpay payouts hit my account the same day.”</p><div class="who"><span class="av">A</span><div><b>Aanya Sharma</b><span>Studio Aanya · D2C</span></div></div></div>
+        <div class="mk-quote reveal"><div class="st">★★★★★</div><p>“The no-code Meta pixel alone paid for the plan. I run ads straight to a landing page and watch Purchase events fire live.”</p><div class="who"><span class="av">D</span><div><b>Dev Mehta</b><span>FitWithDev · Coaching</span></div></div></div>
+        <div class="mk-quote reveal"><div class="st">★★★★★</div><p>“Set up my link-in-bio in ten minutes, then added a paid community. The wallet commission is tiny compared to what I keep.”</p><div class="who"><span class="av">N</span><div><b>Nisha Rao</b><span>NoteCraft · Creator</span></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BAND -->
+  <section class="mk-sec" style="padding-top:20px">
+    <div class="mk-wrap">
+      <div class="mk-ctaband reveal">
+        <h2>Claim your subdomain in seconds</h2>
+        <p>Your store could be live before this page finishes loading.</p>
+        <div class="mk-cb-input">
+          <input value="{{ subVal }}" onInput="{{ onSub }}" placeholder="yourname" />
+          <span class="sfx">.invoxai.io</span>
+          <button class="mk-cb-go">Claim it →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="mk-foot">
+    <div class="mk-wrap">
+      <div class="mk-foot-top">
+        <div class="mk-foot-col">
+          <a class="mk-brand" style="font-size:19px"><span class="mk-logo"></span>invoxai</a>
+          <p class="d">The all-in-one platform to sell on your own domain — India-first, built for the world.</p>
+        </div>
+        <div class="mk-foot-col"><h5>Product</h5><a>Page builders</a><a>Templates</a><a>Wallet &amp; payments</a><a>Analytics</a><a>Pricing</a></div>
+        <div class="mk-foot-col"><h5>Sell with</h5><a>Digital store</a><a>Courses</a><a>Bookings &amp; events</a><a>Paid communities</a><a>Lead forms</a></div>
+        <div class="mk-foot-col"><h5>Company</h5><a>About</a><a>Help center</a><a>Status</a><a>Privacy</a><a>Terms</a></div>
+      </div>
+      <div class="mk-foot-bot">
+        <span>© 2026 invoxai.io · Made in India 🇮🇳</span>
+        <span>SSR + CDN · Supabase · Hosted on a VPS with auto-SSL</span>
+      </div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { theme: "light", menu: false, sub: "" };
+
+  componentDidMount() {
+    const reveal = (el) => el.classList.add("in");
+    // Progressive enhancement: try IntersectionObserver for staggered reveal,
+    // but NEVER let content stay hidden if it doesn't fire.
+    let ioWorks = false;
+    try {
+      this._io = new IntersectionObserver((entries) => {
+        ioWorks = true;
+        entries.forEach(e => { if (e.isIntersecting) { reveal(e.target); this._io.unobserve(e.target); } });
+      }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+      requestAnimationFrame(() => {
+        document.querySelectorAll(".reveal").forEach(el => this._io.observe(el));
+      });
+    } catch (_) { /* no IO support */ }
+    // Fallback: reveal everything still hidden shortly after load.
+    this._fallback = setTimeout(() => {
+      document.querySelectorAll(".reveal:not(.in)").forEach(reveal);
+    }, 700);
+    // Count-up runs on a timer (not gated on an observer that may never fire).
+    setTimeout(() => this._countUp(), 350);
+  }
+  componentWillUnmount() { if (this._io) this._io.disconnect(); clearTimeout(this._fallback); }
+
+  _countUp() {
+    document.querySelectorAll("[data-count]").forEach(el => {
+      const target = parseInt(el.getAttribute("data-count"), 10);
+      const suffix = el.getAttribute("data-suffix") || "";
+      let cur = 0; const step = Math.max(1, Math.round(target / 26));
+      const tick = () => {
+        cur += step;
+        if (cur >= target) { el.textContent = target + suffix; }
+        else { el.textContent = cur + suffix; requestAnimationFrame(tick); }
+      };
+      tick();
+    });
+    // suffix-only stat (e.g. "2 min")
+    document.querySelectorAll("[data-suffix]:not([data-count])").forEach(el => {
+      const base = (el.textContent || "").trim();
+      el.textContent = base + " " + el.getAttribute("data-suffix");
+    });
+  }
+
+  renderVals() {
+    return {
+      theme: this.state.theme,
+      themeIcon: this.state.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(s => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      menuClass: this.state.menu ? "open" : "",
+      toggleMenu: () => this.setState(s => ({ menu: !s.menu })),
+      closeMenu: () => this.setState({ menu: false }),
+      subVal: this.state.sub,
+      onSub: (e) => this.setState({ sub: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })
+    };
+  }
+}
+</script>
+</body>
+</html>

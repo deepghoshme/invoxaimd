@@ -39,24 +39,15 @@ export default async function OnboardingPage() {
     .order("sort_order");
 
   return (
-    <main
-      style={{
-        minHeight: "100dvh",
-        display: "grid",
-        placeItems: "center",
-        padding: "var(--space-3)",
+    <OnboardingWizard
+      email={user.email ?? ""}
+      initial={{
+        store_name: store?.store_name ?? "",
+        subdomain: store?.subdomain ?? "",
+        category_id: store?.category_id ?? "",
+        step: (store?.onboarding_step ?? "store_name") as string,
       }}
-    >
-      <OnboardingWizard
-        email={user.email ?? ""}
-        initial={{
-          store_name: store?.store_name ?? "",
-          subdomain: store?.subdomain ?? "",
-          category_id: store?.category_id ?? "",
-          step: (store?.onboarding_step ?? "store_name") as string,
-        }}
-        categories={categories ?? []}
-      />
-    </main>
+      categories={categories ?? []}
+    />
   );
 }

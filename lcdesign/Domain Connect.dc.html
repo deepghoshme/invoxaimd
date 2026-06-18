@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes dn-spin { to { transform: rotate(360deg); } }
+  @keyframes dn-in { from { opacity: .4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes dn-toast { from { transform: translate(-50%,150%); opacity: 0; } to { transform: translate(-50%,0); opacity: 1; } }
+  .dn {
+    --bg: #fff9f4; --card: #fff; --s2: #fff3ec;
+    --primary: #ff6a3d; --secondary: #ff4d7d; --accent: #7b3fe4; --gold: #ffb23e;
+    --text: #2b1b2e; --muted: #7a6770; --border: #f0e1d6; --green: #1fb57a;
+    --grad: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 72%,#7b3fe4);
+    --shadow: 0 1px 2px rgba(43,27,46,.04), 0 14px 34px -20px rgba(43,27,46,.26);
+    --fh: "Sora", system-ui, sans-serif; --fb: "Inter", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100dvh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .dn[data-theme="dark"] { --bg: #16101f; --card: #221833; --s2: #2a2040; --primary: #ff7e55; --secondary: #ff6aa0; --accent: #a06bff; --gold: #ffc773; --text: #f6eef2; --muted: #b9a8bc; --border: #34264a; --green: #36c98e; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px -20px rgba(0,0,0,.6); }
+  .dn h1,.dn h2,.dn h3 { margin: 0; font-family: var(--fh); letter-spacing: -.02em; }
+  .dn p { margin: 0; }
+  .dn-wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  .dn-nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb,var(--bg) 86%,transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .dn-nav-in { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .dn-brand { display: flex; align-items: center; gap: 9px; font-family: var(--fh); font-weight: 800; font-size: 16px; } .dn-logo { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); } .dn-crumb { font-size: 13px; color: var(--muted); } .dn-crumb b { color: var(--text); }
+  .dn-tgl { margin-left: auto; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-size: 14px; }
+
+  .dn-main { padding: 28px 0 60px; }
+  .dn-h { margin-bottom: 18px; } .dn-h h1 { font-size: 23px; } .dn-h p { color: var(--muted); font-size: 13.5px; margin-top: 5px; }
+
+  .dn-steps { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+  .dn-st { display: flex; align-items: center; gap: 6px; flex: 1; } .dn-st .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; font-family: var(--fh); background: var(--s2); color: var(--muted); flex: none; } .dn-st.on .dot { background: var(--grad); color: #fff; } .dn-st.done .dot { background: var(--green); color: #fff; } .dn-st .lb { font-size: 11.5px; font-weight: 600; color: var(--muted); } .dn-st.on .lb, .dn-st.done .lb { color: var(--text); } .dn-st .line { flex: 1; height: 2px; background: var(--border); } .dn-st.done .line { background: var(--green); }
+
+  .dn-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); animation: dn-in .3s ease; }
+  .dn-ct { font-size: 16px; margin-bottom: 6px; } .dn-sub { color: var(--muted); font-size: 13.5px; margin-bottom: 16px; }
+  .dn-label { display: block; font-size: 12.5px; font-weight: 700; margin: 12px 0 6px; }
+  .dn-suffix { display: flex; align-items: center; background: var(--bg); border: 1.5px solid var(--border); border-radius: 11px; overflow: hidden; } .dn-suffix:focus-within { border-color: var(--primary); } .dn-suffix input { flex: 1; border: 0; background: transparent; padding: 12px 14px; font: inherit; font-size: 15px; color: var(--text); outline: none; }
+  .dn-code { font-family: ui-monospace, Menlo, monospace; background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-size: 13px; display: flex; align-items: center; gap: 10px; } .dn-code .k { color: var(--muted); } .dn-code .v { font-weight: 700; color: var(--text); } .dn-code .cp { margin-left: auto; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+  .dn-rec { display: grid; grid-template-columns: 70px 1fr 1fr; gap: 1px; background: var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; } .dn-rec > div { background: var(--card); padding: 11px 13px; font-size: 13px; } .dn-rec .hd { background: var(--s2); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; } .dn-rec .mono { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+
+  .dn-go { width: 100%; margin-top: 18px; background: var(--grad); color: #fff; border: 0; border-radius: 12px; padding: 14px; font-family: var(--fh); font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; } .dn-go:disabled { opacity: .6; }
+  .dn-spin { width: 17px; height: 17px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: dn-spin .7s linear infinite; }
+  .dn-ghost { width: 100%; margin-top: 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-family: var(--fh); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .dn-checklist { display: flex; flex-direction: column; gap: 11px; margin-top: 14px; } .dn-cl { display: flex; align-items: center; gap: 11px; font-size: 13.5px; } .dn-cl .c { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex: none; } .dn-cl .c.ok { background: color-mix(in srgb,var(--green) 16%,transparent); color: var(--green); } .dn-cl .c.wait { background: var(--s2); color: var(--muted); }
+
+  .dn-done { text-align: center; padding: 14px 6px; } .dn-check { width: 70px; height: 70px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-size: 32px; margin: 0 auto 14px; } .dn-done h2 { font-size: 22px; } .dn-done .url { font-family: ui-monospace, Menlo, monospace; font-size: 14px; color: var(--primary); font-weight: 600; margin: 14px 0; } .dn-auto { text-align: left; background: var(--s2); border-radius: 12px; padding: 16px; margin-top: 8px; } .dn-auto .row { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 7px 0; } .dn-auto .row .e { color: var(--green); font-weight: 800; }
+
+  .dn-toastbox { position: fixed; left: 50%; bottom: 24px; z-index: 60; background: #18121f; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); display: flex; align-items: center; gap: 9px; animation: dn-toast .4s ease; } .dn-toastbox .d { width: 8px; height: 8px; border-radius: 50%; background: #36c98e; }
+  @media (max-width: 560px) { .dn-rec { grid-template-columns: 1fr; } }
+</style>
+</helmet>
+
+<div class="dn" data-theme="{{ theme }}">
+  <nav class="dn-nav">
+    <div class="dn-wrap dn-nav-in">
+      <div class="dn-brand"><span class="dn-logo"></span>invoxai</div>
+      <span class="dn-crumb">Settings / Domains / <b>Connect</b></span>
+      <button class="dn-tgl" onClick="{{ toggle }}">{{ themeIcon }}</button>
+    </div>
+  </nav>
+
+  <main class="dn-wrap dn-main">
+    <div class="dn-h"><h1>Connect a custom domain</h1><p>Point your own domain at invoxai — we issue SSL automatically.</p></div>
+
+    <div class="dn-steps">
+      <div class="dn-st {{ s1cls }}"><span class="dot">{{ s1dot }}</span><span class="lb">Add</span><span class="line"></span></div>
+      <div class="dn-st {{ s2cls }}"><span class="dot">{{ s2dot }}</span><span class="lb">DNS</span><span class="line"></span></div>
+      <div class="dn-st {{ s3cls }}"><span class="dot">{{ s3dot }}</span><span class="lb">Verify</span><span class="line"></span></div>
+      <div class="dn-st {{ s4cls }}"><span class="dot">4</span><span class="lb">Live</span></div>
+    </div>
+
+    <!-- STEP 1 -->
+    <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+      <div class="dn-card">
+        <h3 class="dn-ct">Add your domain</h3>
+        <p class="dn-sub">Enter the domain you own (1 included on your plan, extras ₹199/mo).</p>
+        <label class="dn-label">Domain</label>
+        <div class="dn-suffix"><input value="{{ domain }}" onInput="{{ onDomain }}" placeholder="studioaanya.com" /></div>
+        <button class="dn-go" onClick="{{ next }}" disabled="{{ s1Disabled }}">Add domain →</button>
+      </div>
+    </sc-if>
+
+    <!-- STEP 2 -->
+    <sc-if value="{{ isS2 }}" hint-placeholder-val="{{ false }}">
+      <div class="dn-card">
+        <h3 class="dn-ct">Add this DNS record</h3>
+        <p class="dn-sub">In your registrar's DNS settings for <b>{{ domain }}</b>, add:</p>
+        <div class="dn-rec">
+          <div class="hd">Type</div><div class="hd">Name</div><div class="hd">Value</div>
+          <div class="mono">CNAME</div><div class="mono">@</div><div class="mono">cname.invoxai.io</div>
+        </div>
+        <div class="dn-code" style="margin-top:10px"><span class="k">Verification</span><span class="v">TXT invoxai-verify={{ token }}</span><button class="cp" onClick="{{ copy }}">Copy</button></div>
+        <p class="dn-sub" style="margin:14px 0 0">DNS can take a few minutes to propagate.</p>
+        <button class="dn-go" onClick="{{ verify }}" disabled="{{ verifying }}">
+          <sc-if value="{{ verifying }}" hint-placeholder-val="{{ false }}"><span class="dn-spin"></span>Checking DNS…</sc-if>
+          <sc-if value="{{ notVerifying }}" hint-placeholder-val="{{ true }}">Verify DNS</sc-if>
+        </button>
+        <button class="dn-ghost" onClick="{{ back }}">‹ Back</button>
+      </div>
+    </sc-if>
+
+    <!-- STEP 3 -->
+    <sc-if value="{{ isS3 }}" hint-placeholder-val="{{ false }}">
+      <div class="dn-card">
+        <h3 class="dn-ct">Verifying &amp; issuing SSL</h3>
+        <p class="dn-sub">We're checking your DNS and provisioning a certificate via Caddy.</p>
+        <div class="dn-checklist">
+          <div class="dn-cl"><span class="c ok">✓</span>CNAME record found</div>
+          <div class="dn-cl"><span class="c ok">✓</span>TXT verification matched</div>
+          <div class="dn-cl"><span class="c {{ sslCls }}">{{ sslIcon }}</span>SSL certificate issued</div>
+        </div>
+        <button class="dn-go" onClick="{{ finish }}" disabled="{{ issuing }}">
+          <sc-if value="{{ issuing }}" hint-placeholder-val="{{ true }}"><span class="dn-spin"></span>Issuing SSL…</sc-if>
+          <sc-if value="{{ notIssuing }}" hint-placeholder-val="{{ false }}">Set as primary domain →</sc-if>
+        </button>
+      </div>
+    </sc-if>
+
+    <!-- STEP 4 -->
+    <sc-if value="{{ isS4 }}" hint-placeholder-val="{{ false }}">
+      <div class="dn-card">
+        <div class="dn-done">
+          <div class="dn-check">✓</div>
+          <h2>Your domain is live!</h2>
+          <div class="url">https://{{ domain }}</div>
+          <div class="dn-auto">
+            <div class="row"><span class="e">✓</span>All pages moved to your domain</div>
+            <div class="row"><span class="e">✓</span>Old subdomain URLs now 301-redirect</div>
+            <div class="row"><span class="e">✓</span>SSL certificate active &amp; auto-renewing</div>
+            <div class="row"><span class="e">✓</span>Canonical tags updated for SEO</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div class="dn-toastbox"><span class="d"></span>{{ toastMsg }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:760}}">
+class Component extends DCLogic {
+  state = { theme: "light", step: 1, domain: "", verifying: false, issuing: true, toast: false, toastMsg: "" };
+  fire(m) { this.setState({ toast: true, toastMsg: m }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: false }), 1900); }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._s); }
+  next() { if (this.state.domain.trim().length < 3) return; this.setState({ step: 2 }); }
+  verify() {
+    if (this.state.verifying) return;
+    this.setState({ verifying: true });
+    setTimeout(() => { this.setState({ verifying: false, step: 3, issuing: true }); this._s = setTimeout(() => this.setState({ issuing: false }), 1500); }, 1500);
+  }
+  finish() { if (this.state.issuing) return; this.setState({ step: 4 }); this.fire("🎉 " + (this.state.domain || "Your domain") + " is now primary"); }
+  renderVals() {
+    const s = this.state;
+    const stc = (n) => s.step === n ? "on" : (s.step > n ? "done" : "");
+    return {
+      theme: s.theme, themeIcon: s.theme === "dark" ? "☀" : "☾",
+      toggle: () => this.setState(st => ({ theme: st.theme === "dark" ? "light" : "dark" })),
+      isS1: s.step === 1, isS2: s.step === 2, isS3: s.step === 3, isS4: s.step === 4,
+      s1cls: stc(1), s2cls: stc(2), s3cls: stc(3), s4cls: stc(4),
+      s1dot: s.step > 1 ? "✓" : "1", s2dot: s.step > 2 ? "✓" : "2", s3dot: s.step > 3 ? "✓" : "3",
+      domain: s.domain, onDomain: (e) => this.setState({ domain: e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, "") }),
+      s1Disabled: s.domain.trim().length < 3, next: () => this.next(), back: () => this.setState({ step: 1 }),
+      token: "9xK2mQ", copy: () => this.fire("📋 Copied"),
+      verify: () => this.verify(), verifying: s.verifying, notVerifying: !s.verifying,
+      issuing: s.issuing, notIssuing: !s.issuing, sslCls: s.issuing ? "wait" : "ok", sslIcon: s.issuing ? "…" : "✓",
+      finish: () => this.finish(), toast: s.toast, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>
