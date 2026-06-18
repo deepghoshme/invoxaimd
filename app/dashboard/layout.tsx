@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import DxShell, { type DxNavGroup } from "@/components/dx/Shell";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentStore } from "@/lib/auth";
+import ImpersonationBanner from "./ImpersonationBanner";
 import "./dx.css";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +11,7 @@ const NAV: DxNavGroup[] = [
   { label: "Main", items: [
     { label: "Dashboard", icon: "grid", href: "/dashboard", exact: true },
     { label: "Analytics", icon: "chart", href: "/dashboard/analytics" },
+    { label: "A/B test", icon: "chart", href: "/dashboard/abtest" },
   ] },
   { label: "Pages", items: [
     { label: "Website", icon: "site", href: "/dashboard/website" },
@@ -40,6 +43,7 @@ const NAV: DxNavGroup[] = [
   ] },
   { label: "Account", items: [
     { label: "Notifications", icon: "bell", href: "/dashboard/notifications" },
+    { label: "Team & roles", icon: "users", href: "/dashboard/team" },
     { label: "Domains", icon: "globe", href: "/dashboard/domains" },
     { label: "Plan & billing", icon: "rupee", href: "/dashboard/billing" },
     { label: "Settings", icon: "cog", href: "/dashboard/settings" },
@@ -52,6 +56,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { impersonating } = await getCurrentStore();
 
   const meta = (user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string; picture?: string };
 
@@ -67,6 +73,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       ]}
       homeHref="/dashboard"
     >
+      {impersonating && <ImpersonationBanner storeName={impersonating} />}
       {children}
     </DxShell>
   );

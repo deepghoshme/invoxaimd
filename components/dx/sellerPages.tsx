@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { Phead, Kpis, Card, Table, Tag, Live, Buyer, Templates, AreaChart, Donut, PageType } from "./ui";
+import React from "react";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentStore } from "@/lib/auth";
+import { Phead, Kpis, Card, Table, Tag, Live, Buyer, Templates, Donut, PageType } from "./ui";
 import NewProductButton from "@/app/dashboard/pages/products/NewProductButton";
 
 const inr = (paise?: number | null) => "₹" + Math.round((paise ?? 0) / 100).toLocaleString("en-IN");
@@ -15,16 +17,389 @@ const Field = ({ label, value, ph, type }: { label: string; value?: string; ph?:
   <div className="dx-field"><label>{label}</label><input defaultValue={value} placeholder={ph} type={type} /></div>
 );
 
+/**
+ * Impersonation-aware context helper.
+ *
+ * Returns { sb, store } where `store` is the store the current session should
+ * SEE (target seller's store when impersonating; own store otherwise).
+ *
+ * Data reads in this file always pass store.id explicitly as a WHERE clause,
+ * so using the admin client for both paths is safe — queries are isolated by
+ * store_id. The admin client is required for impersonated stores because the
+ * admin's session-scoped client would fail RLS on the target seller's rows.
+ */
 async function ctx() {
-  const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  const { data: store } = user
-    ? await sb.from("stores").select("id, store_name, subdomain, custom_domain, custom_domain_verified, category_id").eq("owner_id", user.id).maybeSingle()
-    : { data: null };
+  const { store } = await getCurrentStore();
+  // Use the service-role client for all reads in this file. Every query is
+  // scoped by store.id, so there is no RLS bypass risk — the store id is the
+  // one we just validated (either the owner's own, or the admin-verified
+  // impersonated one from getCurrentStore).
+  const sb = createAdminClient();
   return { sb, store };
 }
 
 const TPL = [{ name: "Aurora", sub: "Bio template" }, { name: "Sunset", sub: "Store template" }, { name: "Bloom", sub: "Landing template" }];
+
+// ── Analytics page handler (also exported for the dedicated route) ────────────
+export async function analyticsPage(pgFilter?: string): Promise<React.ReactNode> {
+  const { sb, store } = await ctx();
+  const pg = (pgFilter && pgFilter.length > 0) ? pgFilter : "all";
+
+  // 1. Load all pages for this store (tab selector + top-pages lookup)
+  const { data: pages } = store
+    ? await sb
+        .from("pages")
+        .select("id, page_type, title, public_id, status")
+        .eq("store_id", store.id)
+        .order("created_at", { ascending: true })
+    : { data: [] };
+  const pageList = pages ?? [];
+
+  // Build tab list: All + store/bio singletons + opp pages
+  type PageTab = { id: string; label: string; note: string };
+  const tabs: PageTab[] = [{ id: "all", label: "All pages", note: "across all pages" }];
+  const storePage = pageList.find((p) => p.page_type === "store");
+  if (storePage) tabs.push({ id: storePage.id as string, label: "Store", note: "/store" });
+  const bioPage = pageList.find((p) => p.page_type === "bio");
+  if (bioPage) tabs.push({ id: bioPage.id as string, label: "Bio", note: "/bio" });
+  pageList
+    .filter((p) => p.page_type === "opp")
+    .forEach((p) => {
+      const raw = (p.title as string) || (p.public_id as string) || "Opp page";
+      tabs.push({
+        id: p.id as string,
+        label: raw.length > 22 ? raw.slice(0, 20) + "…" : raw,
+        note: `/opp/${p.public_id ?? p.id}`,
+      });
+    });
+
+  // Resolve page IDs in scope
+  const scopeIds: string[] = pg === "all" ? pageList.map((p) => p.id as string) : [pg];
+
+  // 2. Fetch page_events for scoped pages
+  // Schema: kind(view|click), device, page_id, store_id, created_at
+  // NOTE: no referrer/source field — traffic sources section is an honest placeholder.
+  const buildEventsQ = () => {
+    const q = sb
+      .from("page_events")
+      .select("kind, device, page_id, created_at")
+      .eq("store_id", store?.id ?? "");
+    return pg !== "all" && scopeIds.length > 0 ? q.in("page_id", scopeIds) : q;
+  };
+  const { data: events } = store ? await buildEventsQ() : { data: [] };
+
+  // 3. Fetch orders (created + paid) for funnel stages 3 & 4
+  const buildOrdersQ = () => {
+    const q = sb
+      .from("orders")
+      .select("amount, status, page_id, created_at")
+      .eq("store_id", store?.id ?? "");
+    return pg !== "all" && scopeIds.length > 0 ? q.in("page_id", scopeIds) : q;
+  };
+  const { data: allOrders } = store ? await buildOrdersQ() : { data: [] };
+
+  // 4. Aggregate
+  let views = 0, clicks = 0;
+  const dev: Record<string, number> = { mobile: 0, desktop: 0, tablet: 0 };
+  const dailyViews: Record<string, number> = {};
+  const viewsByPage: Record<string, number> = {};
+  const now = new Date();
+
+  (events ?? []).forEach((e) => {
+    if (e.kind === "view") {
+      views++;
+      const d = String(e.device ?? "");
+      if (d in dev) dev[d]++;
+      const day = String(e.created_at ?? "").slice(0, 10);
+      dailyViews[day] = (dailyViews[day] ?? 0) + 1;
+      const pid = String(e.page_id ?? "");
+      if (pid) viewsByPage[pid] = (viewsByPage[pid] ?? 0) + 1;
+    } else {
+      clicks++;
+    }
+  });
+
+  const ordersCreated = (allOrders ?? []).filter(
+    (o) => o.status === "created" || o.status === "paid"
+  ).length;
+  const ordersPaid = (allOrders ?? []).filter((o) => o.status === "paid").length;
+  const revenue = (allOrders ?? [])
+    .filter((o) => o.status === "paid")
+    .reduce((s, o) => s + (o.amount ?? 0), 0);
+
+  const ctr = views ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
+  const convRate = views ? `${((ordersPaid / views) * 100).toFixed(1)}%` : "0%";
+
+  // 5. 14-day daily bar chart
+  const chartPoints14: number[] = [];
+  const chartLabels14: string[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    chartPoints14.push(dailyViews[key] ?? 0);
+    chartLabels14.push(i === 0 ? "Today" : String(d.getDate()));
+  }
+  const hasChartData = chartPoints14.some((v) => v > 0);
+  const chartMax = hasChartData ? Math.max(...chartPoints14, 1) : 1;
+
+  // 6. Funnel
+  const f1 = views;
+  const f2 = clicks;
+  const f3 = ordersCreated;
+  const f4 = ordersPaid;
+  const fPct = (n: number) => (f1 > 0 ? Math.round((n / f1) * 100) : 0);
+  const fDrop = (from: number, to: number) =>
+    from > 0 ? Math.round(((from - to) / from) * 100) : 0;
+
+  // 7. Top pages
+  const revenueByPage: Record<string, number> = {};
+  const paidByPage: Record<string, number> = {};
+  (allOrders ?? [])
+    .filter((o) => o.status === "paid")
+    .forEach((o) => {
+      const pid = String(o.page_id ?? "");
+      if (pid) {
+        revenueByPage[pid] = (revenueByPage[pid] ?? 0) + (o.amount ?? 0);
+        paidByPage[pid] = (paidByPage[pid] ?? 0) + 1;
+      }
+    });
+
+  type TopRow = { path: string; views: number; conv: string; rev: string };
+  const topPageIds = Array.from(new Set([...Object.keys(viewsByPage), ...Object.keys(paidByPage)]));
+  const topPages: TopRow[] = topPageIds
+    .map((pid) => {
+      const p = pageList.find((x) => x.id === pid);
+      const path = p
+        ? p.page_type === "store"
+          ? "/store"
+          : p.page_type === "bio"
+          ? "/bio"
+          : `/opp/${p.public_id ?? pid}`
+        : `/${pid.slice(0, 8)}`;
+      const pv = viewsByPage[pid] ?? 0;
+      const paid = paidByPage[pid] ?? 0;
+      const rev = revenueByPage[pid] ?? 0;
+      return {
+        path,
+        views: pv,
+        conv: pv > 0 ? `${((paid / pv) * 100).toFixed(1)}%` : "—",
+        rev: rev > 0 ? inr(rev) : "—",
+      };
+    })
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 8);
+
+  // 8. Device donut
+  const devTotal = dev.mobile + dev.desktop + dev.tablet;
+  const devPct = (n: number) => (devTotal ? Math.round((n / devTotal) * 100) : 0);
+
+  // 9. Active tab
+  const activeTab = tabs.find((t) => t.id === pg) ?? tabs[0];
+
+  return (
+    <>
+      {/* Page selector tabs */}
+      <div className="dx-pageseg">
+        {tabs.map((t) => (
+          <a
+            key={t.id}
+            href={`/dashboard/analytics?pg=${t.id}`}
+            className={`dx-pseg-btn${t.id === pg ? " on" : ""}`}
+          >
+            {t.label}
+          </a>
+        ))}
+      </div>
+
+      {/* KPI row: Visitors, Page views, CTR, Revenue */}
+      <Kpis
+        items={[
+          { icon: "eye",   color: "var(--primary)",   label: "Visitors",          value: views.toLocaleString("en-IN") },
+          { icon: "link",  color: "var(--accent)",     label: "Page views",        value: views.toLocaleString("en-IN") },
+          { icon: "spark", color: "var(--secondary)",  label: "CTR (click / view)", value: ctr },
+          { icon: "rupee", color: "var(--gold)",       label: "Revenue",           value: inr(revenue) },
+        ]}
+      />
+
+      {/* Two-column layout */}
+      <div className="dx-grid dx-cols" style={{ alignItems: "start" }}>
+        {/* Left column */}
+        <div>
+          {/* 14-day bar chart */}
+          <Card title="Visitors · last 14 days">
+            {!hasChartData ? (
+              <div className="dx-empty">
+                No event data yet — views will appear here once your pages receive traffic.
+              </div>
+            ) : (
+              <div className="an-chart">
+                {chartPoints14.map((v, i) => (
+                  <div key={i} className="an-col">
+                    <div
+                      className={`an-bar${i < chartPoints14.length - 1 ? " dim" : ""}`}
+                      style={{ height: `${Math.max(4, Math.round((v / chartMax) * 100))}%` }}
+                    />
+                    <span className="an-lab">{chartLabels14[i]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Conversion funnel */}
+          <Card title="Conversion funnel">
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
+              {activeTab.note} · page_events (view/click) + orders (created/paid)
+            </div>
+            <div className="an-funnel">
+              <div className="an-step">
+                <div className="an-step-top"><b>Page views</b><span className="an-step-n">{f1.toLocaleString("en-IN")}</span></div>
+                <div className="an-step-track"><div className="an-step-fill" style={{ width: "100%" }}>100%</div></div>
+              </div>
+              <div className="an-step">
+                <div className="an-step-top"><b>Clicked buy / CTA</b><span className="an-step-n">{f2.toLocaleString("en-IN")}</span></div>
+                <div className="an-step-track">
+                  <div className="an-step-fill" style={{ width: `${Math.max(fPct(f2), f2 > 0 ? 4 : 0)}%` }}>
+                    {fPct(f2)}%
+                  </div>
+                </div>
+                {f1 > 0 && f2 < f1 && <div className="an-step-drop">▼ {fDrop(f1, f2)}% drop-off</div>}
+              </div>
+              <div className="an-step">
+                <div className="an-step-top"><b>Started checkout</b><span className="an-step-n">{f3.toLocaleString("en-IN")}</span></div>
+                <div className="an-step-track">
+                  <div className="an-step-fill" style={{ width: `${Math.max(fPct(f3), f3 > 0 ? 4 : 0)}%` }}>
+                    {fPct(f3)}%
+                  </div>
+                </div>
+                {f2 > 0 && f3 < f2 && <div className="an-step-drop">▼ {fDrop(f2, f3)}% drop-off</div>}
+              </div>
+              <div className="an-step">
+                <div className="an-step-top"><b>Purchased</b><span className="an-step-n">{f4.toLocaleString("en-IN")}</span></div>
+                <div className="an-step-track">
+                  <div className="an-step-fill" style={{ width: `${Math.max(fPct(f4), f4 > 0 ? 4 : 0)}%` }}>
+                    {fPct(f4)}%
+                  </div>
+                </div>
+                <div className="an-step-conv">
+                  {f4 > 0 ? `✓ ${convRate} conversion` : "No paid orders yet"}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Top pages table */}
+          <Card title="Top pages" link="by views">
+            {topPages.length === 0 ? (
+              <div className="dx-empty">No page data yet.</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Page</th>
+                    <th style={{ textAlign: "right" }}>Views</th>
+                    <th style={{ textAlign: "right" }}>Conv.</th>
+                    <th style={{ textAlign: "right" }}>Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topPages.map((row, i) => (
+                    <tr key={i}>
+                      <td><span className="dx-monopath">{row.path}</span></td>
+                      <td style={{ textAlign: "right", fontWeight: 600 }}>{row.views.toLocaleString("en-IN")}</td>
+                      <td style={{ textAlign: "right" }}>{row.conv}</td>
+                      <td style={{ textAlign: "right", fontWeight: 600 }}>{row.rev}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </div>
+
+        {/* Right column */}
+        <div>
+          {/* Traffic sources — honest: no referrer field in page_events yet */}
+          <Card title="Traffic sources">
+            <div style={{ padding: "4px 0 8px" }}>
+              <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Source tracking coming soon</div>
+              <p style={{ fontSize: 12.5, color: "var(--muted)", margin: 0 }}>
+                The <code className="an-code">page_events</code> table does not yet include a referrer
+                or UTM source column. Add a <code className="an-code">referrer text</code> field and
+                capture <code className="an-code">document.referrer</code> at view-time to unlock
+                organic / paid / direct breakdown here.
+              </p>
+            </div>
+          </Card>
+
+          {/* Devices donut */}
+          <Card title="Devices">
+            {devTotal === 0 ? (
+              <div className="dx-empty">No device data yet.</div>
+            ) : (
+              <>
+                <Donut
+                  segments={[
+                    { label: "Mobile",  pct: devPct(dev.mobile),  color: "var(--primary)" },
+                    { label: "Desktop", pct: devPct(dev.desktop), color: "var(--accent)" },
+                    { label: "Tablet",  pct: devPct(dev.tablet),  color: "var(--gold)" },
+                  ]}
+                />
+                <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
+                  {devPct(dev.mobile)}% mobile · {devTotal.toLocaleString("en-IN")} total view events
+                </div>
+              </>
+            )}
+          </Card>
+
+          {/* Pixel events — derived from what we actually track */}
+          <Card title="Pixel events">
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "var(--muted)" }}>PageView <span className="an-badge">kind=view</span></span>
+                <b>{views.toLocaleString("en-IN")}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "var(--muted)" }}>ViewContent <span className="an-badge">=PageView today</span></span>
+                <b>{views.toLocaleString("en-IN")}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "var(--muted)" }}>InitiateCheckout <span className="an-badge">orders created</span></span>
+                <b>{ordersCreated.toLocaleString("en-IN")}</b>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "var(--muted)" }}>Purchase <span className="an-badge">orders paid</span></span>
+                <b style={{ color: "var(--green)" }}>{ordersPaid.toLocaleString("en-IN")}</b>
+              </div>
+              <p style={{ fontSize: 11.5, color: "var(--muted)", margin: 0, borderTop: "1px solid var(--border)", paddingTop: 9 }}>
+                ViewContent will diverge from PageView once per-product view tracking is added (separate kind). InitiateCheckout counts all order rows (status: created OR paid).
+              </p>
+            </div>
+          </Card>
+
+          {/* Suggest more */}
+          <Card title="Improve tracking">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div className="an-suggest">
+                <b>Add UTM / referrer tracking</b>
+                <p>Add a <code>referrer text</code> column to <code>page_events</code> + capture <code>document.referrer</code> at view-time to unlock traffic-sources breakdown.</p>
+              </div>
+              <div className="an-suggest">
+                <b>Unique visitors</b>
+                <p>Store a hashed fingerprint or short session ID per event to distinguish unique vs repeat visitors (currently views = visitors).</p>
+              </div>
+              <div className="an-suggest">
+                <b>Connect Meta Pixel</b>
+                <p>Set a Pixel ID per page in the page builder to fire real browser-side pixel events alongside these server-side counts.</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export const SELLER_PAGES: Record<string, () => Promise<React.ReactNode>> = {
   product: async () => {
@@ -123,22 +498,10 @@ export const SELLER_PAGES: Record<string, () => Promise<React.ReactNode>> = {
     );
   },
 
-  wallet: async () => {
-    const { sb } = await ctx();
-    const { data: cats } = await sb.from("business_categories").select("name, commission_rate").order("sort_order");
-    return (
-      <>
-        <Phead title="Wallet" sub="Recharge and track commission." action={<button className="btn grad">Recharge</button>} />
-        <div className="dx-grid dx-cols">
-          <div><Card title="Commission ledger" link="Daily invoices"><Table cols={["Date", "Description", "Type", "Amount"]} rows={[]} empty="No wallet activity yet." /></Card></div>
-          <div>
-            <div className="dx-card" style={{ background: "var(--grad)", color: "#fff", border: 0, marginBottom: 16 }}><div style={{ fontSize: 12.5, opacity: 0.85 }}>Balance</div><div style={{ fontFamily: "var(--font-sora), sans-serif", fontSize: 28, fontWeight: 700, marginTop: 3 }}>₹0</div><div style={{ fontSize: 11.5, opacity: 0.9, marginTop: 8 }}>Sales pause at ₹0.</div><button className="btn" style={{ marginTop: 12, width: "100%", justifyContent: "center", background: "rgba(255,255,255,.95)", color: "#7a2f1c" }}>Recharge</button></div>
-            <Card title="Commission by category">{(cats ?? []).map((c) => <div className="dx-kv" key={c.name}><span>{c.name}</span><span className="dx-fw6">{(Number(c.commission_rate) * 100).toFixed(1)}%</span></div>)}</Card>
-          </div>
-        </div>
-      </>
-    );
-  },
+  // wallet is handled by the dedicated app/dashboard/wallet/page.tsx route.
+  // This stub is intentionally removed — the [...slug] catch-all is never
+  // reached for /dashboard/wallet because the static segment wins in Next.js
+  // route resolution. Keeping a stub here was misleading (hardcoded ₹0).
 
   coupons: async () => (
     <>
@@ -200,96 +563,7 @@ export const SELLER_PAGES: Record<string, () => Promise<React.ReactNode>> = {
     </>
   ),
 
-  analytics: async () => {
-    const { sb, store } = await ctx();
-
-    // ── Fetch all page_events for this store ─────────────────────────────────
-    const { data: events } = store
-      ? await sb
-          .from("page_events")
-          .select("kind, device, created_at")
-          .eq("store_id", store.id)
-      : { data: [] };
-
-    // ── Fetch paid orders for conversion / revenue ────────────────────────────
-    const { data: paidOrders } = store
-      ? await sb
-          .from("orders")
-          .select("amount, created_at")
-          .eq("store_id", store.id)
-          .eq("status", "paid")
-      : { data: [] };
-
-    // ── Aggregate KPIs ────────────────────────────────────────────────────────
-    let views = 0, clicks = 0;
-    const dev: Record<string, number> = { mobile: 0, desktop: 0, tablet: 0 };
-    // keyed by "YYYY-MM-DD" → view count (last 30 days)
-    const dailyViews: Record<string, number> = {};
-    const now = new Date();
-
-    (events ?? []).forEach((e) => {
-      if (e.kind === "view") {
-        views++;
-        if (e.device && dev[e.device] !== undefined) dev[e.device]++;
-        // bucket by calendar date
-        const day = e.created_at.slice(0, 10); // "YYYY-MM-DD"
-        dailyViews[day] = (dailyViews[day] ?? 0) + 1;
-      } else {
-        clicks++;
-      }
-    });
-
-    const orderCount = (paidOrders ?? []).length;
-    const revenue = (paidOrders ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
-    const ctr = views ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
-
-    // ── Build 30-day points array for the chart ───────────────────────────────
-    // Generate the last 30 calendar dates (oldest → newest) so x-axis is correct.
-    const chartPoints: number[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      chartPoints.push(dailyViews[key] ?? 0);
-    }
-    const hasChartData = chartPoints.some((v) => v > 0);
-
-    // ── Device donut ──────────────────────────────────────────────────────────
-    const devTotal = dev.mobile + dev.desktop + dev.tablet;
-    const pct = (n: number) => (devTotal ? Math.round((n / devTotal) * 100) : 0);
-
-    return (
-      <>
-        <Phead title="Analytics" sub="Visitors, conversions, and devices across all your pages." />
-        <Kpis items={[
-          { icon: "eye",   color: "var(--primary)",   label: "Total views",  value: views.toLocaleString("en-IN") },
-          { icon: "link",  color: "var(--secondary)",  label: "Link clicks",  value: clicks.toLocaleString("en-IN") },
-          { icon: "spark", color: "var(--green)",      label: "CTR",          value: ctr },
-          { icon: "bag",   color: "var(--accent)",     label: "Paid orders",  value: orderCount.toLocaleString("en-IN") },
-        ]} />
-        <div className="dx-grid dx-cols">
-          <div>
-            <Card title="Traffic" link="last 30 days">
-              <AreaChart points={hasChartData ? chartPoints : undefined} />
-            </Card>
-          </div>
-          <div>
-            <Card title="Devices">
-              {devTotal === 0 ? (
-                <div className="dx-empty">No device data yet.</div>
-              ) : (
-                <Donut segments={[
-                  { label: "Mobile",  pct: pct(dev.mobile),  color: "var(--primary)" },
-                  { label: "Desktop", pct: pct(dev.desktop), color: "var(--secondary)" },
-                  { label: "Tablet",  pct: pct(dev.tablet),  color: "var(--accent)" },
-                ]} />
-              )}
-            </Card>
-          </div>
-        </div>
-      </>
-    );
-  },
+  analytics: async () => analyticsPage("all"),
 
   // page-type management views (no backend yet)
   // NOTE: `website` has a dedicated route at app/dashboard/website/ (static

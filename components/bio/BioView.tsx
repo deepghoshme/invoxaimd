@@ -15,7 +15,20 @@ export default function BioView({
   const bg = content.bg ?? "aurora";
   const name = content.name || "Your name";
   const initial = (content.name || "A").trim().charAt(0).toUpperCase();
-  const links = (content.links ?? []).filter((l) => l.t || l.u || l.type === "header");
+  // Normalise legacy link records that used {url, label} instead of the
+  // canonical {u, t} keys. Old records from early builds may have the wrong
+  // keys; coerce them so they render rather than being silently dropped.
+  type AnyLink = Record<string, unknown>;
+  const links = (content.links ?? [])
+    .map((l) => {
+      const raw = l as AnyLink;
+      return {
+        ...l,
+        t: l.t || String(raw.label ?? ""),
+        u: l.u || String(raw.url ?? ""),
+      };
+    })
+    .filter((l) => l.t || l.u || l.type === "header");
   const socials = (content.socials ?? []).filter((s) => s.platform || s.label);
   const f = content.featured ?? {};
   const showReal = f.real && f.real !== f.off;

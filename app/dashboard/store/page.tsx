@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card, Tag, Live } from "@/components/dx/ui";
 import ProductCatalog from "@/components/store/ProductCatalog";
 import { rowToProduct } from "@/lib/catalog";
@@ -7,12 +7,8 @@ import { rowToProduct } from "@/lib/catalog";
 export const dynamic = "force-dynamic";
 
 export default async function StorePage() {
-  const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: store } = await sb.from("stores").select("id, subdomain, onboarding_completed").eq("owner_id", user.id).maybeSingle();
-  if (!store || !store.onboarding_completed) redirect("/onboarding");
+  const { store } = await requireDashboardStore();
+  const sb = createAdminClient();
 
   const { data: page } = await sb.from("pages").select("id, status, content").eq("store_id", store.id).eq("page_type", "store").maybeSingle();
   const published = page?.status === "published";

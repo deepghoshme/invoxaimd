@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { CatalogInput } from "@/lib/catalog";
+import { assertNotImpersonating } from "@/lib/impersonation";
 
 type Result = { ok: boolean; error?: string };
 
@@ -48,6 +49,8 @@ function clean(input: Partial<CatalogInput>) {
 }
 
 export async function createCatalogProduct(input: Partial<CatalogInput>): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
   const { data, error } = await supabase.from("products").insert({ store_id: store.id, ...clean(input) }).select("id").single();
@@ -57,6 +60,8 @@ export async function createCatalogProduct(input: Partial<CatalogInput>): Promis
 }
 
 export async function updateCatalogProduct(id: string, input: Partial<CatalogInput>): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
   const { error } = await supabase.from("products").update(clean(input)).eq("id", id).eq("store_id", store.id);
@@ -66,6 +71,8 @@ export async function updateCatalogProduct(id: string, input: Partial<CatalogInp
 }
 
 export async function setProductVisible(id: string, visible: boolean): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
   const { error } = await supabase.from("products").update({ store_visible: visible }).eq("id", id).eq("store_id", store.id);
@@ -75,6 +82,8 @@ export async function setProductVisible(id: string, visible: boolean): Promise<R
 }
 
 export async function deleteCatalogProduct(id: string): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
   const { error } = await supabase.from("products").delete().eq("id", id).eq("store_id", store.id);

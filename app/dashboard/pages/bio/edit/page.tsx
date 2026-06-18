@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireDashboardStore } from "@/lib/auth";
 import BioBuilder from "@/components/bio/BioBuilder";
 import { DEFAULT_BIO, type BioContent } from "@/lib/bio";
 import "../../../../bio.css";
@@ -7,18 +7,8 @@ import "../../../../bio.css";
 export const dynamic = "force-dynamic";
 
 export default async function BioEditPage() {
-  const sb = await createClient();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: store } = await sb
-    .from("stores")
-    .select("id, store_name, subdomain, onboarding_completed")
-    .eq("owner_id", user.id)
-    .maybeSingle();
-  if (!store || !store.onboarding_completed) redirect("/onboarding");
+  const { store } = await requireDashboardStore();
+  const sb = createAdminClient();
 
   const { data: bio } = await sb
     .from("pages")

@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { type OppContent, formatPrice, toMinorUnit, DEFAULT_CURRENCY } from "@/lib/products";
+import { type OppContent, formatPrice, toMinorUnit, DEFAULT_CURRENCY, PAYMENT_BRANDS } from "@/lib/products";
 import { resolveOppTheme } from "@/lib/oppTheme";
 import InlineCheckout from "@/components/checkout/InlineCheckout";
 import BuyBar from "@/components/checkout/BuyBar";
+import FooterPolicies from "@/components/checkout/FooterPolicies";
+import LiveProof from "@/components/checkout/LiveProof";
+import CountdownTimer from "@/components/checkout/CountdownTimer";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 /** Catalog-style Product Detail Page (opp layout = "pdp"). Reuses the existing
  * checkout (InlineCheckout) for the buy flow. */
@@ -32,7 +36,9 @@ export default function PDPTemplate({
   const specs = (content.specs ?? []).filter((s) => s[0]);
   const reviews = (content.testimonials ?? []).filter((t) => t?.text);
   const related = (content.related ?? []).filter((r) => r.name);
-  const descHtml = content.description_html || (content.description ? content.description.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("") : "");
+  const descHtml = sanitizeHtml(
+    content.description_html || (content.description ? content.description.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("") : ""),
+  );
   const ptype = content.productType ?? "digital";
   const plans = (content.plans ?? []).filter((p) => p.label);
   const [plan, setPlan] = useState(0);
@@ -43,6 +49,17 @@ export default function PDPTemplate({
   const rcount = content.reviews_count || "";
   const [tab, setTab] = useState("desc");
   const [pin, setPin] = useState(""); const [pinRes, setPinRes] = useState("");
+  const faqs = (content.faqs ?? []).filter((f) => f?.q);
+  const policies = content.policies ?? {};
+  const policyItems = [
+    { key: "privacy", label: "Privacy Policy", body: policies.privacy },
+    { key: "terms", label: "Terms & Conditions", body: policies.terms },
+    { key: "refund", label: "Refund Policy", body: policies.refund },
+  ].filter((p) => p.body && p.body.trim());
+  const showLogos = content.show_payment_logos !== false;
+  const payIcons = (content.payment_icons ?? []).filter(Boolean);
+  const cdEnd = content.countdown_enabled && content.countdown_end ? new Date(content.countdown_end).getTime() : 0;
+  const waNum = (content.contact_whatsapp || "").replace(/[^0-9]/g, "");
 
   // Stock / urgency (from seats) + trust badges + sticky buy bar.
   const seatsTotal = content.seats_enabled ? content.seats_total ?? 0 : 0;
@@ -65,6 +82,7 @@ export default function PDPTemplate({
     ["inc", "What's included", includes.length > 0],
     ["spec", "Specifications", specs.length > 0],
     ["rev", `Reviews${reviews.length ? ` (${reviews.length})` : ""}`, reviews.length > 0],
+    ["faq", `FAQ${faqs.length ? ` (${faqs.length})` : ""}`, faqs.length > 0],
   ];
   const tabs = TABS.filter((t) => t[2]);
   const activeTab = tabs.some((t) => t[0] === tab) ? tab : tabs[0]?.[0];
@@ -72,6 +90,12 @@ export default function PDPTemplate({
   return (
     <div className={rootClass} style={rootStyle}>
       {th.googleHref && <link rel="stylesheet" href={th.googleHref} />}
+      {/* Countdown strip — visible on mobile above the fold */}
+      {content.countdown_enabled && content.countdown_end && (
+        <div className="prod2-strip">
+          <CountdownTimer endIso={content.countdown_end} expireMsg={content.countdown_expire_msg} />
+        </div>
+      )}
       <div className="pdp-top">
         <div className="pdp-lg">{storeName}</div>
         <div className="pdp-tp">{formatPrice(price, currency)}{off > 0 && <s>{formatPrice(compareAt, currency)}</s>}</div>
@@ -119,6 +143,16 @@ export default function PDPTemplate({
             {activeTab === "inc" && <div className="pdp-inc">{includes.map((i, k) => <div className="pdp-inci" key={k}><span className="ck">✓</span><span>{i}</span></div>)}</div>}
             {activeTab === "spec" && <table className="pdp-spec"><tbody>{specs.map((s, k) => <tr key={k}><td>{s[0]}</td><td>{s[1]}</td></tr>)}</tbody></table>}
             {activeTab === "rev" && <div>{reviews.map((r, k) => <div className="pdp-rc" key={k}><div className="rh"><div className="rav">{(r.name || "?").charAt(0)}</div><div><div className="rn">{r.name}</div><div className="rst">★★★★★</div></div></div><p>{r.text}</p></div>)}</div>}
+            {activeTab === "faq" && (
+              <div className="prod-faqs">
+                {faqs.map((f, k) => (
+                  <details className="prod-faq" key={k}>
+                    <summary>{f.q}</summary>
+                    <p>{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -130,7 +164,41 @@ export default function PDPTemplate({
         })}</div></div>
       )}
 
-      {showBrand && <div className="pdp-foot">Powered by <a href="https://invoxai.io" target="_blank" rel="noreferrer"><b>invoxai</b></a></div>}
+      {/* Footer — payment icons, logos, seller contact, policies, brand badge */}
+      <footer className="prod-footer">
+        {payIcons.length > 0 && (
+          <div className="prod-pay-icons">
+            {payIcons.map((src, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="pay-icon" key={i} src={src} alt="" />
+            ))}
+          </div>
+        )}
+        {showLogos && payIcons.length === 0 && (
+          <div className="prod-pay-logos">
+            {PAYMENT_BRANDS.map((b) => <span className="pay-logo" key={b}>{b}</span>)}
+          </div>
+        )}
+        {(content.seller_email || content.seller_phone) && (
+          <p className="prod-contact muted">
+            Contact: {content.seller_email}
+            {content.seller_email && content.seller_phone ? " · " : ""}
+            {content.seller_phone}
+          </p>
+        )}
+        {waNum && !content.seller_email && !content.seller_phone && (
+          <p className="prod-contact muted">
+            <a href={`https://wa.me/${waNum}`} target="_blank" rel="noreferrer">💬 Chat on WhatsApp</a>
+          </p>
+        )}
+        {policyItems.length > 0 && <FooterPolicies items={policyItems} />}
+        {showBrand && (
+          <p className="prod-powered">
+            Powered by{" "}
+            <a href="https://invoxai.io" target="_blank" rel="noreferrer"><strong>InvoxAI</strong></a>
+          </p>
+        )}
+      </footer>
 
       {!preview && !soldOut && price > 0 && (
         <BuyBar
@@ -142,6 +210,10 @@ export default function PDPTemplate({
           targetId="pdp-buy"
           reveal
         />
+      )}
+
+      {content.liveproof_enabled && !preview && (
+        <LiveProof items={content.liveproof_items} intervalSec={content.liveproof_interval} product={title} />
       )}
     </div>
   );

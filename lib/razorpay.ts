@@ -9,9 +9,30 @@ export type RazorpayKeys = { keyId: string; keySecret: string };
 export type RazorpayOrder = {
   id: string;
   amount: number;
+  amount_paid: number;
   currency: string;
   status: string;
 };
+
+/**
+ * Fetch a Razorpay order by id using the SELLER's keys. Throws on API error.
+ * Use this to obtain the AUTHORITATIVE amount of an order server-side — never
+ * trust a client-supplied amount when crediting money.
+ */
+export async function fetchRazorpayOrder(
+  keys: RazorpayKeys,
+  orderId: string,
+): Promise<RazorpayOrder> {
+  const auth = Buffer.from(`${keys.keyId}:${keys.keySecret}`).toString("base64");
+  const res = await fetch(`${API}/orders/${encodeURIComponent(orderId)}`, {
+    headers: { Authorization: `Basic ${auth}` },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Razorpay order fetch failed (${res.status}): ${body.slice(0, 300)}`);
+  }
+  return (await res.json()) as RazorpayOrder;
+}
 
 /** Create a Razorpay order using the SELLER's keys. Throws on API error. */
 export async function createRazorpayOrder(

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { publicId } from "@/lib/ids";
+import { assertNotImpersonating } from "@/lib/impersonation";
 
 type Result = { ok: boolean; error?: string };
 
@@ -28,6 +29,8 @@ async function ownerStore() {
 export async function createProduct(
   opts?: { layout?: "landing" | "pdp"; fromProductId?: string },
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
 
@@ -94,6 +97,8 @@ export type ProductSave = {
 };
 
 export async function saveProduct(pageId: string, payload: ProductSave): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const supabase = await createClient();
   const { error } = await supabase
     .from("pages")
@@ -115,6 +120,8 @@ export async function setProductStatus(
   pageId: string,
   status: "draft" | "published",
 ): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const supabase = await createClient();
 
   // Backstop the publish requirements server-side (can't be bypassed by a client).
@@ -150,6 +157,8 @@ export async function setProductStatus(
 
 /** Delete a product page. */
 export async function deleteProduct(pageId: string): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const supabase = await createClient();
   const { error } = await supabase
     .from("pages")

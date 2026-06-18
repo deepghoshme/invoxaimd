@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireDashboardStore } from "@/lib/auth";
 import NotificationsFeed from "./NotificationsFeed";
 
 export const dynamic = "force-dynamic";
@@ -22,18 +22,8 @@ export interface NotifItem {
 // Server component — fetch real data, map to NotifItem[]
 // ──────────────────────────────────────────────────────────────────────────────
 export default async function NotificationsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: store } = await supabase
-    .from("stores")
-    .select("id, store_name, onboarding_completed")
-    .eq("owner_id", user.id)
-    .maybeSingle();
-  if (!store || !store.onboarding_completed) redirect("/onboarding");
+  const { store } = await requireDashboardStore();
+  const supabase = createAdminClient();
 
   // ── 1. Paid orders → Orders + Money notifications ──────────────────────────
   const { data: orders } = await supabase

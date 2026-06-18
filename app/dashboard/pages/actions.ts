@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { assertNotImpersonating } from "@/lib/impersonation";
 
 type Result = { ok: boolean; error?: string };
 
@@ -21,6 +22,8 @@ async function ownerStore() {
 
 /** Ensure a (draft) bio page exists for this store; return its id. */
 export async function ensureBioPage(): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
 
@@ -58,6 +61,8 @@ export type BioSave = {
 };
 
 export async function saveBioPage(pageId: string, payload: BioSave): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const supabase = await createClient();
   const { error } = await supabase
     .from("pages")
@@ -77,6 +82,8 @@ export async function setBioStatus(
   pageId: string,
   status: "draft" | "published",
 ): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const supabase = await createClient();
   const { error } = await supabase
     .from("pages")

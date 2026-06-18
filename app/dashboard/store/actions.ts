@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_STORE } from "@/lib/store";
+import { assertNotImpersonating } from "@/lib/impersonation";
 
 type Result = { ok: boolean; error?: string };
 
@@ -20,6 +21,8 @@ async function storePageId(): Promise<{ ok: boolean; id?: string; error?: string
 }
 
 export async function saveStore(content: Record<string, unknown>): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const id = await storePageId();
   if (!id.ok || !id.id) return { ok: false, error: id.error };
   const sb = await createClient();
@@ -31,6 +34,8 @@ export async function saveStore(content: Record<string, unknown>): Promise<Resul
 
 /** Save just the product list from the Store dashboard (merges into store content). */
 export async function saveStoreProducts(products: unknown[]): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in." };
@@ -51,6 +56,8 @@ export async function saveStoreProducts(products: unknown[]): Promise<Result> {
 }
 
 export async function publishStore(content: Record<string, unknown>, publish: boolean): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const id = await storePageId();
   if (!id.ok || !id.id) return { ok: false, error: id.error };
   const sb = await createClient();

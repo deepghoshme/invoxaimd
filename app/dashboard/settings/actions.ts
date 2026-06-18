@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { assertNotImpersonating } from "@/lib/impersonation";
 
 type Result = { ok: boolean; error?: string };
 
@@ -10,6 +11,9 @@ export async function saveStoreSettings(input: {
   store_name: string;
   category_id: string | null;
 }): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
+
   const sb = await createClient();
   const {
     data: { user },

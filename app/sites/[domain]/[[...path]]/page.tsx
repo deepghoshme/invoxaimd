@@ -125,6 +125,13 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
   if (!store) {
     return <Notice title="Site not found" body="This address isn’t connected to a store." />;
   }
+
+  // Suspension check — graceful if the column doesn’t exist yet (migration unapplied).
+  const isSuspended = await isStoreSuspended(store.id);
+  if (isSuspended) {
+    return <StoreSuspended storeName={store.store_name} />;
+  }
+
   if (!page) {
     return (
       <Notice
@@ -225,6 +232,8 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
 async function CatalogProductPage({ domain, productId }: { domain: string; productId: string }) {
   const store = await resolveStoreByHost(domain);
   if (!store) return <Notice title="Site not found" body="This address isn’t connected to a store." />;
+  const suspended = await isStoreSuspended(store.id);
+  if (suspended) return <StoreSuspended storeName={store.store_name} />;
 
   const row = await getProductById(productId);
   if (!row || row.store_id !== store.id || row.store_visible === false) {
@@ -275,6 +284,10 @@ async function Checkout({
     return <Notice title="Order not found" body="This checkout link is invalid or expired." />;
   }
 
+  // Suspended stores cannot transact.
+  const suspended = await isStoreSuspended(store.id);
+  if (suspended) return <StoreSuspended storeName={store.store_name} />;
+
   const sourcePage = order.page_id ? await getPageById(order.page_id) : null;
 
   return (
@@ -290,6 +303,95 @@ async function Checkout({
         }}
         storeName={store.store_name ?? "Store"}
       />
+    </main>
+  );
+}
+
+/**
+ * Check if a store is suspended.
+ * Gracefully returns false if the `suspended` column doesn't exist yet
+ * (migration unapplied) — we never 500 on a missing column.
+ */
+async function isStoreSuspended(storeId: string): Promise<boolean> {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const sb = createAdminClient();
+    const { data, error } = await sb
+      .from("stores")
+      .select("suspended")
+      .eq("id", storeId)
+      .maybeSingle();
+    if (error) return false; // column missing or other DB error → fail open
+    return !!(data as { suspended?: boolean } | null)?.suspended;
+  } catch {
+    return false;
+  }
+}
+
+function StoreSuspended({ storeName }: { storeName: string | null }) {
+  const name = storeName || "This store";
+  return (
+    <main
+      style={{
+        minHeight: "100dvh",
+        display: "grid",
+        placeItems: "center",
+        padding: "var(--space-4, 32px) var(--space-3, 24px)",
+        background: "var(--color-bg, #f9fafb)",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 440,
+          width: "100%",
+          textAlign: "center",
+          background: "var(--color-card, #fff)",
+          border: "1px solid var(--color-border, #e5e7eb)",
+          borderRadius: 20,
+          padding: "40px 32px",
+          boxShadow: "0 4px 24px rgba(0,0,0,.07)",
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 18,
+            background: "var(--brand-gradient, linear-gradient(135deg,#ff4d7d,#a855f7))",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 32,
+            margin: "0 auto 24px",
+            boxShadow: "0 14px 36px -10px rgba(168,85,247,.35)",
+          }}
+        >
+          🔒
+        </div>
+        <h1
+          style={{
+            fontFamily: "var(--font-heading, inherit)",
+            fontSize: "clamp(1.2rem, 4vw, 1.5rem)",
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            margin: "0 0 12px",
+            color: "var(--color-text, #111827)",
+          }}
+        >
+          {name}
+        </h1>
+        <p
+          style={{
+            color: "var(--color-muted, #6b7280)",
+            fontSize: "0.9375rem",
+            lineHeight: 1.6,
+            margin: 0,
+          }}
+        >
+          This store is currently unavailable.
+        </p>
+      </div>
     </main>
   );
 }

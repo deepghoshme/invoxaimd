@@ -1,17 +1,13 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card, Table, Tag, Live, Donut } from "@/components/dx/ui";
 import { DEFAULT_WEBSITE, type WebsiteContent } from "@/lib/website";
 
 export const dynamic = "force-dynamic";
 
 export default async function WebsitePage() {
-  const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: store } = await sb.from("stores").select("id, subdomain, onboarding_completed").eq("owner_id", user.id).maybeSingle();
-  if (!store || !store.onboarding_completed) redirect("/onboarding");
+  const { store } = await requireDashboardStore();
+  const sb = createAdminClient();
 
   const { data: site } = await sb.from("pages").select("id, content, status").eq("store_id", store.id).eq("page_type", "website").maybeSingle();
   const content: WebsiteContent = { ...DEFAULT_WEBSITE, ...((site?.content ?? {}) as WebsiteContent) };

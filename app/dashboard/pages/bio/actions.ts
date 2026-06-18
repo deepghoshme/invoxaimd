@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { assertNotImpersonating } from "@/lib/impersonation";
 
 type Result = { ok: boolean; error?: string };
 
@@ -19,6 +20,8 @@ async function bioPageId(): Promise<{ ok: boolean; id?: string; error?: string }
 }
 
 export async function saveBio(content: Record<string, unknown>): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const id = await bioPageId();
   if (!id.ok || !id.id) return { ok: false, error: id.error };
   const sb = await createClient();
@@ -29,6 +32,8 @@ export async function saveBio(content: Record<string, unknown>): Promise<Result>
 }
 
 export async function publishBio(content: Record<string, unknown>, publish: boolean): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
   const id = await bioPageId();
   if (!id.ok || !id.id) return { ok: false, error: id.error };
   const sb = await createClient();

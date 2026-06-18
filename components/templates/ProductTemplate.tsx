@@ -13,6 +13,7 @@ import BuyBar from "@/components/checkout/BuyBar";
 import FooterPolicies from "@/components/checkout/FooterPolicies";
 import PDPTemplate from "@/components/templates/PDPTemplate";
 import { resolveOppTheme } from "@/lib/oppTheme";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 function Stars({ n }: { n: number }) {
   const r = Math.max(0, Math.min(5, Math.round(n)));
@@ -180,7 +181,7 @@ export default function ProductTemplate({
             <section className="prod2-section">
               <h2 className="prod2-h2">Description</h2>
               {content.description_html ? (
-                <div className="prod-desc rte-content" dangerouslySetInnerHTML={{ __html: content.description_html }} />
+                <div className="prod-desc rte-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.description_html) }} />
               ) : (
                 content.description && <p className="prod-desc">{content.description}</p>
               )}

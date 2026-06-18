@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Phead, Kpis, Card, Table, Tag, Cat, Live, Buyer, Bars, LineChart } from "./ui";
+import { getPlatformGateway } from "@/app/admin/actions";
+import PlatformGatewayForm from "@/app/admin/PlatformGatewayForm";
 
 const inr = (paise?: number | null) => "₹" + Math.round((paise ?? 0) / 100).toLocaleString("en-IN");
 
@@ -144,7 +146,18 @@ export const ADMIN_PAGES: Record<string, () => Promise<React.ReactNode>> = {
 
   branding: async () => (<><Phead title="Branding" sub="Logo, favicon, and invoice template." /><Card title="Brand assets"><div className="dx-ff"><div className="dx-field"><label>Logo</label><input type="file" /></div><div className="dx-field"><label>Favicon</label><input type="file" /></div></div><div className="dx-field"><label>Invoice template</label><select><option>Sunset (default)</option><option>Minimal</option></select></div><button className="btn grad">Save branding</button></Card></>),
 
-  gateways: async () => (<><Phead title="Payment gateways" sub="Platform billing gateways." /><Card title="Platform gateways">{[["Razorpay", false], ["Cashfree", false]].map((g) => <div className="dx-kv" key={g[0] as string}><span className="dx-fw6">{g[0] as string}</span><button className="dx-editbtn">Connect</button></div>)}</Card></>),
+  gateways: async () => {
+    const initial = await getPlatformGateway();
+    return (
+      <>
+        <Phead
+          title="Payment gateways"
+          sub="Platform billing gateways — used to charge sellers for plans, wallet recharge &amp; add-ons."
+        />
+        <PlatformGatewayForm initial={initial} />
+      </>
+    );
+  },
 
   maintenance: async () => (<><Phead title="Maintenance & controls" sub="Platform-wide switches." /><Card title="Controls"><div className="dx-mrow"><Switch on={false} /><div className="tx"><b>Maintenance mode</b><p>Show maintenance page to everyone.</p></div></div><div className="dx-mrow"><Switch /><div className="tx"><b>New signups</b><p>Allow new sellers to register.</p></div></div></Card></>),
 

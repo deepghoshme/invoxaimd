@@ -1,17 +1,13 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card, Table, Tag, Live, Donut } from "@/components/dx/ui";
 import { DEFAULT_BIO, type BioContent } from "@/lib/bio";
 
 export const dynamic = "force-dynamic";
 
 export default async function BioPage() {
-  const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: store } = await sb.from("stores").select("id, subdomain, onboarding_completed").eq("owner_id", user.id).maybeSingle();
-  if (!store || !store.onboarding_completed) redirect("/onboarding");
+  const { store } = await requireDashboardStore();
+  const sb = createAdminClient();
 
   const { data: bio } = await sb.from("pages").select("id, content, status").eq("store_id", store.id).eq("page_type", "bio").maybeSingle();
   const content: BioContent = { ...DEFAULT_BIO, ...((bio?.content ?? {}) as BioContent) };

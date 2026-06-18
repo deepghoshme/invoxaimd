@@ -2,8 +2,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import MarketingLanding from "./MarketingLanding";
-import MaintenancePage from "./MaintenancePage";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -52,9 +50,8 @@ export const metadata: Metadata = {
  *  - admin.invoxai.io → admin panel
  *  - everything else  → marketing landing (invoxai.io)
  *
- * If platform_settings.maintenance_mode = true the maintenance page is shown
- * instead of the full landing. Toggle it from the admin panel or directly in
- * Supabase: UPDATE platform_settings SET maintenance_mode = true;
+ * Maintenance mode is enforced centrally in middleware.ts before this page is
+ * reached, so no check is needed here.
  */
 export default async function Home() {
   const host = (await headers()).get("host") ?? "";
@@ -62,28 +59,6 @@ export default async function Home() {
 
   if (sub === "app") redirect("/dashboard");
   if (sub === "admin") redirect("/admin");
-
-  // Check maintenance flag from platform_settings (public-readable, singleton)
-  let maintenanceMode = false;
-  let maintenanceEta: string | null = null;
-  try {
-    const supabase = createAdminClient();
-    const { data } = await supabase
-      .from("platform_settings")
-      .select("maintenance_mode, maintenance_eta")
-      .eq("id", true)
-      .maybeSingle();
-    if (data?.maintenance_mode) {
-      maintenanceMode = true;
-      maintenanceEta = data.maintenance_eta ?? null;
-    }
-  } catch {
-    // If DB is unreachable or column doesn't exist yet, show the normal landing
-  }
-
-  if (maintenanceMode) {
-    return <MaintenancePage eta={maintenanceEta} />;
-  }
 
   return <MarketingLanding />;
 }
