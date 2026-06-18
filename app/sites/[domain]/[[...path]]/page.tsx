@@ -28,9 +28,18 @@ import StoreView from "@/components/store/StoreView";
 import ProductPage from "@/components/store/ProductPage";
 import { type StoreContent } from "@/lib/store";
 import { rowToProduct } from "@/lib/catalog";
+import CourseView from "@/components/course/CourseView";
+import { type CourseContent, type CourseModule, type CourseLesson } from "@/lib/course";
+import BookingView from "@/components/booking/BookingView";
+import { type BookingContent } from "@/lib/booking";
+import EventView from "@/components/event/EventView";
+import { type EventContent } from "@/lib/event";
+import VipView from "@/components/vip/VipView";
+import { type VipContent } from "@/lib/vip";
 import "../../../bio.css";
 import "../../../website.css";
 import "../../../store.css";
+import "../../../booking.css";
 import ProductTemplate from "@/components/templates/ProductTemplate";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
 import PixelInjector from "@/components/PixelInjector";
@@ -40,7 +49,9 @@ export const dynamic = "force-dynamic";
 type Params = { domain: string; path?: string[] };
 
 // Prefixed "many" page types addressed by /{prefix}/{public_id}.
-const MANY_PREFIXES = new Set(["opp", "pay", "book", "ldf", "vpc", "led", "env"]);
+const MANY_PREFIXES = new Set(["opp", "pay", "book", "ldf", "vpc", "led", "env", "course", "event", "vip"]);
+// URL prefix → page_type (most match; booking is reached via /book/…)
+const PREFIX_TO_TYPE: Record<string, string> = { book: "booking" };
 
 /** Resolve the page for a host+path, with a bio fallback for the site root. */
 async function resolve(domain: string, path?: string[]) {
@@ -50,7 +61,7 @@ async function resolve(domain: string, path?: string[]) {
   // /{prefix}/{public_id} (not /checkout/…) → a "many" page.
   const seg0 = (path?.[0] ?? "").toLowerCase();
   if (MANY_PREFIXES.has(seg0) && path?.[1] && path[1].toLowerCase() !== "checkout") {
-    const page = await getPublishedPageByPublicId(store.id, seg0, path[1]);
+    const page = await getPublishedPageByPublicId(store.id, PREFIX_TO_TYPE[seg0] ?? seg0, path[1]);
     return { store, page };
   }
 
@@ -226,6 +237,73 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
         <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
         <StoreView content={page.content as StoreContent} products={products} payEnabled={payEnabled} stage />
         <WebsiteTracker pageId={page.id} storeId={store.id} />
+      </>
+    );
+  }
+
+  if (page.page_type === "course") {
+    const gateway = await getStoreGateway(store.id);
+    const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient();
+    let courseModules: CourseModule[] = [];
+    try {
+      const { data: modRows } = await admin
+        .from("course_modules").select("id, page_id, title, sort_order")
+        .eq("page_id", page.id).order("sort_order", { ascending: true });
+      if (modRows && modRows.length) {
+        const modIds = (modRows as { id: string }[]).map((m) => m.id);
+        const { data: lesRows } = await admin
+          .from("course_lessons")
+          .select("id, module_id, title, video_url, duration, is_free_preview, sort_order, content")
+          .in("module_id", modIds).order("sort_order", { ascending: true });
+        const byMod = new Map<string, CourseLesson[]>();
+        for (const l of ((lesRows ?? []) as CourseLesson[])) {
+          const k = (l as unknown as { module_id: string }).module_id;
+          if (!byMod.has(k)) byMod.set(k, []);
+          byMod.get(k)!.push(l);
+        }
+        courseModules = (modRows as { id: string; page_id: string; title: string; sort_order: number }[]).map((m) => ({
+          id: m.id, page_id: m.page_id, title: m.title, sort_order: m.sort_order, lessons: byMod.get(m.id) ?? [],
+        }));
+      }
+    } catch { /* tables not applied yet */ }
+    return (
+      <>
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
+        <CourseView page={{ id: page.id, public_id: (page as { public_id?: string | null }).public_id ?? null, content: page.content as CourseContent, status: page.status }} modules={courseModules} storeName={store.store_name ?? "Academy"} pageId={page.id} payEnabled={payEnabled} enrolled={false} />
+      </>
+    );
+  }
+
+  if (page.page_type === "booking") {
+    return (
+      <>
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
+        <BookingView content={page.content as BookingContent} pageId={page.id} publicUrl={`/book/${(page as { public_id?: string | null }).public_id ?? ""}`} storeName={store.store_name ?? "Store"} />
+      </>
+    );
+  }
+
+  if (page.page_type === "event") {
+    const gateway = await getStoreGateway(store.id);
+    const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
+    return (
+      <>
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
+        <EventView content={page.content as EventContent} pageId={page.id} storeName={store.store_name ?? "Store"} payEnabled={payEnabled} />
+      </>
+    );
+  }
+
+  if (page.page_type === "vip") {
+    const gateway = await getStoreGateway(store.id);
+    const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
+    const memberCount = await getPaidOrderCount(page.id);
+    return (
+      <>
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
+        <VipView content={page.content as VipContent} pageId={page.id} storeName={store.store_name ?? "Store"} memberCount={memberCount} payEnabled={payEnabled} stage={false} />
       </>
     );
   }
