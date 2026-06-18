@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import DxShell, { type DxNavGroup } from "@/components/dx/Shell";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStore } from "@/lib/auth";
+import { getStoreNotifications } from "@/lib/notifications";
 import ImpersonationBanner from "./ImpersonationBanner";
 import "./dx.css";
 
@@ -43,6 +44,7 @@ const NAV: DxNavGroup[] = [
   ] },
   { label: "Account", items: [
     { label: "Notifications", icon: "bell", href: "/dashboard/notifications" },
+    { label: "Audit log", icon: "shield", href: "/dashboard/audit" },
     { label: "Team & roles", icon: "users", href: "/dashboard/team" },
     { label: "Domains", icon: "globe", href: "/dashboard/domains" },
     { label: "Plan & billing", icon: "rupee", href: "/dashboard/billing" },
@@ -57,7 +59,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { impersonating } = await getCurrentStore();
+  const { store, impersonating } = await getCurrentStore();
+  const notifItems = store ? await getStoreNotifications(store.id) : [];
 
   const meta = (user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string; picture?: string };
 
@@ -66,6 +69,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       brand="invoxai"
       groups={NAV}
       user={{ email: user.email, name: meta.full_name ?? meta.name, avatarUrl: meta.avatar_url ?? meta.picture }}
+      notifItems={notifItems}
       walletHref="/dashboard/wallet"
       profileItems={[
         { label: "Account setting", href: "/dashboard/settings" },

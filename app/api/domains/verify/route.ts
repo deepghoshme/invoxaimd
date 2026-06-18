@@ -105,6 +105,21 @@ export async function POST(request: Request) {
   // ── Fetch or create the custom_domains row ────────────────────────
   const admin = createAdminClient();
 
+  // SECURITY (IDOR / domain hijacking): the custom_domains.domain column is
+  // globally UNIQUE, so an upsert on `domain` would silently re-point a domain
+  // already claimed by ANOTHER store to the caller's store. Reject that.
+  const { data: claimed } = await admin
+    .from("custom_domains")
+    .select("store_id")
+    .eq("domain", domain)
+    .maybeSingle();
+  if (claimed && claimed.store_id !== storeId) {
+    return err(
+      "This domain is already connected to another store. If you own it, contact support to release it.",
+      409,
+    );
+  }
+
   // Look for an existing row (same domain, same store)
   const { data: existing } = await admin
     .from("custom_domains")

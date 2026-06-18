@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import DxShell, { type DxNavGroup } from "@/components/dx/Shell";
 import { createClient } from "@/lib/supabase/server";
+import { getPlatformNotifications } from "@/lib/notifications";
 import "../dashboard/dx.css";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ const ADMIN_NAV: DxNavGroup[] = [
   { label: "Main", items: [
     { label: "Overview", icon: "grid", href: "/admin", exact: true },
     { label: "Revenue", icon: "chart", href: "/admin/revenue" },
+    { label: "Notifications", icon: "bell", href: "/admin/notifications" },
   ] },
   { label: "Users", items: [
     { label: "Sellers", icon: "users", href: "/admin/sellers" },
@@ -28,6 +30,8 @@ const ADMIN_NAV: DxNavGroup[] = [
     { label: "Emails", icon: "mail", href: "/admin/emails" },
   ] },
   { label: "Platform", items: [
+    { label: "Team & roles", icon: "users", href: "/admin/team" },
+    { label: "Audit log", icon: "shield", href: "/admin/audit" },
     { label: "Branding", icon: "img", href: "/admin/branding" },
     { label: "Payment gateways", icon: "card", href: "/admin/gateways" },
     { label: "Maintenance", icon: "shield", href: "/admin/maintenance" },
@@ -58,12 +62,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const meta = (user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string; picture?: string };
+  const notifItems = await getPlatformNotifications();
 
   return (
     <DxShell
       brand="invoxai"
       badge="admin"
       groups={ADMIN_NAV}
+      notifItems={notifItems}
       user={{ email: user.email, name: meta.full_name ?? meta.name, avatarUrl: meta.avatar_url ?? meta.picture }}
       profileItems={[
         { label: "Account setting", href: "/admin/settings" },

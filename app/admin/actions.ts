@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/lib/audit";
 
 type Result = { ok: boolean; error?: string };
 
@@ -104,6 +105,24 @@ export async function savePlatformGateway(input: {
     .upsert(row, { onConflict: "id" });
 
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    actorUserId: user.id,
+    actorEmail:  user.email ?? null,
+    actorRole:   "admin",
+    action:      "gateway.save",
+    targetType:  "gateway",
+    targetId:    provider,
+    storeId:     null,
+    metadata: {
+      provider,
+      mode:       input.mode,
+      is_enabled: input.is_enabled,
+      key_id_set: !!keyId,
+      secret_set: !!secret,
+    },
+  });
+
   revalidatePath("/admin/gateways");
   return { ok: true };
 }
@@ -120,12 +139,26 @@ export async function updateCommission(
 
   // RLS (categories_admin_write -> is_admin()) enforces admin-only writes.
   const supabase = await createClient();
+  const { data: { user: commUser } } = await supabase.auth.getUser();
+
   const { error } = await supabase
     .from("business_categories")
     .update({ commission_rate: rate })
     .eq("id", categoryId);
 
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    actorUserId: commUser?.id    ?? null,
+    actorEmail:  commUser?.email ?? null,
+    actorRole:   "admin",
+    action:      "commission.update",
+    targetType:  "category",
+    targetId:    categoryId,
+    storeId:     null,
+    metadata:    { rate_percent: percent },
+  });
+
   revalidatePath("/admin");
   return { ok: true };
 }
@@ -134,12 +167,26 @@ export async function updateCommission(
 export async function setBrandBadge(show: boolean): Promise<Result> {
   // RLS (platform_settings_admin_write -> is_admin()) enforces admin-only writes.
   const supabase = await createClient();
+  const { data: { user: badgeUser } } = await supabase.auth.getUser();
+
   const { error } = await supabase
     .from("platform_settings")
     .update({ show_brand_badge: show })
     .eq("id", true);
 
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    actorUserId: badgeUser?.id    ?? null,
+    actorEmail:  badgeUser?.email ?? null,
+    actorRole:   "admin",
+    action:      "brand.badge",
+    targetType:  "platform_settings",
+    targetId:    "singleton",
+    storeId:     null,
+    metadata:    { show_brand_badge: show },
+  });
+
   revalidatePath("/admin");
   return { ok: true };
 }

@@ -9,13 +9,15 @@ import {
   IMP_COOKIE,
   IMP_MAX_AGE_SECONDS,
 } from "@/lib/impersonation";
+import { logAudit } from "@/lib/audit";
 
 // ── Admin guard ───────────────────────────────────────────────────────────────
 // Shared with app/admin/sellers/actions.ts but defined here too to keep the
 // file self-contained and avoid coupling action files to each other.
 
 async function assertAdmin(): Promise<
-  { ok: true; userId: string } | { ok: false; error: string }
+  | { ok: true; userId: string; email: string }
+  | { ok: false; error: string }
 > {
   const supabase = await createClient();
   const {
@@ -31,7 +33,7 @@ async function assertAdmin(): Promise<
   const isAdmin = (roles ?? []).some((r: { role: string }) => r.role === "admin");
   if (!isAdmin) return { ok: false, error: "Admin access required." };
 
-  return { ok: true, userId: user.id };
+  return { ok: true, userId: user.id, email: user.email ?? "" };
 }
 
 // ── Suspend ───────────────────────────────────────────────────────────────────
@@ -71,6 +73,18 @@ export async function suspendStoreAction(
   console.info(
     `[admin-action] suspendStore storeId=${storeId} by adminUserId=${guard.userId} reason=${reason ?? "none"}`,
   );
+
+  await logAudit({
+    actorUserId: guard.userId,
+    actorEmail:  guard.email,
+    actorRole:   "admin",
+    action:      "store.suspend",
+    targetType:  "store",
+    targetId:    storeId,
+    storeId:     storeId,
+    metadata:    { reason: reason?.trim() || null },
+  });
+
   revalidatePath(`/admin/sellers/${storeId}`);
   revalidatePath("/admin/sellers");
   return { ok: true };
@@ -112,6 +126,18 @@ export async function unsuspendStoreAction(
   console.info(
     `[admin-action] unsuspendStore storeId=${storeId} by adminUserId=${guard.userId}`,
   );
+
+  await logAudit({
+    actorUserId: guard.userId,
+    actorEmail:  guard.email,
+    actorRole:   "admin",
+    action:      "store.unsuspend",
+    targetType:  "store",
+    targetId:    storeId,
+    storeId:     storeId,
+    metadata:    null,
+  });
+
   revalidatePath(`/admin/sellers/${storeId}`);
   revalidatePath("/admin/sellers");
   return { ok: true };
@@ -152,6 +178,17 @@ export async function startImpersonation(
   console.info(
     `[admin-action] startImpersonation storeId=${storeId} storeName="${storeName}" by adminUserId=${guard.userId}`,
   );
+
+  await logAudit({
+    actorUserId: guard.userId,
+    actorEmail:  guard.email,
+    actorRole:   "admin",
+    action:      "impersonate.start",
+    targetType:  "store",
+    targetId:    storeId,
+    storeId:     storeId,
+    metadata:    { storeName },
+  });
 
   return { ok: true };
 }
