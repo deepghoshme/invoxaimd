@@ -12,6 +12,17 @@ export type SiteStore = {
   primary_domain: string;
 };
 
+/** Store-level SEO + pixel defaults (from the store_seo migration columns). */
+export type StoreSeoDefaults = {
+  default_meta_title: string | null;
+  default_meta_description: string | null;
+  og_image_url: string | null;
+  meta_pixel_id: string | null;
+  google_analytics_id: string | null;
+  google_ads_id: string | null;
+  seo_indexable: boolean;
+};
+
 export type SitePage = {
   id: string;
   page_type: string;
@@ -199,6 +210,9 @@ export type Order = {
   commission_rate: number | null;
   commission_amount: number | null;
   paid_at: string | null;
+  coupon_code?: string | null;
+  discount_paise?: number | null;
+  original_amount_paise?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -217,6 +231,10 @@ export async function createOrderRecord(input: {
   buyer_email?: string | null;
   buyer_name?: string | null;
   buyer_phone?: string | null;
+  // Coupon fields (optional — only present when a code was applied)
+  coupon_code?: string | null;
+  discount_paise?: number | null;
+  original_amount_paise?: number | null;
 }): Promise<Order | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -243,6 +261,45 @@ export async function updateOrder(
   const supabase = createAdminClient();
   const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
   return !error;
+}
+
+/**
+ * Fetch store-level SEO defaults + pixel IDs.
+ * Gracefully returns safe defaults if the columns don't exist yet
+ * (migration unapplied) — never throws, never 500s public pages.
+ */
+export async function getStoreSeoDefaults(storeId: string): Promise<StoreSeoDefaults> {
+  const empty: StoreSeoDefaults = {
+    default_meta_title: null,
+    default_meta_description: null,
+    og_image_url: null,
+    meta_pixel_id: null,
+    google_analytics_id: null,
+    google_ads_id: null,
+    seo_indexable: true,
+  };
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("stores")
+      .select(
+        "default_meta_title, default_meta_description, og_image_url, meta_pixel_id, google_analytics_id, google_ads_id, seo_indexable",
+      )
+      .eq("id", storeId)
+      .maybeSingle();
+    if (!data) return empty;
+    return {
+      default_meta_title: (data as Record<string, unknown>).default_meta_title as string | null ?? null,
+      default_meta_description: (data as Record<string, unknown>).default_meta_description as string | null ?? null,
+      og_image_url: (data as Record<string, unknown>).og_image_url as string | null ?? null,
+      meta_pixel_id: (data as Record<string, unknown>).meta_pixel_id as string | null ?? null,
+      google_analytics_id: (data as Record<string, unknown>).google_analytics_id as string | null ?? null,
+      google_ads_id: (data as Record<string, unknown>).google_ads_id as string | null ?? null,
+      seo_indexable: ((data as Record<string, unknown>).seo_indexable as boolean | null) ?? true,
+    };
+  } catch {
+    return empty;
+  }
 }
 
 export type PlatformSettings = { show_brand_badge: boolean };

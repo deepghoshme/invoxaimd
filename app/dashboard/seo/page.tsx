@@ -1,25 +1,26 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card, Tag, Live } from "@/components/dx/ui";
+import SeoForm from "./SeoForm";
+import type { SeoFormData } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function SeoPage() {
-  // requireDashboardStore's select includes custom_domain and custom_domain_verified.
-  const { store } = await requireDashboardStore();
+  const { store, impersonating } = await requireDashboardStore();
   const sb = createAdminClient();
 
-  // Fetch all pages for SEO overview
+  // Fetch all pages for SEO overview.
   const { data: pages } = await sb
     .from("pages")
-    .select("id, page_type, title, status, content")
+    .select("id, page_type, title, status, content, seo, pixels")
     .eq("store_id", store.id)
     .order("updated_at", { ascending: false });
 
   const pageList = pages ?? [];
   const publishedCount = pageList.filter((p) => p.status === "published").length;
 
-  // Get page_events for rough SEO traffic sense
+  // Page views from page_events.
   const { data: eventRows } = await sb
     .from("page_events")
     .select("kind, page_id")
@@ -33,32 +34,72 @@ export default async function SeoPage() {
   }
   const totalViews = Object.values(viewsByPage).reduce((s, v) => s + v, 0);
 
-  // Build domain info
-  const activeBase = store.custom_domain && store.custom_domain_verified
-    ? `https://${store.custom_domain}`
-    : store.subdomain
+  // Domain info.
+  const activeBase =
+    store.custom_domain && store.custom_domain_verified
+      ? `https://${store.custom_domain}`
+      : store.subdomain
       ? `https://${store.subdomain}.invoxai.io`
       : null;
 
-  // Check SEO metadata in page content
-  function getSeoMeta(p: { content?: unknown }): { title?: string; description?: string; meta_pixel?: string } {
+  // Load store-level SEO defaults — graceful if columns don't exist yet.
+  type StoreRow = {
+    default_meta_title?: string | null;
+    default_meta_description?: string | null;
+    og_image_url?: string | null;
+    meta_pixel_id?: string | null;
+    google_analytics_id?: string | null;
+    google_ads_id?: string | null;
+    seo_indexable?: boolean | null;
+  };
+  const { data: storeRow } = await sb
+    .from("stores")
+    .select(
+      "default_meta_title, default_meta_description, og_image_url, meta_pixel_id, google_analytics_id, google_ads_id, seo_indexable",
+    )
+    .eq("id", store.id)
+    .maybeSingle()
+    .then((r) => ({ data: (r.data ?? {}) as StoreRow }));
+
+  const seoInitial: SeoFormData = {
+    default_meta_title: storeRow.default_meta_title ?? "",
+    default_meta_description: storeRow.default_meta_description ?? "",
+    og_image_url: storeRow.og_image_url ?? "",
+    meta_pixel_id: storeRow.meta_pixel_id ?? "",
+    google_analytics_id: storeRow.google_analytics_id ?? "",
+    google_ads_id: storeRow.google_ads_id ?? "",
+    seo_indexable: storeRow.seo_indexable ?? true,
+  };
+
+  // Pixel counts for KPIs.
+  const storePixelSet = !!(
+    seoInitial.meta_pixel_id ||
+    seoInitial.google_analytics_id ||
+    seoInitial.google_ads_id
+  );
+
+  // Build page rows for table.
+  function getSeoMeta(p: { seo?: unknown; content?: unknown; pixels?: unknown }): {
+    title?: string;
+    description?: string;
+    meta_pixel?: string;
+  } {
+    const s = (p.seo ?? {}) as Record<string, string>;
     const c = (p.content ?? {}) as Record<string, unknown>;
+    const cs = (c.seo ?? {}) as Record<string, string>;
+    const px = (p.pixels ?? {}) as Record<string, string>;
     return {
-      title: (c.meta_title || c.title) as string | undefined,
-      description: (c.meta_description || c.description) as string | undefined,
-      meta_pixel: (c.meta_pixel || c.pixel_id) as string | undefined,
+      title: s.title || cs.title || (c.meta_title as string) || undefined,
+      description: s.description || cs.description || undefined,
+      meta_pixel: px.meta_pixel_id || (s.meta_pixel as string) || undefined,
     };
   }
 
   const pageRows = pageList.map((p) => {
     const seo = getSeoMeta(p);
     const views = viewsByPage[p.id] ?? 0;
-    const pathMap: Record<string, string> = {
-      website: "/",
-      bio: "/bio",
-      store: "/store",
-    };
-    const path = pathMap[p.page_type] || `/opp/${p.id.slice(0, 8)}`;
+    const pathMap: Record<string, string> = { website: "/", bio: "/bio", store: "/store" };
+    const path = pathMap[p.page_type] ?? `/opp/${p.id.slice(0, 8)}`;
     return { ...p, seo, views, path };
   });
 
@@ -66,7 +107,7 @@ export default async function SeoPage() {
     <>
       <Phead
         title="Pixels & SEO"
-        sub="Per-page tracking, meta tags, and search visibility."
+        sub="Store-wide defaults for tracking pixels, search metadata, and social cards."
       />
 
       <Kpis
@@ -85,19 +126,25 @@ export default async function SeoPage() {
           },
           {
             icon: "pixel",
-            color: "var(--secondary)",
-            label: "Domain",
-            value: activeBase
-              ? activeBase.replace("https://", "")
-              : "Not set",
+            color: storePixelSet ? "var(--primary)" : "var(--muted)",
+            label: "Store pixels",
+            value: storePixelSet ? "Active" : "Not set",
           },
           {
             icon: "chart",
             color: "var(--accent)",
-            label: "Pages with pixel",
-            value: String(pageRows.filter((p) => p.seo.meta_pixel).length),
+            label: "Domain",
+            value: activeBase ? activeBase.replace("https://", "") : "Not set",
           },
         ]}
+      />
+
+      {/* Store-level SEO + pixel form (live Google/OG preview on the right). */}
+      <SeoForm
+        initial={seoInitial}
+        storeName={store.store_name ?? ""}
+        activeBase={activeBase}
+        impersonating={!!impersonating}
       />
 
       <style>{`
@@ -107,32 +154,23 @@ export default async function SeoPage() {
           text-transform: uppercase; color: var(--muted); padding: 9px 12px;
           border-bottom: 1px solid var(--border);
         }
-        .seo-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+        .seo-table td {
+          padding: 10px 12px; border-bottom: 1px solid var(--border);
+          font-size: 13px; vertical-align: middle;
+        }
         .seo-table tr:last-child td { border-bottom: 0; }
         .seo-table tr:hover td { background: var(--surface2); }
         .seo-path { font-family: monospace; font-size: 12px; color: var(--muted); }
         .seo-meta { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .seo-missing { color: var(--secondary); font-size: 12px; }
-        .seo-coming {
-          background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-          border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
-          border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
-        }
-        .seo-coming b { display: block; margin-bottom: 4px; }
-        .seo-coming p { margin: 0; font-size: 13px; color: var(--muted); }
-        .seo-field { margin-bottom: 10px; }
-        .seo-field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
-        .seo-field input {
-          width: 100%; padding: 9px 12px; border: 1px solid var(--border);
-          border-radius: 9px; background: var(--bg); color: var(--text);
-          font: inherit; font-size: 13.5px; outline: none;
-        }
         .seo-pixel-link {
           display: inline-flex; align-items: center; gap: 5px;
           font-size: 12.5px; color: var(--primary); text-decoration: none;
         }
         .seo-pixel-link:hover { text-decoration: underline; }
       `}</style>
+
+      <div style={{ height: 20 }} />
 
       <div className="dx-grid dx-cols">
         <div>
@@ -150,7 +188,7 @@ export default async function SeoPage() {
                     <th>Path</th>
                     <th>Views</th>
                     <th>Meta title</th>
-                    <th>Pixel</th>
+                    <th>Page pixel</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -163,29 +201,25 @@ export default async function SeoPage() {
                       <td>
                         <span className="seo-path">{p.path}</span>
                       </td>
-                      <td style={{ fontWeight: 600 }}>
-                        {p.views.toLocaleString("en-IN")}
-                      </td>
+                      <td style={{ fontWeight: 600 }}>{p.views.toLocaleString("en-IN")}</td>
                       <td>
                         {p.seo.title ? (
                           <span className="seo-meta">{p.seo.title}</span>
                         ) : (
-                          <span className="seo-missing">Not set</span>
+                          <span className="seo-missing">Store default</span>
                         )}
                       </td>
                       <td>
                         {p.seo.meta_pixel ? (
-                          <Tag kind="paid">Set</Tag>
+                          <Tag kind="paid">Override</Tag>
+                        ) : storePixelSet ? (
+                          <Tag kind="neu">Store default</Tag>
                         ) : (
                           <span className="seo-missing">—</span>
                         )}
                       </td>
                       <td>
-                        {p.status === "published" ? (
-                          <Live />
-                        ) : (
-                          <Tag kind="neu">Draft</Tag>
-                        )}
+                        {p.status === "published" ? <Live /> : <Tag kind="neu">Draft</Tag>}
                       </td>
                     </tr>
                   ))}
@@ -193,52 +227,9 @@ export default async function SeoPage() {
               </table>
             )}
             <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-              Set meta title, description, and pixel IDs inside each page builder (builder → SEO tab).
+              Set meta title, description, and pixel overrides inside each page builder (builder → SEO tab).
+              Store-wide defaults above apply where no page-level value is set.
             </p>
-          </Card>
-
-          <div style={{ height: 14 }} />
-
-          {/* Store-level pixel defaults */}
-          <Card title="Default pixel IDs (store-wide)">
-            <div className="seo-coming">
-              <b>Global pixel configuration — coming soon</b>
-              <p>
-                Set default Meta Pixel and Google Ads tag IDs here to fire on all pages automatically.
-                Per-page overrides are set inside each page builder.
-              </p>
-            </div>
-            <div className="seo-field">
-              <label>Meta Pixel ID (default)</label>
-              <input
-                placeholder="123456789012345"
-                disabled
-                style={{ opacity: 0.6, cursor: "not-allowed" }}
-              />
-            </div>
-            <div className="seo-field">
-              <label>Google Ads tag (default)</label>
-              <input
-                placeholder="AW-XXXXXXXXXX"
-                disabled
-                style={{ opacity: 0.6, cursor: "not-allowed" }}
-              />
-            </div>
-            <div className="seo-field">
-              <label>Google Analytics 4 Measurement ID</label>
-              <input
-                placeholder="G-XXXXXXXXXX"
-                disabled
-                style={{ opacity: 0.6, cursor: "not-allowed" }}
-              />
-            </div>
-            <button
-              className="btn grad"
-              disabled
-              style={{ opacity: 0.5, cursor: "not-allowed" }}
-            >
-              Save defaults (coming soon)
-            </button>
           </Card>
         </div>
 
@@ -248,39 +239,48 @@ export default async function SeoPage() {
             <div className="dx-kv">
               <span>Subdomain</span>
               <span className="dx-fw6">
-                {store.subdomain
-                  ? `${store.subdomain}.invoxai.io`
-                  : "—"}
+                {store.subdomain ? `${store.subdomain}.invoxai.io` : "—"}
               </span>
             </div>
             <div className="dx-kv">
               <span>Custom domain</span>
-              <span className="dx-fw6">
-                {store.custom_domain ?? "Not connected"}
-              </span>
+              <span className="dx-fw6">{store.custom_domain ?? "Not connected"}</span>
             </div>
             <div className="dx-kv">
               <span>SSL</span>
-              {store.custom_domain
-                ? store.custom_domain_verified
-                  ? <Live />
-                  : <Tag kind="pend">Verifying</Tag>
-                : <Tag kind="neu">Subdomain only</Tag>}
+              {store.custom_domain ? (
+                store.custom_domain_verified ? <Live /> : <Tag kind="pend">Verifying</Tag>
+              ) : (
+                <Tag kind="neu">Subdomain only</Tag>
+              )}
             </div>
             <div className="dx-kv">
-              <span>Google indexing</span>
-              <Tag kind="neu">Auto (coming soon)</Tag>
+              <span>Search indexing</span>
+              {seoInitial.seo_indexable ? (
+                <Tag kind="paid">Allowed</Tag>
+              ) : (
+                <Tag kind="neu">Blocked (noindex)</Tag>
+              )}
             </div>
             {activeBase && (
               <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-                Sitemap will be at{" "}
-                <a href={`${activeBase}/sitemap.xml`} target="_blank" rel="noreferrer" style={{ color: "var(--primary)" }}>
+                Sitemap at{" "}
+                <a
+                  href={`${activeBase}/sitemap.xml`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--primary)" }}
+                >
                   {activeBase.replace("https://", "")}/sitemap.xml
                 </a>{" "}
                 (auto-generated, not yet live).
               </p>
             )}
-            <a href="/dashboard/domains" className="dx-editbtn" style={{ display: "inline-block", marginTop: 10 }}>
+            <a
+              href="/dashboard/domains"
+              className="dx-editbtn"
+              style={{ display: "inline-block", marginTop: 10 }}
+            >
               Manage domains →
             </a>
           </Card>
@@ -311,44 +311,36 @@ export default async function SeoPage() {
                 link: "/studio/store",
               },
               {
-                label: "Meta title set on website",
-                done: pageRows.some(
-                  (p) => p.page_type === "website" && p.seo.title
-                ),
-                link: "/studio/website",
+                label: "Default meta title set",
+                done: !!seoInitial.default_meta_title,
+                link: undefined,
               },
               {
-                label: "Meta Pixel configured",
-                done: pageRows.some((p) => p.seo.meta_pixel),
-                link: pageRows.find((p) => p.seo.meta_pixel)
-                  ? undefined
-                  : "/studio/website",
+                label: "OG image uploaded",
+                done: !!seoInitial.og_image_url,
+                link: undefined,
+              },
+              {
+                label: "Meta Pixel or GA4 configured",
+                done: !!(seoInitial.meta_pixel_id || seoInitial.google_analytics_id),
+                link: undefined,
               },
             ].map((item) => (
               <div
                 key={item.label}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 0",
-                  borderBottom: "1px solid var(--border)",
-                  fontSize: 13,
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "9px 0", borderBottom: "1px solid var(--border)", fontSize: 13,
                 }}
               >
                 <span
                   style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
+                    width: 18, height: 18, borderRadius: "50%", flex: "none",
                     background: item.done ? "var(--green)" : "var(--surface2)",
                     border: `1.5px solid ${item.done ? "var(--green)" : "var(--border)"}`,
-                    display: "grid",
-                    placeItems: "center",
+                    display: "grid", placeItems: "center",
                     color: item.done ? "#fff" : "var(--muted)",
-                    fontSize: 10,
-                    fontWeight: 800,
-                    flex: "none",
+                    fontSize: 10, fontWeight: 800,
                   }}
                 >
                   {item.done ? "✓" : ""}
@@ -357,9 +349,7 @@ export default async function SeoPage() {
                   {item.label}
                 </span>
                 {!item.done && item.link && (
-                  <a href={item.link} className="seo-pixel-link">
-                    Fix →
-                  </a>
+                  <a href={item.link} className="seo-pixel-link">Fix →</a>
                 )}
               </div>
             ))}

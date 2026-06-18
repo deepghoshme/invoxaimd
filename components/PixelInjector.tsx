@@ -1,14 +1,52 @@
 import Script from "next/script";
 
-type Pixels = { meta_pixel_id?: string; google_id?: string };
+/** Per-page pixel overrides (from pages.pixels JSONB column). */
+type PagePixels = { meta_pixel_id?: string; google_id?: string };
+
+/** Store-level pixel defaults (from stores columns added by the store_seo migration). */
+type StorePixels = {
+  meta_pixel_id?: string | null;
+  google_analytics_id?: string | null;
+  google_ads_id?: string | null;
+};
 
 /**
- * Injects per-page Meta (Facebook) + Google (GA4 or Ads) pixels into the public
- * page. IDs come from the page's JSONB `pixels`. Fires page-view on load.
+ * Injects Meta (Facebook) + Google (GA4 / Ads) pixels into a public page.
+ *
+ * Resolution order (most-specific wins):
+ *   1. Per-page `pixels` JSONB (page-level override set in the page builder)
+ *   2. Store-level defaults (`meta_pixel_id`, `google_analytics_id`,
+ *      `google_ads_id` columns on `stores` — set in the SEO & Pixels dashboard)
+ *
+ * Safe to call with empty / undefined arguments — renders nothing.
  */
-export default function PixelInjector({ pixels }: { pixels: Pixels }) {
-  const meta = pixels?.meta_pixel_id?.trim();
-  const google = pixels?.google_id?.trim();
+export default function PixelInjector({
+  pixels,
+  storePixels,
+}: {
+  pixels?: PagePixels;
+  storePixels?: StorePixels;
+}) {
+  // Meta Pixel: page-level override wins; fall back to store-level.
+  const meta =
+    (pixels?.meta_pixel_id?.trim() || storePixels?.meta_pixel_id?.trim()) ?? "";
+
+  // Google: page-level google_id (could be GA4 or Ads) wins; otherwise prefer
+  // GA4 store column, then Ads store column.
+  const google =
+    (pixels?.google_id?.trim() ||
+      storePixels?.google_analytics_id?.trim() ||
+      storePixels?.google_ads_id?.trim()) ?? "";
+
+  // Google Ads fires a *second* gtag config call when a dedicated ads ID exists
+  // and is different from the main google ID already being loaded.
+  const googleAds =
+    storePixels?.google_ads_id?.trim() &&
+    storePixels.google_ads_id.trim() !== google
+      ? storePixels.google_ads_id.trim()
+      : "";
+
+  if (!meta && !google && !googleAds) return null;
 
   return (
     <>
@@ -36,7 +74,23 @@ export default function PixelInjector({ pixels }: { pixels: Pixels }) {
             {`window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', '${google}');`}
+            gtag('config', '${google}');${googleAds ? `\n            gtag('config', '${googleAds}');` : ""}`}
+          </Script>
+        </>
+      )}
+
+      {/* Ads-only path: no GA4 but a dedicated Google Ads ID. */}
+      {!google && googleAds && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${googleAds}`}
+            strategy="afterInteractive"
+          />
+          <Script id="gtag-ads-init" strategy="afterInteractive">
+            {`window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${googleAds}');`}
           </Script>
         </>
       )}

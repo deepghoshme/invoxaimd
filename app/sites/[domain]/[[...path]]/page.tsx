@@ -11,9 +11,11 @@ import {
   getStoreProducts,
   getStoreCatalog,
   getProductById,
+  getStoreSeoDefaults,
   pageTypeForPath,
   websiteSubPage,
   type SitePage,
+  type StoreSeoDefaults,
 } from "@/lib/sites";
 import { formatPrice, type OppContent } from "@/lib/products";
 import BioView from "@/components/bio/BioView";
@@ -80,16 +82,27 @@ export async function generateMetadata({
   const { store, page } = await resolve(domain, path);
   if (!store) return { title: "Not found" };
 
+  // Fetch store-level SEO defaults (graceful — returns nulls if migration unapplied).
+  const storeSeo = await getStoreSeoDefaults(store.id);
+
   const seo = (page?.seo ?? {}) as Record<string, string>;
   // Website pages keep their SEO + favicon inside content (single JSONB blob).
   const content = (page?.content ?? {}) as { seo?: { title?: string; description?: string; ogImage?: string }; favicon?: string };
   const wsSeo = page?.page_type === "website" ? (content.seo ?? {}) : {};
   const favicon = page?.page_type === "website" ? content.favicon : undefined;
 
-  const title = seo.title || wsSeo.title || page?.title || store.store_name || "invoxai.io";
-  const description = seo.description || wsSeo.description || "";
-  const ogImage = seo.og_image || wsSeo.ogImage;
-  const robots = seo.robots === "noindex" ? { index: false, follow: false } : undefined;
+  // Resolution: page-level seo column → website content.seo → store defaults → fallback.
+  const title =
+    seo.title || wsSeo.title || page?.title ||
+    storeSeo.default_meta_title || store.store_name || "invoxai.io";
+  const description =
+    seo.description || wsSeo.description ||
+    storeSeo.default_meta_description || "";
+  const ogImage = seo.og_image || wsSeo.ogImage || storeSeo.og_image_url || undefined;
+
+  // noindex: page-level "noindex" flag OR store-level seo_indexable=false.
+  const noindex = seo.robots === "noindex" || !storeSeo.seo_indexable;
+  const robots = noindex ? { index: false, follow: false } : undefined;
   const canonical = seo.canonical || undefined;
 
   return {
@@ -141,6 +154,9 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
     );
   }
 
+  // Store-level SEO defaults + pixel IDs (graceful — nulls if migration unapplied).
+  const storeSeo = await getStoreSeoDefaults(store.id);
+
   const { show_brand_badge } = await getPlatformSettings();
 
   if (page.page_type === "opp") {
@@ -149,7 +165,7 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
     const sold = await getPaidOrderCount(page.id);
     return (
       <>
-        <PixelInjector pixels={page.pixels} />
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
         <ProductTemplate
           content={page.content as OppContent}
           pageId={page.id}
@@ -177,7 +193,7 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
     });
     return (
       <>
-        <PixelInjector pixels={page.pixels} />
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
         <WebsiteView content={page.content as WebsiteContent} showBrand={show_brand_badge} track={{ pageId: page.id, storeId: store.id }} initialPage={websiteSubPage(path)} products={products} stage live />
         <WebsiteTracker pageId={page.id} storeId={store.id} />
       </>
@@ -207,7 +223,7 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
     const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
     return (
       <>
-        <PixelInjector pixels={page.pixels} />
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
         <StoreView content={page.content as StoreContent} products={products} payEnabled={payEnabled} stage />
         <WebsiteTracker pageId={page.id} storeId={store.id} />
       </>
@@ -216,7 +232,7 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
 
   return (
     <>
-      <PixelInjector pixels={page.pixels} />
+      <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
       {page.page_type === "bio" ? (
         <>
           <BioView content={page.content as BioContent} showBrand={show_brand_badge} track={{ pageId: page.id, storeId: store.id }} stage />
@@ -246,6 +262,9 @@ async function CatalogProductPage({ domain, productId }: { domain: string; produ
   const gateway = await getStoreGateway(store.id);
   const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
 
+  // Store-level SEO / pixel defaults.
+  const storeSeo = await getStoreSeoDefaults(store.id);
+
   // "You may also like" — other visible products from the same store.
   const relRows = await getStoreCatalog(store.id, 12);
   const related = relRows
@@ -260,7 +279,10 @@ async function CatalogProductPage({ domain, productId }: { domain: string; produ
 
   return (
     <>
-      {storePage && <PixelInjector pixels={storePage.pixels} />}
+      <PixelInjector
+        pixels={storePage ? (storePage.pixels as { meta_pixel_id?: string; google_id?: string }) : undefined}
+        storePixels={storeSeo}
+      />
       <ProductPage product={product} store={storeContent} storeName={store.store_name ?? "Store"} storeUrl="/store" payEnabled={payEnabled} related={related} />
       {storePage && <WebsiteTracker pageId={storePage.id} storeId={store.id} />}
     </>
@@ -289,10 +311,14 @@ async function Checkout({
   if (suspended) return <StoreSuspended storeName={store.store_name} />;
 
   const sourcePage = order.page_id ? await getPageById(order.page_id) : null;
+  const storeSeo = await getStoreSeoDefaults(store.id);
 
   return (
     <main className="checkout-page">
-      <PixelInjector pixels={sourcePage?.pixels ?? {}} />
+      <PixelInjector
+        pixels={(sourcePage?.pixels ?? {}) as { meta_pixel_id?: string; google_id?: string }}
+        storePixels={storeSeo}
+      />
       <CheckoutForm
         order={{
           id: order.id,
