@@ -157,6 +157,22 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.startsWith("/auth");
 
+  // Buyer-facing routes must run on the apex host (app.invoxai.io) because
+  // seller/custom-domain hosts don't hold a Supabase session cookie.
+  // If such a request somehow arrives on a non-platform host, redirect it to
+  // the canonical apex rather than rewriting it to /sites/[host] (which would
+  // 404 or silently lose the session).
+  const isBuyerRoute =
+    pathname === "/account" ||
+    pathname.startsWith("/account/") ||
+    pathname.startsWith("/auth/claim");
+
+  if (host && !PLATFORM_HOSTS.has(host) && isBuyerRoute) {
+    return NextResponse.redirect(
+      `https://app.invoxai.io${pathname}${request.nextUrl.search}`,
+    );
+  }
+
   if (host && !PLATFORM_HOSTS.has(host) && !isInternal) {
     const url = request.nextUrl.clone();
     url.pathname = `/sites/${host}${pathname === "/" ? "" : pathname}`;
