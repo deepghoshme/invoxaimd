@@ -63,8 +63,29 @@ export default async function OrdersPage({
 
   const { data: rows, count } = await query.range(offset, offset + PAGE_SIZE - 1);
 
-  const orders = (rows ?? []) as import("./OrdersTable").OrderRow[];
+  const rawOrders = (rows ?? []) as Omit<import("./OrdersTable").OrderRow, "invoice_id">[];
   const totalCount = count ?? 0;
+
+  // Fetch invoice IDs for this page of orders so the drawer can link to the
+  // buyer/order PDF. Scoped to this store's order IDs — no cross-store leakage.
+  const pageOrderIds = rawOrders.map((o) => o.id);
+  let invoiceMap: Record<string, string> = {};
+  if (pageOrderIds.length > 0) {
+    const { data: invRows } = await sb
+      .from("invoices")
+      .select("id, order_id")
+      .eq("store_id", store.id)
+      .eq("kind", "order")
+      .in("order_id", pageOrderIds);
+    for (const inv of invRows ?? []) {
+      if (inv.order_id) invoiceMap[inv.order_id] = inv.id;
+    }
+  }
+
+  const orders = rawOrders.map((o) => ({
+    ...o,
+    invoice_id: invoiceMap[o.id] ?? null,
+  })) as import("./OrdersTable").OrderRow[];
 
   return (
     <>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { formatMoney } from "@/lib/products";
 
 type Order = {
@@ -59,6 +60,9 @@ export default function CheckoutForm({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(order.status === "paid");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const valueMajor = order.amount / 100;
 
@@ -188,7 +192,8 @@ export default function CheckoutForm({
 
       {err && <div className="alert alert-error">{err}</div>}
 
-      <button className="btn btn-gradient btn-block btn-shimmer" onClick={pay} disabled={loading}>
+      {/* Inline pay button — hidden on mobile (≤640px) via .co-inline-pay */}
+      <button className="btn btn-gradient btn-block btn-shimmer co-inline-pay" onClick={pay} disabled={loading}>
         <span
           className="btn-shine"
           style={{ background: "linear-gradient(90deg, transparent, #ffffff, transparent)" }}
@@ -198,6 +203,30 @@ export default function CheckoutForm({
       <p className="muted" style={{ fontSize: "0.78rem", textAlign: "center", marginTop: 10 }}>
         🔒 Secure payment via Razorpay
       </p>
+
+      {/* Mobile-pinned pay bar — portals to body so it escapes the card's stacking
+          context and sits fixed at the viewport bottom. Only visible on ≤640px via CSS. */}
+      {mounted && createPortal(
+        <div className="co-pay-bar">
+          <button
+            className="btn btn-gradient btn-block btn-shimmer"
+            onClick={pay}
+            disabled={loading}
+            style={{ fontSize: "1rem", padding: "0.85rem 1rem" }}
+          >
+            <span
+              className="btn-shine"
+              style={{ background: "linear-gradient(90deg, transparent, #ffffff, transparent)" }}
+            />
+            {loading ? "Processing…" : `Pay ${formatMoney(order.amount, order.currency)}`}
+          </button>
+          <p className="muted" style={{ fontSize: "0.72rem", textAlign: "center", margin: "4px 0 0" }}>
+            🔒 Secure payment via Razorpay
+          </p>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
+

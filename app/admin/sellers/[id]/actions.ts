@@ -143,6 +143,50 @@ export async function unsuspendStoreAction(
   return { ok: true };
 }
 
+// ── Commission override ───────────────────────────────────────────────────────
+
+/**
+ * Admin-only: Set or clear a per-store commission override.
+ * @param storeId   The store to update.
+ * @param ratePercent  Rate in percent (e.g. 8.5 = 8.5 %). Pass null to clear the override.
+ */
+export async function setCommissionOverrideAction(
+  storeId: string,
+  ratePercent: number | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+  if (!storeId?.trim()) return { ok: false, error: "storeId is required." };
+
+  if (ratePercent !== null && (!Number.isFinite(ratePercent) || ratePercent < 0 || ratePercent > 50)) {
+    return { ok: false, error: "Rate must be between 0 and 50 %." };
+  }
+
+  const fraction = ratePercent !== null ? ratePercent / 100 : null;
+
+  const sb = createAdminClient();
+  const { error } = await sb
+    .from("stores")
+    .update({ commission_override: fraction })
+    .eq("id", storeId);
+
+  if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    actorUserId: guard.userId,
+    actorEmail:  guard.email,
+    actorRole:   "admin",
+    action:      "store.commission_override",
+    targetType:  "store",
+    targetId:    storeId,
+    storeId:     storeId,
+    metadata:    { ratePercent, fraction },
+  });
+
+  revalidatePath(`/admin/sellers/${storeId}`);
+  return { ok: true };
+}
+
 // ── Impersonation start ───────────────────────────────────────────────────────
 
 /**

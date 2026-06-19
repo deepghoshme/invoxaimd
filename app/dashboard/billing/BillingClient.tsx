@@ -124,6 +124,8 @@ export default function BillingClient({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoMsg, setPromoMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   // Determine whether to show the toggle based on whether there are any annual plans
   const hasAnnual = plans.some((p) => p.interval === "annual");
@@ -185,22 +187,43 @@ export default function BillingClient({
       return setMsg({ text: "Couldn't load the payment library. Check your connection.", ok: false });
     }
     try {
+      setPromoMsg(null);
       const sRes = await fetch("/api/plans/subscribe/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: planId }),
+        body: JSON.stringify({ plan_id: planId, promoCode: promoCode.trim() || undefined }),
       });
       const start = await sRes.json();
+      // If the server returned a promo-specific error, surface it separately so
+      // the user knows to fix the code before re-trying (not a generic failure).
+      if (!sRes.ok && start.promoError) {
+        setBusy(false);
+        setPromoMsg({ text: start.error || "Invalid promo code.", ok: false });
+        return;
+      }
       if (!sRes.ok) throw new Error(start.error || "Couldn't start payment.");
 
-      // Zero-charge path: the upgrade credit fully covers the new plan price.
+      // Zero-charge path: credit + promo discount fully covers the new plan price.
       // /start has already activated the plan — skip the payment modal.
       if (start.zero_charge) {
-        setMsg({ text: "Plan upgraded (credit applied — no charge).", ok: true });
+        const discountNote = start.discount_paise > 0
+          ? ` (promo saved ₹${Math.round(start.discount_paise / 100).toLocaleString("en-IN")})`
+          : "";
+        setMsg({ text: `Plan upgraded — no charge${discountNote}.`, ok: true });
         router.refresh();
         setTimeout(() => setMsg(null), 4000);
         setBusy(false);
         return;
+      }
+
+      // Show the server-computed discounted amount in the Razorpay modal title
+      // so the user sees exactly what they'll be charged (server is source of truth).
+      const chargedRupees = Math.round((start.amount as number) / 100).toLocaleString("en-IN");
+      const discountNote = (start.discount_paise as number) > 0
+        ? ` · promo saves ₹${Math.round((start.discount_paise as number) / 100).toLocaleString("en-IN")}`
+        : "";
+      if ((start.discount_paise as number) > 0) {
+        setPromoMsg({ text: `Promo applied — you pay ₹${chargedRupees}${discountNote}.`, ok: true });
       }
 
       const rzp = new window.Razorpay!({
@@ -209,7 +232,7 @@ export default function BillingClient({
         amount: start.amount,
         currency: start.currency,
         name: "invoxai",
-        description: `${start.plan_name} plan`,
+        description: `${start.plan_name} plan — ₹${chargedRupees}`,
         theme: { color: "#FF6A3D" },
         modal: { ondismiss: () => setBusy(false) },
         handler: async (resp: Record<string, string>) => {
@@ -227,6 +250,7 @@ export default function BillingClient({
             const v = await vRes.json();
             if (!vRes.ok || !v.ok) throw new Error(v.error || "Verification failed");
             setMsg({ text: "Plan activated", ok: true });
+            setPromoMsg(null);
             router.refresh();
             setTimeout(() => setMsg(null), 3000);
           } catch (e) {
@@ -332,6 +356,24 @@ export default function BillingClient({
         .bl-msg.ok { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
         .bl-msg.err { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
         .bl-note { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.6; }
+        /* Promo code row */
+        .bl-promo-row {
+          display: flex; align-items: center; gap: 8px;
+          margin-top: 18px; flex-wrap: wrap;
+        }
+        .bl-promo-row input {
+          flex: 1; min-width: 140px; max-width: 220px;
+          padding: 8px 12px; border: 1.5px solid var(--border);
+          border-radius: 9px; background: var(--surface); color: var(--text);
+          font-size: 13px; font-family: monospace; letter-spacing: .05em;
+          outline: none; transition: border-color .15s;
+        }
+        .bl-promo-row input:focus { border-color: var(--primary); }
+        .bl-promo-row input::placeholder { color: var(--muted); font-family: sans-serif; letter-spacing: normal; }
+        .bl-promo-label { font-size: 13px; color: var(--muted); flex: none; }
+        .bl-promo-msg { margin-top: 6px; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 8px; }
+        .bl-promo-msg.ok { background: color-mix(in srgb, var(--green, #22c55e) 14%, transparent); color: var(--green, #16a34a); }
+        .bl-promo-msg.err { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
         @media (max-width: 480px) { .bl-plans-grid { grid-template-columns: 1fr; } }
       `}</style>
 
@@ -411,6 +453,32 @@ export default function BillingClient({
           </div>
         )}
       </div>
+
+      {/* Promo code input — shown only when there are paid plans to select */}
+      {filteredPlans.some((p) => p.price > 0) && !migrationPending && (
+        <div style={{ marginTop: 18 }}>
+          <div className="bl-promo-row">
+            <span className="bl-promo-label">Promo code</span>
+            <input
+              type="text"
+              className=""
+              placeholder="ENTER CODE"
+              value={promoCode}
+              onChange={(e) => {
+                setPromoCode(e.target.value.toUpperCase());
+                setPromoMsg(null);
+              }}
+              maxLength={32}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={busy}
+            />
+          </div>
+          {promoMsg && (
+            <div className={`bl-promo-msg ${promoMsg.ok ? "ok" : "err"}`}>{promoMsg.text}</div>
+          )}
+        </div>
+      )}
 
       {/* Feedback message */}
       {msg && (

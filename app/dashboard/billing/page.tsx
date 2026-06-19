@@ -33,7 +33,10 @@ async function loadLegacyInvoices(storeId: string): Promise<LegacyInvoice[]> {
   return [...planRows, ...walletRows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-/** Tax invoices from public.invoices (service-role scoped to this store). Newest first. */
+/**
+ * Platform-to-seller invoices only: plan subscriptions and wallet recharges.
+ * Buyer/order invoices (kind="order") belong on the seller order page, not here.
+ */
 async function loadTaxInvoices(storeId: string): Promise<InvoiceRow[]> {
   const admin = createAdminClient();
   const { data } = await admin
@@ -42,6 +45,7 @@ async function loadTaxInvoices(storeId: string): Promise<InvoiceRow[]> {
       "id, store_id, order_id, invoice_number, buyer_name, buyer_email, currency, subtotal_paise, tax_rate, cgst_paise, sgst_paise, igst_paise, total_paise, gstin, seller_legal_name, seller_address, kind, meta, created_at",
     )
     .eq("store_id", storeId)
+    .in("kind", ["plan", "wallet"])
     .order("created_at", { ascending: false })
     .limit(100);
   return (data ?? []) as InvoiceRow[];
@@ -124,7 +128,7 @@ export default async function BillingPage() {
         gstBreakdown = `IGST ${inr(igst)} (${rate}%)`;
       }
     }
-    const kindLabel = inv.kind === "order" ? "Order" : inv.kind === "plan" ? "Plan" : "Wallet";
+    const kindLabel = inv.kind === "plan" ? "Plan" : "Wallet";
     return [
       <span key="n" style={{ fontFamily: "monospace", fontSize: 12 }}>{inv.invoice_number}</span>,
       <span key="d" style={{ whiteSpace: "nowrap" }}>{fmtDate(inv.created_at)}</span>,
@@ -165,13 +169,13 @@ export default async function BillingPage() {
         migrationPending={migrationPending}
       />
 
-      {/* Tax Invoices — real sequential GST invoices from public.invoices */}
+      {/* Platform invoices — plan subscriptions and wallet recharges billed by the platform to this seller */}
       <div style={{ marginTop: 20 }}>
-        <Card title="Tax invoices">
+        <Card title="Platform invoices">
           <Table
             cols={["Invoice No.", "Date", "Type", "Taxable Value", "GST Breakdown", "Total", ""]}
             rows={taxInvoiceRows}
-            empty="No tax invoices yet. They are auto-generated on each confirmed order and plan payment."
+            empty="No platform invoices yet. Plan subscriptions and wallet recharges will appear here."
           />
         </Card>
       </div>

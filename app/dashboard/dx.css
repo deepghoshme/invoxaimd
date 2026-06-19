@@ -191,8 +191,17 @@
   .dx-navlbl { display: none; }
   .dx-side-foot { display: none; }
   .dx-nav { white-space: nowrap; padding: 8px 11px; } .dx-nav.act::before { display: none; }
-  .dx-top { padding: 0 14px; }
+  /* Topbar: reduce gap and shrink wallet link text on mobile to avoid collision */
+  .dx-top { padding: 0 10px; gap: 8px; }
+  .dx-wallet { padding: 6px 9px; font-size: 12px; }
+  .dx-icon-btn { width: 34px; height: 34px; font-size: 14px; }
   .dx-cols, .dx-g2, .dx-g3 { grid-template-columns: 1fr; }
+}
+
+/* Extra-small screens: hide the wallet text, keep the icon only */
+@media (max-width: 480px) {
+  .dx-top { gap: 6px; padding: 0 8px; }
+  .dx-wallet-label { display: none; }
 }
 
 /* ── Analytics page ──────────────────────────────────────────────────────── */

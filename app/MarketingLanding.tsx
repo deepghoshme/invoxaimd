@@ -129,6 +129,92 @@ function StatsSection() {
   );
 }
 
+/* ── static pricing data ─────────────────────────────────────────────────── */
+type MkPlan = {
+  name: string;
+  price: string;
+  per?: string;
+  savings?: string;
+  desc: string;
+  features: string[];
+  cta: string;
+  ctaHref: string;
+  featured: boolean;
+  ribbon: string | null;
+};
+
+const PLANS_MONTHLY: MkPlan[] = [
+  {
+    name: "Starter",
+    price: "Free",
+    desc: "Everything to launch your first page.",
+    features: ["1 free subdomain", "Bio + one-page product", "Lead forms & pixels", "6% commission per sale"],
+    cta: "Get started",
+    ctaHref: "/onboarding",
+    featured: false,
+    ribbon: null,
+  },
+  {
+    name: "Growth",
+    price: "₹899",
+    per: "/mo",
+    desc: "For sellers running ads & scaling.",
+    features: ["Custom domain included", "Store, courses & events", "Abandoned-cart recovery", "Coupons & discount links", "3% commission per sale"],
+    cta: "Start 14-day trial",
+    ctaHref: "/onboarding",
+    featured: true,
+    ribbon: "Most popular",
+  },
+  {
+    name: "Scale",
+    price: "₹2,499",
+    per: "/mo",
+    desc: "For brands & agencies.",
+    features: ["5 custom domains", "Premium templates", "Seller brand email + automation", "Priority support", "1.5% commission per sale"],
+    cta: "Choose Scale",
+    ctaHref: "/onboarding",
+    featured: false,
+    ribbon: null,
+  },
+];
+
+const PLANS_ANNUAL: MkPlan[] = [
+  {
+    name: "Starter",
+    price: "Free",
+    desc: "Everything to launch your first page.",
+    features: ["1 free subdomain", "Bio + one-page product", "Lead forms & pixels", "6% commission per sale"],
+    cta: "Get started",
+    ctaHref: "/onboarding",
+    featured: false,
+    ribbon: null,
+  },
+  {
+    name: "Growth",
+    price: "₹8,990",
+    per: "/yr",
+    savings: "Save ₹1,798 vs monthly",
+    desc: "For sellers running ads & scaling.",
+    features: ["Custom domain included", "Store, courses & events", "Abandoned-cart recovery", "Coupons & discount links", "3% commission per sale", "2 months free"],
+    cta: "Start 14-day trial",
+    ctaHref: "/onboarding",
+    featured: true,
+    ribbon: "Best value",
+  },
+  {
+    name: "Scale",
+    price: "₹23,990",
+    per: "/yr",
+    savings: "Save ₹5,998 vs monthly",
+    desc: "For brands & agencies.",
+    features: ["5 custom domains", "Premium templates", "Seller brand email + automation", "Priority support", "1.5% commission per sale", "2 months free"],
+    cta: "Choose Scale",
+    ctaHref: "/onboarding",
+    featured: false,
+    ribbon: null,
+  },
+];
+
 /* ── static data ─────────────────────────────────────────────────────────── */
 const PAGE_TYPES = [
   { ico: "🔗", label: "Link-in-bio",      path: "/bio" },
@@ -184,6 +270,7 @@ export default function MarketingLanding() {
   const { theme, toggle } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [subVal, setSubVal] = useState("");
+  const [pricingInterval, setPricingInterval] = useState<"monthly" | "annual">("monthly");
 
   return (
     <>
@@ -651,76 +738,55 @@ export default function MarketingLanding() {
               </p>
             </div>
           </Reveal>
+
+          {/* Billing interval toggle */}
+          <div className="mk-pricing-toggle-wrap">
+            <div className="mk-pricing-toggle">
+              <button
+                className={pricingInterval === "monthly" ? "active" : ""}
+                onClick={() => setPricingInterval("monthly")}
+              >
+                Monthly
+              </button>
+              <button
+                className={pricingInterval === "annual" ? "active" : ""}
+                onClick={() => setPricingInterval("annual")}
+              >
+                Annual
+              </button>
+            </div>
+            {pricingInterval === "annual" && (
+              <span className="mk-pricing-save-hint">2 months free on annual</span>
+            )}
+          </div>
+
           <div className="mk-plans">
-            <Reveal delay={0}>
-              <div className="mk-plan">
-                <div className="mk-plan-name">Starter</div>
-                <div className="mk-plan-price">Free</div>
-                <div className="mk-plan-desc">
-                  Everything to launch your first page.
+            {(pricingInterval === "monthly" ? PLANS_MONTHLY : PLANS_ANNUAL).map((plan, i) => (
+              <Reveal key={plan.name} delay={i * 80}>
+                <div className={`mk-plan${plan.featured ? " mk-plan-feat" : ""}`}>
+                  {plan.ribbon && <span className="mk-plan-rib">{plan.ribbon}</span>}
+                  <div className="mk-plan-name">{plan.name}</div>
+                  <div className="mk-plan-price">
+                    {plan.price}
+                    {plan.per && <small> {plan.per}</small>}
+                  </div>
+                  {plan.savings && (
+                    <div className="mk-plan-savings">{plan.savings}</div>
+                  )}
+                  <div className="mk-plan-desc">{plan.desc}</div>
+                  <ul>
+                    {plan.features.map((f) => <li key={f}>{f}</li>)}
+                  </ul>
+                  <a
+                    href={plan.ctaHref}
+                    className={`mk-btn ${plan.featured ? "mk-btn-grad" : "mk-btn-ghost"} mk-btn-block`}
+                  >
+                    {plan.cta}
+                    {plan.featured && <span className="mk-shine" aria-hidden="true" />}
+                  </a>
                 </div>
-                <ul>
-                  <li>1 free subdomain</li>
-                  <li>Bio + one-page product</li>
-                  <li>Lead forms &amp; pixels</li>
-                  <li>6% commission per sale</li>
-                </ul>
-                <a
-                  href="/onboarding"
-                  className="mk-btn mk-btn-ghost mk-btn-block"
-                >
-                  Get started
-                </a>
-              </div>
-            </Reveal>
-            <Reveal delay={80}>
-              <div className="mk-plan mk-plan-feat">
-                <span className="mk-plan-rib">Most popular</span>
-                <div className="mk-plan-name">Growth</div>
-                <div className="mk-plan-price">
-                  ₹899<small> /mo</small>
-                </div>
-                <div className="mk-plan-desc">
-                  For sellers running ads &amp; scaling.
-                </div>
-                <ul>
-                  <li>Custom domain included</li>
-                  <li>Store, courses &amp; events</li>
-                  <li>Abandoned-cart recovery</li>
-                  <li>Coupons &amp; discount links</li>
-                  <li>3% commission per sale</li>
-                </ul>
-                <a
-                  href="/onboarding"
-                  className="mk-btn mk-btn-grad mk-btn-block"
-                >
-                  Start 14-day trial
-                  <span className="mk-shine" aria-hidden="true" />
-                </a>
-              </div>
-            </Reveal>
-            <Reveal delay={160}>
-              <div className="mk-plan">
-                <div className="mk-plan-name">Scale</div>
-                <div className="mk-plan-price">
-                  ₹2,499<small> /mo</small>
-                </div>
-                <div className="mk-plan-desc">For brands &amp; agencies.</div>
-                <ul>
-                  <li>5 custom domains</li>
-                  <li>Premium templates</li>
-                  <li>Seller brand email + automation</li>
-                  <li>Priority support</li>
-                  <li>1.5% commission per sale</li>
-                </ul>
-                <a
-                  href="/onboarding"
-                  className="mk-btn mk-btn-ghost mk-btn-block"
-                >
-                  Choose Scale
-                </a>
-              </div>
-            </Reveal>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
@@ -981,6 +1047,13 @@ const MK_CSS = `
 .mk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;text-align:center}
 .mk-stat-n{font-family:var(--font-heading);font-weight:800;font-size:clamp(30px,4vw,46px);letter-spacing:-.02em}
 .mk-stat-l{color:var(--color-muted);font-size:13.5px;margin-top:4px}
+
+.mk-pricing-toggle-wrap{display:flex;align-items:center;gap:14px;justify-content:center;margin:0 0 32px;flex-wrap:wrap}
+.mk-pricing-toggle{display:inline-flex;background:var(--color-card);border:1px solid var(--color-border);border-radius:12px;padding:4px;box-shadow:var(--shadow)}
+.mk-pricing-toggle button{padding:8px 24px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;background:transparent;color:var(--color-muted);transition:background .15s,color .15s,box-shadow .15s;font-family:inherit}
+.mk-pricing-toggle button.active{background:var(--brand-gradient);color:#fff;box-shadow:0 4px 14px -6px rgba(255,77,125,.55)}
+.mk-pricing-save-hint{font-size:12.5px;font-weight:700;padding:5px 13px;border-radius:20px;background:color-mix(in srgb,var(--color-green,#22c55e) 14%,transparent);color:var(--color-green,#16a34a)}
+.mk-plan-savings{font-size:12px;font-weight:700;color:var(--color-green,#16a34a);margin-bottom:2px}
 
 .mk-plans{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
 .mk-plan{position:relative;background:var(--color-card);border:1px solid var(--color-border);border-radius:20px;padding:26px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:100%;box-sizing:border-box}

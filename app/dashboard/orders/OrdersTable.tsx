@@ -43,6 +43,8 @@ export type OrderRow = {
   created_at: string;
   paid_at: string | null;
   commission_amount: number | null;
+  /** Invoice row id from public.invoices (kind="order") — null if no invoice exists yet. */
+  invoice_id: string | null;
 };
 
 function DrawerField({ label, value }: { label: string; value: React.ReactNode }) {
@@ -251,6 +253,30 @@ export default function OrdersTable({
               }
             />
             <DrawerField label="Payment ID" value={selected.gateway_payment_id} />
+            {selected.invoice_id && (
+              <DrawerField
+                label="Billing PDF"
+                value={
+                  <a
+                    href={`/api/invoices/${selected.invoice_id}/pdf`}
+                    download
+                    style={{
+                      display: "inline-block",
+                      padding: "4px 12px",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#7b3fe4",
+                      border: "1px solid #c4a8f0",
+                      borderRadius: 6,
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Download invoice PDF
+                  </a>
+                }
+              />
+            )}
           </DrawerSection>
 
           <DrawerSection title="Timestamps">

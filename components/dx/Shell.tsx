@@ -27,14 +27,27 @@ function BellMenu({ items, viewAllHref, storageKey }: { items: DxNotifItem[]; vi
     setHydrated(true);
   }, [storageKey]);
 
-  // Recalculate position whenever dropdown opens
-  useEffect(() => {
-    if (!open || !btnRef.current) return;
+  // Recalculate position from the bell button's bounding rect
+  function reposition() {
+    if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
     setPanelPos({
       top: rect.bottom + 8,
       right: window.innerWidth - rect.right,
     });
+  }
+
+  // Recalculate position whenever dropdown opens AND on every scroll/resize while open
+  useEffect(() => {
+    if (!open) return;
+    reposition();
+    window.addEventListener("scroll", reposition, { passive: true, capture: true });
+    window.addEventListener("resize", reposition, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Close on Escape key
@@ -188,7 +201,7 @@ export default function DxShell({
         <header className="dx-top">
           {walletHref && (
             <Link className="dx-wallet" href={walletHref}>
-              <Icon name="wallet" size={16} /> Wallet
+              <Icon name="wallet" size={16} /> <span className="dx-wallet-label">Wallet</span>
             </Link>
           )}
           {notifItems && (

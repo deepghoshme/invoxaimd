@@ -5,6 +5,7 @@ import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
 import { upsertSubscription, getStoreSubscription, computeUpgradeCredit } from "@/lib/subscriptions";
 import { sendPlanInvoiceEmail } from "@/lib/transactional";
 import { createInvoiceForPlan } from "@/lib/invoice";
+import { validatePromoCode, incrementPromoUsage } from "@/lib/promos";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,43 @@ export async function POST(req: Request) {
     expectedChargePaise = fullAmountPaise;
   }
 
+  // ── Promo discount re-validation ─────────────────────────────────────────────
+  // Re-validate the promo from server-set order notes. We call validatePromoCode
+  // again with the same plan + full amount to recompute the discount independently,
+  // then confirm the recomputed value matches what /start stashed in the notes.
+  // This blocks any tampered notes: if promo_discount_paise was inflated on the
+  // client side (impossible via Razorpay notes, but defensive), this check catches
+  // it. incrementPromoUsage is called ONLY after the plan_payments ledger insert
+  // succeeds, so a replayed verify (duplicate order_id) never double-increments.
+  const notesPromoDiscountPaise = notes.promo_discount_paise ? Number(notes.promo_discount_paise) : 0;
+  const notesPromoId = typeof notes.promo_id === "string" && notes.promo_id ? notes.promo_id : null;
+  const notesPromoCode = typeof notes.promo_code === "string" && notes.promo_code ? notes.promo_code : null;
+
+  if (notesPromoCode && notesPromoId) {
+    // Re-run validation to get the server-computed discount for this code + plan.
+    const revalidated = await validatePromoCode(notesPromoCode, plan.name as string, fullAmountPaise);
+    if (!revalidated.ok) {
+      // Code is now invalid (expired/disabled between /start and /verify).
+      // The order was already created by /start with the discounted amount, so we
+      // must still honor it (the user already paid). Accept it with a warning log
+      // only if the Razorpay order amount matches what /start charged — the amount
+      // check below will catch any real tamper. Log for audit visibility.
+      console.warn(
+        `[plans/verify] promo ${notesPromoCode} no longer valid at verify time (store=${store.id}), proceeding with order amount.`,
+      );
+    } else {
+      // Promo still valid — confirm the discount in notes matches the recomputed value.
+      if (revalidated.discountPaise !== notesPromoDiscountPaise) {
+        console.error(
+          `[plans/verify] promo discount mismatch: notes=${notesPromoDiscountPaise} recomputed=${revalidated.discountPaise} code=${notesPromoCode} store=${store.id}`,
+        );
+        return NextResponse.json({ error: "Promo discount mismatch. Please try again." }, { status: 400 });
+      }
+    }
+    // Subtract the stashed promo discount from the expected charge.
+    expectedChargePaise = Math.max(0, expectedChargePaise - notesPromoDiscountPaise);
+  }
+
   if (Number(rpOrder.amount) !== expectedChargePaise) {
     return NextResponse.json({ error: "Amount mismatch." }, { status: 400 });
   }
@@ -169,11 +207,20 @@ export async function POST(req: Request) {
     plan_id: plan.id as string,
     razorpay_order_id,
     razorpay_payment_id,
-    amount: expectedChargePaise, // Actual charge (may be < full price for prorated upgrades)
+    amount: expectedChargePaise, // Actual charge (may be < full price for prorated/promo-discounted orders)
   });
   if (ledgerErr) {
     // Duplicate (already processed) → treat as success without re-activating.
+    // Critically: do NOT increment promo usage here — the first successful
+    // insert already triggered it below, so a replayed verify won't double-count.
     return NextResponse.json({ ok: true, already: true });
+  }
+
+  // Increment promo usage ONLY after the ledger insert succeeds (non-fatal).
+  // The UNIQUE constraint on razorpay_order_id in plan_payments means this branch
+  // executes exactly once per order — the duplicate path above returns early.
+  if (notesPromoId) {
+    await incrementPromoUsage(notesPromoId);
   }
 
   // ── Period end by interval ───────────────────────────────────────────────────

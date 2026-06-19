@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRazorpayOrder } from "@/lib/razorpay";
 import { getStoreSubscription, computeUpgradeCredit } from "@/lib/subscriptions";
+import { validatePromoCode, incrementPromoUsage } from "@/lib/promos";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,11 @@ export async function POST(req: Request) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
-  let body: { plan_id?: string };
+  let body: { plan_id?: string; promoCode?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad request" }, { status: 400 }); }
   const planId = typeof body.plan_id === "string" ? body.plan_id : "";
   if (!planId) return NextResponse.json({ error: "Missing plan_id" }, { status: 400 });
+  const promoCodeInput = typeof body.promoCode === "string" ? body.promoCode.trim() : "";
 
   const admin = createAdminClient();
   const { data: plan } = await admin
@@ -66,6 +68,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Platform payments aren't set up yet. Ask the admin to enable the payment gateway." }, { status: 503 });
   }
 
+  // ── Promo code validation ────────────────────────────────────────────────────
+  // Validated server-side AFTER the plan price is read from DB. The client can
+  // only supply the code string — the discount is always computed here, never
+  // derived from any client-supplied amount. Invalid codes return 400 immediately
+  // so the user is never silently charged full price on a bad code.
+  let discountPaise = 0;
+  let validatedPromoId: string | null = null;
+  let validatedPromoCode: string | null = null;
+  if (promoCodeInput) {
+    const promoResult = await validatePromoCode(promoCodeInput, plan.name as string, newAmountPaise);
+    if (!promoResult.ok) {
+      return NextResponse.json({ error: promoResult.reason, promoError: true }, { status: 400 });
+    }
+    discountPaise = promoResult.discountPaise;
+    validatedPromoId = promoResult.promoId;
+    validatedPromoCode = promoResult.code;
+  }
+
   // ── Upgrade proration ────────────────────────────────────────────────────────
   // Fetch the store's current active subscription (if any).
   // All credit logic is derived from STORED DB values — the client never supplies
@@ -88,7 +108,8 @@ export async function POST(req: Request) {
     });
   }
 
-  const chargePaise = Math.max(0, newAmountPaise - creditPaise);
+  // Effective charge = plan price − upgrade credit − promo discount (floor 0).
+  const chargePaise = Math.max(0, newAmountPaise - creditPaise - discountPaise);
 
   // ── Zero-charge path ─────────────────────────────────────────────────────────
   // Razorpay rejects 0-amount orders. Activate directly without a payment modal.
@@ -127,7 +148,15 @@ export async function POST(req: Request) {
       razorpay_payment_id: null,
       amount: 0,
     }).then(() => {}); // Non-fatal if it fails
-    return NextResponse.json({ zero_charge: true, plan_name: plan.name });
+    // Increment promo usage AFTER the subscription upsert succeeds (non-fatal).
+    if (validatedPromoId) {
+      await incrementPromoUsage(validatedPromoId);
+    }
+    return NextResponse.json({
+      zero_charge: true,
+      plan_name: plan.name,
+      discount_paise: discountPaise,
+    });
   }
 
   // ── Normal Razorpay order ────────────────────────────────────────────────────
@@ -142,12 +171,17 @@ export async function POST(req: Request) {
           kind: "plan",
           plan_id: plan.id as string,
           store_id: store.id as string,
-          // Stash the full plan price and credit in server-set notes so
-          // /verify can re-validate the prorated amount without trusting
-          // any client-supplied figure.
+          // Stash the full plan price, credit, and promo discount in server-set
+          // notes so /verify can re-validate the prorated/discounted amount
+          // without trusting any client-supplied figure.
           full_amount_paise: String(newAmountPaise),
           credit_paise: String(creditPaise),
           plan_interval: planInterval,
+          // Promo fields — set only when a code was applied. /verify re-validates
+          // the code and confirms the discount matches before activating the plan.
+          promo_discount_paise: String(discountPaise),
+          promo_id: validatedPromoId ?? "",
+          promo_code: validatedPromoCode ?? "",
         },
       },
     );
@@ -157,6 +191,9 @@ export async function POST(req: Request) {
       amount: chargePaise,
       currency: "INR",
       plan_name: plan.name,
+      // Returned so the UI can display the server-computed discounted total.
+      // The client MUST show this value, never recompute the discount itself.
+      discount_paise: discountPaise,
     });
   } catch {
     return NextResponse.json({ error: "Couldn't start the payment. Please try again." }, { status: 502 });

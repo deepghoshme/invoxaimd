@@ -16,6 +16,94 @@ export type Plan = {
   is_recommended: boolean;
 };
 
+/* ── Feature list editor: add/remove individual lines ─────────────────────── */
+function FeaturesEditor({
+  features,
+  onChange,
+}: {
+  features: string[];
+  onChange: (f: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function addFeature() {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    onChange([...features, trimmed]);
+    setDraft("");
+  }
+
+  function removeFeature(idx: number) {
+    onChange(features.filter((_, i) => i !== idx));
+  }
+
+  function updateFeature(idx: number, val: string) {
+    const next = [...features];
+    next[idx] = val;
+    onChange(next);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {features.map((f, i) => (
+        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input
+            value={f}
+            onChange={(e) => updateFeature(i, e.target.value)}
+            style={{
+              flex: 1, padding: "7px 10px", border: "1px solid var(--border)",
+              borderRadius: 8, background: "var(--bg)", color: "var(--text)",
+              font: "inherit", fontSize: 13,
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => removeFeature(i)}
+            title="Remove feature"
+            style={{
+              width: 28, height: 28, borderRadius: 7, border: "1px solid var(--border)",
+              background: "var(--bg)", color: "var(--text)", cursor: "pointer",
+              display: "grid", placeItems: "center", fontSize: 14, flexShrink: 0,
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 6, marginTop: features.length ? 4 : 0 }}>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFeature(); } }}
+          placeholder="New feature line..."
+          style={{
+            flex: 1, padding: "7px 10px", border: "1px dashed var(--border)",
+            borderRadius: 8, background: "var(--bg)", color: "var(--text)",
+            font: "inherit", fontSize: 13,
+          }}
+        />
+        <button
+          type="button"
+          onClick={addFeature}
+          style={{
+            padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)",
+            background: "var(--bg)", color: "var(--text)", cursor: "pointer",
+            fontSize: 13, fontWeight: 600, flexShrink: 0,
+          }}
+        >
+          + Add
+        </button>
+      </div>
+      {features.length === 0 && (
+        <span style={{ fontSize: 12, color: "var(--muted, #888)" }}>
+          No features yet — type above and press Add or Enter.
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ── Individual plan card ──────────────────────────────────────────────────── */
 function PlanCard({ plan }: { plan: Plan }) {
   const router = useRouter();
   const [p, setP] = useState<PlanInput>({
@@ -53,7 +141,7 @@ function PlanCard({ plan }: { plan: Plan }) {
       <div className="dx-field"><label>Name</label><input value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} /></div>
       <div className="dx-ff">
         <div className="dx-field">
-          <label>Price ₹{intervalLabel}</label>
+          <label>Price &#8377;{intervalLabel}</label>
           <input inputMode="numeric" value={p.price} onChange={(e) => setP({ ...p, price: parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0 })} />
         </div>
         <div className="dx-field"><label>Contacts</label><input inputMode="numeric" value={p.contact_limit ?? ""} onChange={(e) => setP({ ...p, contact_limit: e.target.value ? parseInt(e.target.value.replace(/[^0-9]/g, "")) : null })} /></div>
@@ -69,8 +157,12 @@ function PlanCard({ plan }: { plan: Plan }) {
           <option value="annual">Annual</option>
         </select>
       </div>
-      <div className="dx-field"><label>Features (one per line)</label>
-        <textarea className="dx-plan-feat" rows={3} value={p.features.join("\n")} onChange={(e) => setP({ ...p, features: e.target.value.split("\n") })} style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit" }} />
+      <div className="dx-field">
+        <label style={{ marginBottom: 6, display: "block" }}>Features</label>
+        <FeaturesEditor
+          features={p.features}
+          onChange={(f) => setP({ ...p, features: f })}
+        />
       </div>
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, margin: "4px 0 6px" }}>
         <input type="checkbox" checked={p.is_popular} onChange={(e) => setP({ ...p, is_popular: e.target.checked })} /> Mark as popular
@@ -87,19 +179,89 @@ function PlanCard({ plan }: { plan: Plan }) {
   );
 }
 
+/* ── Top-level admin page ──────────────────────────────────────────────────── */
 export default function PlansAdmin({ plans }: { plans: Plan[] }) {
   const router = useRouter();
+  const [intervalFilter, setIntervalFilter] = useState<"all" | "monthly" | "annual">("all");
+
   async function add() { await createPlan(); router.refresh(); }
+
+  const hasMonthly = plans.some((p) => p.interval === "monthly");
+  const hasAnnual = plans.some((p) => p.interval === "annual");
+  const showToggle = hasMonthly || hasAnnual;
+
+  const filtered =
+    intervalFilter === "all"
+      ? plans
+      : plans.filter((p) => p.interval === intervalFilter);
+
   return (
     <>
+      <style>{`
+        .pa-toggle-wrap { display: flex; align-items: center; gap: 12px; margin: 14px 0 18px; flex-wrap: wrap; }
+        .pa-toggle {
+          display: inline-flex; background: var(--surface2, var(--bg));
+          border: 1px solid var(--border); border-radius: 10px; padding: 3px;
+        }
+        .pa-toggle button {
+          padding: 6px 18px; border-radius: 8px; border: none; cursor: pointer;
+          font-size: 13px; font-weight: 600; background: transparent;
+          color: var(--muted, #888); transition: background .15s, color .15s;
+        }
+        .pa-toggle button.active {
+          background: var(--surface, var(--card)); color: var(--text);
+          box-shadow: 0 1px 4px rgba(0,0,0,.12);
+        }
+        .pa-interval-badge {
+          display: inline-block; font-size: 10px; font-weight: 700;
+          letter-spacing: .06em; text-transform: uppercase;
+          padding: 2px 8px; border-radius: 20px; margin-bottom: 6px;
+          background: color-mix(in srgb, var(--primary, #FF6A3D) 14%, transparent);
+          color: var(--primary, #FF6A3D);
+        }
+      `}</style>
       <div className="dx-phead">
-        <div><h1>Plans &amp; Features</h1><p>Pricing, limits, and access. Create separate Monthly and Annual rows; annual rows have interval=Annual.</p></div>
+        <div>
+          <h1>Plans &amp; Features</h1>
+          <p>Pricing, limits, and access. Create separate Monthly and Annual rows; annual rows have interval=Annual.</p>
+        </div>
         <button className="btn grad" onClick={add}>+ New plan</button>
       </div>
-      {plans.length === 0 ? (
+
+      {showToggle && (
+        <div className="pa-toggle-wrap">
+          <div className="pa-toggle">
+            <button className={intervalFilter === "all" ? "active" : ""} onClick={() => setIntervalFilter("all")}>
+              All ({plans.length})
+            </button>
+            {hasMonthly && (
+              <button className={intervalFilter === "monthly" ? "active" : ""} onClick={() => setIntervalFilter("monthly")}>
+                Monthly ({plans.filter((p) => p.interval === "monthly").length})
+              </button>
+            )}
+            {hasAnnual && (
+              <button className={intervalFilter === "annual" ? "active" : ""} onClick={() => setIntervalFilter("annual")}>
+                Annual ({plans.filter((p) => p.interval === "annual").length})
+              </button>
+            )}
+          </div>
+          <span style={{ fontSize: 12, color: "var(--muted, #888)" }}>
+            Tip: pair each monthly plan with an annual counterpart at a discounted yearly price.
+          </span>
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
         <div className="dx-card"><div className="dx-empty">No plans yet — add one.</div></div>
       ) : (
-        <div className="dx-grid dx-g3">{plans.map((pl) => <PlanCard key={pl.id} plan={pl} />)}</div>
+        <div className="dx-grid dx-g3">
+          {filtered.map((pl) => (
+            <div key={pl.id}>
+              <span className="pa-interval-badge">{pl.interval}</span>
+              <PlanCard plan={pl} />
+            </div>
+          ))}
+        </div>
       )}
     </>
   );

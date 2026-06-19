@@ -98,6 +98,20 @@
 
 * {
   box-sizing: border-box;
+  /* Remove the mobile tap highlight rectangle on all elements */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove focus ring on mouse/touch clicks only.
+   Keyboard (:focus-visible) keeps a clear ring so keyboard users aren't affected. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure keyboard-navigated interactive elements always have a visible ring. */
+:focus-visible {
+  outline: 2px solid var(--color-primary, #ff6a3d);
+  outline-offset: 2px;
 }
 
 html,
@@ -371,6 +385,38 @@ a:hover {
 .trust-badge .ic {
   color: var(--color-primary);
   font-weight: 800;
+}
+
+/* ---- Mobile-sticky payment footer bar (checkout pages) ---- */
+/* On mobile the inline Pay button is hidden; this fixed bar takes its place. */
+.co-pay-bar {
+  display: none; /* desktop: button lives inline */
+}
+@media (max-width: 640px) {
+  /* Add padding so the card content isn't hidden behind the bar */
+  .checkout-page .card {
+    padding-bottom: 96px;
+  }
+  .co-pay-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 48;
+    padding: 10px 16px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--color-card, #fff) 94%, transparent);
+    backdrop-filter: blur(12px) saturate(1.3);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -8px 26px -16px rgba(0, 0, 0, 0.35);
+  }
+  /* Hide the inline button on mobile — the fixed bar handles it */
+  .co-inline-pay {
+    display: none;
+  }
 }
 
 /* ---- One-page product (opp) + checkout ---- */
