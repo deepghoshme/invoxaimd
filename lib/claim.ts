@@ -3,6 +3,16 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
+ * Escape LIKE/ILIKE wildcards so an email is matched LITERALLY (case-insensitively),
+ * not as a pattern. Without this, `_` (common in emails) and `%` act as wildcards —
+ * a HIGH IDOR: e.g. "a%@x.com" would claim every "...@x.com" order. Backslash is
+ * Postgres LIKE's default escape char, so `\_` / `\%` match the literal character.
+ */
+function escapeLike(s: string): string {
+  return s.replace(/([\\%_])/g, "\\$1");
+}
+
+/**
  * Result returned by claimOrdersForUser.
  */
 export interface ClaimResult {
@@ -49,6 +59,8 @@ export async function claimOrdersForUser(
 
   const admin = createAdminClient();
   const normalizedEmail = email.trim().toLowerCase();
+  // Match the email literally (case-insensitive) — never as a LIKE pattern.
+  const emailPattern = escapeLike(normalizedEmail);
 
   // Run all five table updates in parallel — they are independent.
   const [ordersRes, ticketsRes, vipRes, bookingsRes, coursesRes] =
@@ -58,7 +70,7 @@ export async function claimOrdersForUser(
         .update({ buyer_id: userId })
         .is("buyer_id", null)
         .not("buyer_email", "is", null)
-        .ilike("buyer_email", normalizedEmail)
+        .ilike("buyer_email", emailPattern)
         .select("id"),
 
       admin
@@ -66,7 +78,7 @@ export async function claimOrdersForUser(
         .update({ buyer_id: userId })
         .is("buyer_id", null)
         .not("buyer_email", "is", null)
-        .ilike("buyer_email", normalizedEmail)
+        .ilike("buyer_email", emailPattern)
         .select("id"),
 
       admin
@@ -74,7 +86,7 @@ export async function claimOrdersForUser(
         .update({ buyer_id: userId })
         .is("buyer_id", null)
         .not("buyer_email", "is", null)
-        .ilike("buyer_email", normalizedEmail)
+        .ilike("buyer_email", emailPattern)
         .select("id"),
 
       admin
@@ -82,7 +94,7 @@ export async function claimOrdersForUser(
         .update({ buyer_id: userId })
         .is("buyer_id", null)
         .not("buyer_email", "is", null)
-        .ilike("buyer_email", normalizedEmail)
+        .ilike("buyer_email", emailPattern)
         .select("id"),
 
       admin
@@ -90,7 +102,7 @@ export async function claimOrdersForUser(
         .update({ buyer_id: userId })
         .is("buyer_id", null)
         .not("buyer_email", "is", null)
-        .ilike("buyer_email", normalizedEmail)
+        .ilike("buyer_email", emailPattern)
         .select("id"),
     ]);
 

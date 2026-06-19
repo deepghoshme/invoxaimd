@@ -150,14 +150,19 @@ export async function POST(req: Request) {
   if (order.buyer_email) {
     try {
       const adminForLink = createAdminClient();
-      // Step 1: find a matching profile by email (case-insensitive).
+      // Step 1: find a matching profile by email (case-insensitive, LITERAL).
+      // Escape LIKE wildcards (`_`/`%` are common/abusable in emails) so the
+      // lookup can't match a different account, then re-confirm an exact match
+      // in JS — a wrong match here would link the order to the wrong buyer (IDOR).
+      const wantEmail = order.buyer_email.trim().toLowerCase();
+      const safeEmail = wantEmail.replace(/([\\%_])/g, "\\$1");
       const { data: profileRow } = await adminForLink
         .from("profiles")
-        .select("id")
-        .ilike("email", order.buyer_email.trim())
+        .select("id, email")
+        .ilike("email", safeEmail)
         .maybeSingle();
 
-      if (profileRow?.id) {
+      if (profileRow?.id && (profileRow.email ?? "").trim().toLowerCase() === wantEmail) {
         // Step 2: confirm the account's email is verified.
         const { data: authData } = await adminForLink.auth.admin.getUserById(profileRow.id);
         const verified = !!authData?.user?.email_confirmed_at;
