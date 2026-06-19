@@ -125,6 +125,103 @@ export async function POST(req: Request) {
     sellerReplyTo,
   });
 
+  // ── Buyer linkage ──────────────────────────────────────────────────────────
+  // After a confirmed payment, try to link the order to a known verified auth
+  // user so the purchase appears immediately in their /account page.
+  //
+  // Lookup strategy (two-step, no email filter on listUsers):
+  //   1. Query public.profiles by lower(email) — service-role bypasses RLS.
+  //      profiles.id is a 1:1 FK to auth.users and is populated by a trigger
+  //      at signup. Case-insensitive ilike match avoids case-mismatch misses.
+  //   2. Confirm email_confirmed_at IS NOT NULL via auth.admin.getUserById.
+  //      This is the authoritative verified-only check (same pattern as
+  //      app/auth/callback/route.ts). A user who signed up but never confirmed
+  //      their email must NOT have their order pre-linked — that would allow
+  //      an attacker to register with a victim's email and steal purchase
+  //      history before the real owner verifies.
+  //
+  // Idempotent: we only SET buyer_id when it is currently null (the early-return
+  // above already prevents re-running this for already-paid orders on a retry,
+  // but the null-check is a belt-and-suspenders guard).
+  // Non-fatal: any hiccup here must never block the 200 response to the buyer.
+  //
+  // We resolve buyerId for use in the course enrollment block below.
+  let resolvedBuyerId: string | null = null;
+  if (order.buyer_email) {
+    try {
+      const adminForLink = createAdminClient();
+      // Step 1: find a matching profile by email (case-insensitive).
+      const { data: profileRow } = await adminForLink
+        .from("profiles")
+        .select("id")
+        .ilike("email", order.buyer_email.trim())
+        .maybeSingle();
+
+      if (profileRow?.id) {
+        // Step 2: confirm the account's email is verified.
+        const { data: authData } = await adminForLink.auth.admin.getUserById(profileRow.id);
+        const verified = !!authData?.user?.email_confirmed_at;
+
+        if (verified) {
+          resolvedBuyerId = profileRow.id;
+          // Only patch the order when buyer_id is still null — idempotent.
+          // (order.buyer_id is not on the Order type yet but the DB column
+          // exists; we rely on the null-check query rather than the type field.)
+          await adminForLink
+            .from("orders")
+            .update({ buyer_id: resolvedBuyerId })
+            .eq("id", order.id)
+            .is("buyer_id", null);
+        }
+      }
+    } catch {
+      // Non-fatal: buyer linkage failure must never block payment confirmation.
+      console.error("[verify] buyer linkage failed for order", order.id);
+    }
+  }
+
+  // ── Course enrollment ──────────────────────────────────────────────────────
+  // For course purchases, create an enrollment row so the buyer immediately
+  // has access. The UNIQUE partial indexes on (page_id, buyer_id) and
+  // (page_id, lower(buyer_email)) make a duplicate INSERT (retried verify) a
+  // unique-violation that we catch and ignore — it is never a double-enroll.
+  //
+  // Edge cases:
+  //  - No buyer_email on the order: enrollment is skipped (no identity to tie
+  //    it to); the buyer will need to contact support.
+  //  - page_id null on a course order: should not happen in normal flow (course
+  //    checkout always has a page_id), but we guard explicitly.
+  //  - buyer_id null (unrecognised email): enrollment is still created with
+  //    buyer_id = null and buyer_email set; the Wave 2 claim flow backfills
+  //    buyer_id when the buyer later signs up/logs in.
+  // Non-fatal.
+  if (order.page_type === "course" && order.page_id) {
+    if (!order.buyer_email) {
+      console.error("[verify] course order missing buyer_email; enrollment skipped", order.id);
+    } else {
+      try {
+        const adminForEnroll = createAdminClient();
+        const { error: enrollErr } = await adminForEnroll
+          .from("course_enrollments")
+          .insert({
+            buyer_id: resolvedBuyerId,
+            buyer_email: order.buyer_email,
+            page_id: order.page_id,
+            store_id: order.store_id,
+            order_id: order.id,
+          });
+        // Unique-violation (code "23505") means this order already has an
+        // enrollment row — a retried verify call, perfectly fine. Any other
+        // error is logged but still non-fatal.
+        if (enrollErr && enrollErr.code !== "23505") {
+          console.error("[verify] course enrollment insert error", order.id, enrollErr.code);
+        }
+      } catch {
+        console.error("[verify] course enrollment failed for order", order.id);
+      }
+    }
+  }
+
   // ── Booking confirmation ───────────────────────────────────────────────────
   // If this order was for a paid booking session, flip the SPECIFIC matching
   // pending booking row to "confirmed" and record the order_id on it.
