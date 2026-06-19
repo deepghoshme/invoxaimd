@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOrderById, getStoreGateway, updateOrder } from "@/lib/sites";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { incrementCouponUsageByCode } from "@/lib/coupons";
 
 /**
  * Verify a Razorpay checkout signature and mark the order paid. The signature
@@ -57,6 +58,13 @@ export async function POST(req: Request) {
     gateway_signature: razorpay_signature,
     paid_at: new Date().toISOString(),
   });
+
+  // Consume a coupon use only now that payment is confirmed. The "already paid"
+  // early-return above makes this run exactly once per order, so repeated verify
+  // calls can't double-count.
+  if (order.coupon_code) {
+    await incrementCouponUsageByCode(order.store_id, order.coupon_code);
+  }
 
   // ── Booking confirmation ───────────────────────────────────────────────────
   // If this order was for a paid booking session, flip the SPECIFIC matching

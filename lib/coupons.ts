@@ -95,6 +95,32 @@ export async function validateCoupon(
  * an RPC can be added later without changing the calling API).
  * Silently no-ops if the coupon row is missing (idempotent / safe).
  */
+/**
+ * Increment a coupon's used_count by its (store-scoped) code. Used at payment
+ * verification so usage is only consumed on CONFIRMED payments — abandoned or
+ * cancelled checkouts no longer burn a use. Safe/no-op if the code isn't found.
+ */
+export async function incrementCouponUsageByCode(storeId: string, code: string): Promise<void> {
+  try {
+    const normalised = code.trim().toUpperCase();
+    if (!normalised) return;
+    const sb = createAdminClient();
+    const { data } = await sb
+      .from("coupons")
+      .select("id, used_count")
+      .eq("store_id", storeId)
+      .eq("code", normalised)
+      .maybeSingle();
+    if (!data) return;
+    await sb
+      .from("coupons")
+      .update({ used_count: (Number(data.used_count) || 0) + 1 })
+      .eq("id", data.id as string);
+  } catch {
+    // Non-fatal — worst case the count is slightly off.
+  }
+}
+
 export async function incrementCouponUsage(couponId: string): Promise<void> {
   try {
     const sb = createAdminClient();

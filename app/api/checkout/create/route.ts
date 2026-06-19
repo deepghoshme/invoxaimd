@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStoreCommissionRate, createOrderRecord, getProductById } from "@/lib/sites";
 import { type OppContent, toMinorUnit, DEFAULT_CURRENCY } from "@/lib/products";
-import { validateCoupon, incrementCouponUsage } from "@/lib/coupons";
+import { validateCoupon } from "@/lib/coupons";
 import { bumpApplies, bumpPricePaise, type BumpOffer } from "@/lib/upsell";
 
 /**
@@ -108,7 +108,6 @@ export async function POST(req: Request) {
     let finalAmount = originalAmount;
     let discountPaise = 0;
     let appliedCouponCode: string | null = null;
-    let appliedCouponId: string | null = null;
     let couponError: string | null = null;
 
     if (rawCouponCode) {
@@ -116,7 +115,6 @@ export async function POST(req: Request) {
       if (couponResult.ok) {
         discountPaise = couponResult.discountPaise;
         appliedCouponCode = couponResult.code;
-        appliedCouponId = couponResult.couponId;
         finalAmount = originalAmount - discountPaise;
         // Ensure final amount is always >= 1 paise (gateway minimum)
         if (finalAmount < 1) finalAmount = 1;
@@ -149,15 +147,9 @@ export async function POST(req: Request) {
     });
     if (!order) return NextResponse.json({ error: "Could not create order" }, { status: 500 });
 
-    // Increment coupon usage in the background (non-blocking, non-fatal).
-    // NOTE: used_count is bumped here at order creation. Ideally this should
-    // happen only on confirmed payment (verify route). Follow-up task: move
-    // incrementCouponUsage to the verify route so cancelled payments don't
-    // consume coupon uses. For now the pre-check in validateCoupon + the
-    // max_uses guard provide adequate protection.
-    if (appliedCouponId) {
-      incrementCouponUsage(appliedCouponId).catch(() => {});
-    }
+    // Coupon usage is incremented at payment verification (see verify route), so
+    // abandoned/cancelled checkouts don't consume a use. validateCoupon's
+    // pre-check + max_uses guard still bound concurrent in-flight checkouts.
 
     return NextResponse.json({
       order_id: order.id,
@@ -206,7 +198,6 @@ export async function POST(req: Request) {
   let finalAmount = originalAmount;
   let discountPaise = 0;
   let appliedCouponCode: string | null = null;
-  let appliedCouponId: string | null = null;
   let couponError: string | null = null;
 
   if (rawCouponCode) {
@@ -214,7 +205,6 @@ export async function POST(req: Request) {
     if (couponResult.ok) {
       discountPaise = couponResult.discountPaise;
       appliedCouponCode = couponResult.code;
-      appliedCouponId = couponResult.couponId;
       finalAmount = originalAmount - discountPaise;
       if (finalAmount < 1) finalAmount = 1;
     } else {
@@ -260,9 +250,7 @@ export async function POST(req: Request) {
 
   if (!order) return NextResponse.json({ error: "Could not create order" }, { status: 500 });
 
-  if (appliedCouponId) {
-    incrementCouponUsage(appliedCouponId).catch(() => {});
-  }
+  // Coupon usage is incremented at payment verification (see verify route).
 
   return NextResponse.json({
     order_id: order.id,
