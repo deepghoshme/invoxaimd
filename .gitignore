@@ -19,3 +19,4 @@ lcdesign/*.js
 
 # Live QA run artifacts (screenshots + results)
 .qa-out/
+.qa-drive.mjs
