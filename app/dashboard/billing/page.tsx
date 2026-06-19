@@ -1,10 +1,36 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
-import { Phead } from "@/components/dx/ui";
+import { Phead, Card, Table } from "@/components/dx/ui";
 import { getStoreSubscription } from "@/lib/subscriptions";
 import BillingClient from "./BillingClient";
 
 export const dynamic = "force-dynamic";
+
+const inr = (paise: number) => "₹" + Math.round(paise / 100).toLocaleString("en-IN");
+const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+type Invoice = { date: string; kind: string; desc: string; amountPaise: number };
+
+/** Plan-subscription payments + wallet recharges, newest first. */
+async function loadInvoices(storeId: string): Promise<Invoice[]> {
+  const admin = createAdminClient();
+  const [planRes, walletRes] = await Promise.all([
+    admin.from("plan_payments").select("amount, created_at, plan:plan_id(name)").eq("store_id", storeId).order("created_at", { ascending: false }).limit(50),
+    admin.from("wallet_ledger").select("amount, reason, created_at").eq("store_id", storeId).eq("type", "credit").order("created_at", { ascending: false }).limit(50),
+  ]);
+  const planRows = (planRes.data ?? []).map((p) => {
+    const plan = p.plan as { name?: string } | { name?: string }[] | null;
+    const name = Array.isArray(plan) ? plan[0]?.name : plan?.name;
+    return { date: p.created_at as string, kind: "Plan", desc: `${name ?? "Plan"} subscription`, amountPaise: Number(p.amount) };
+  });
+  const walletRows = (walletRes.data ?? []).map((w) => ({
+    date: w.created_at as string,
+    kind: "Wallet",
+    desc: w.reason === "recharge_bonus" ? "Recharge bonus" : "Wallet recharge",
+    amountPaise: Number(w.amount),
+  }));
+  return [...planRows, ...walletRows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
 
 export default async function BillingPage() {
   const { store } = await requireDashboardStore();
@@ -56,6 +82,14 @@ export default async function BillingPage() {
       }
     : null;
 
+  const invoices = await loadInvoices(store.id);
+  const invoiceRows = invoices.map((iv) => [
+    <span key="d" style={{ whiteSpace: "nowrap" }}>{fmtDate(iv.date)}</span>,
+    <span key="k" className={`dx-pill ${iv.kind === "Plan" ? "" : ""}`} style={{ fontSize: 11.5 }}>{iv.kind}</span>,
+    iv.desc,
+    <span key="a" style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{inr(iv.amountPaise)}</span>,
+  ]);
+
   return (
     <>
       <Phead
@@ -67,6 +101,16 @@ export default async function BillingPage() {
         currentSub={subForClient}
         migrationPending={migrationPending}
       />
+
+      <div style={{ marginTop: 20 }}>
+        <Card title="Billing history">
+          <Table
+            cols={["Date", "Type", "Description", "Amount"]}
+            rows={invoiceRows}
+            empty="No payments yet. Plan upgrades and wallet recharges will appear here."
+          />
+        </Card>
+      </div>
     </>
   );
 }
