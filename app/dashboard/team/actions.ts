@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { assertNotImpersonating } from "@/lib/impersonation";
+import { sendTeamInviteEmail } from "@/lib/transactional";
 
 type Role = "admin" | "editor" | "viewer";
 
@@ -11,16 +12,16 @@ async function verifyOwnership(storeId: string) {
   const {
     data: { user },
   } = await sb.auth.getUser();
-  if (!user) return { sb, user: null, owned: false };
+  if (!user) return { sb, user: null, owned: false, store: null as null | { id: string; store_name: string | null } };
 
   const { data: store } = await sb
     .from("stores")
-    .select("id")
+    .select("id, store_name")
     .eq("id", storeId)
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  return { sb, user, owned: !!store };
+  return { sb, user, owned: !!store, store: store as { id: string; store_name: string | null } | null };
 }
 
 // ── Invite a new member ──────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ export async function inviteMember(
   const guard = await assertNotImpersonating();
   if (!guard.ok) return { error: guard.error };
   try {
-    const { sb, owned } = await verifyOwnership(storeId);
+    const { sb, user, owned, store } = await verifyOwnership(storeId);
     if (!owned) return { error: "Not authorized" };
 
     const { data, error } = await sb
@@ -51,6 +52,22 @@ export async function inviteMember(
       if (error.code === "23505") return { error: "That person is already in your team" };
       return { error: error.message };
     }
+
+    // Send invite email — non-fatal, never block the insert
+    try {
+      const inviterName =
+        (user?.user_metadata?.full_name as string | undefined) ||
+        (user?.user_metadata?.name as string | undefined) ||
+        null;
+      await sendTeamInviteEmail({
+        to: email.trim().toLowerCase(),
+        inviterName,
+        storeName: store?.store_name ?? null,
+        role,
+        inviteUrl: "https://app.invoxai.io/login",
+      });
+    } catch { /* non-fatal */ }
+
     return { id: data.id };
   } catch (err) {
     // Table doesn't exist yet (migration pending)

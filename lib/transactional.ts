@@ -407,3 +407,104 @@ export async function sendPlanInvoiceEmail(o: {
     });
   } catch { /* non-fatal */ }
 }
+
+/**
+ * Send an abandoned-cart recovery email to a buyer who started checkout but
+ * didn't complete payment. Non-fatal.
+ *
+ * Sent from hello@ (general route) — no admin CC to avoid noise from bulk runs.
+ */
+export async function sendAbandonedCartEmail(o: {
+  to: string | null;
+  buyerName: string | null;
+  productTitle: string | null;
+  amountPaise: number;
+  recoverUrl: string;
+  storeName: string | null;
+  subject?: string;
+  message?: string;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.general;
+  const cur = "INR";
+
+  const subject = o.subject
+    || (o.productTitle
+      ? `You left "${o.productTitle}" behind`
+      : "You left something behind");
+
+  const bodyLine = o.message
+    || `You started checkout but didn't complete your purchase. Click below to pick up where you left off — your spot is still available.`;
+
+  const inner = `
+    <p style="font-size:15px;margin:0 0 10px">Hi${o.buyerName ? ` ${esc(o.buyerName)}` : ""},</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#4a3f47">${esc(bodyLine)}</p>
+    ${o.productTitle ? `<p style="margin:0 0 6px;font-size:13px;color:#7a6770"><strong>Product:</strong> ${esc(o.productTitle)}</p>` : ""}
+    <p style="margin:0 0 16px;font-size:13px;color:#7a6770"><strong>Amount:</strong> ${money(o.amountPaise, cur)}</p>
+    <a href="${esc(o.recoverUrl)}" style="display:inline-block;padding:10px 22px;background:#FF6A3D;color:#fff;font-weight:700;border-radius:8px;text-decoration:none;font-size:14px">
+      Complete your purchase →
+    </a>
+    <p style="margin-top:18px;font-size:12px;color:#8a8088">
+      This email was sent because you started checkout on${o.storeName ? ` ${esc(o.storeName)}` : " our store"}.
+      If you didn't start a checkout, you can safely ignore this email.
+    </p>`;
+
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: o.to,
+      subject,
+      html: shell("Complete your purchase", inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+// ─── Team invite email ────────────────────────────────────────────────────────
+
+/**
+ * Notify an invited team member that they've been added to a store (from hello@).
+ * Non-fatal. The invite mechanism is: the invited user signs in with their email
+ * address, which grants them access to the team_members record already inserted.
+ * No separate acceptance token is needed.
+ */
+export async function sendTeamInviteEmail(o: {
+  to: string;
+  inviterName?: string | null;
+  storeName?: string | null;
+  role: string;
+  inviteUrl?: string | null;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.general;
+  const store = o.storeName ? esc(o.storeName) : "a store";
+  const inviter = o.inviterName ? esc(o.inviterName) : "The store owner";
+  const loginUrl = o.inviteUrl?.trim() || "https://app.invoxai.io/login";
+  const roleLabel = esc(o.role);
+  const inner = `<p>Hi there,</p>
+    <p>${inviter} has invited you to help manage <b>${store}</b> on invoxai as a <b>${roleLabel}</b>.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      ${row("Store", store)}
+      ${row("Your role", roleLabel)}
+      ${row("Your email", esc(o.to))}
+    </table>
+    <p style="margin-top:14px">To accept, sign in (or create an account) on invoxai using <b>${esc(o.to)}</b> as your email. Once signed in you will have access to the store dashboard.</p>
+    <div style="text-align:center;margin:22px 0">
+      <a href="${esc(loginUrl)}"
+         style="display:inline-block;background:linear-gradient(135deg,#ff6a3d,#ff4d7d);color:#fff;font-weight:700;font-size:15px;padding:13px 32px;border-radius:10px;text-decoration:none">
+        Sign in to accept
+      </a>
+    </div>
+    <p style="font-size:12.5px;color:#8a8088">If you were not expecting this invitation, you can safely ignore it.</p>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: o.to,
+      subject: `You've been invited to manage ${o.storeName || "a store"} on invoxai`,
+      html: shell(`You're invited to ${store}`, inner),
+    });
+  } catch { /* non-fatal */ }
+}
