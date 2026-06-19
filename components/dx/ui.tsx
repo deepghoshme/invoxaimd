@@ -74,7 +74,20 @@ export function Table({ cols, rows, empty = "No data yet" }: { cols: string[]; r
  * Falls back to a static demo curve when no points are provided.
  * The chart fills the full SVG width (600 × 170) with a 10px vertical pad.
  */
-export function AreaChart({ points }: { points?: number[] } = {}) {
+export function AreaChart({
+  points,
+  money = false,
+}: { points?: number[]; money?: boolean } = {}) {
+  // Y-axis tick formatter. `money` treats point values as paise → compact ₹.
+  const format = (n: number): string => {
+    if (money) {
+      const r = n / 100;
+      if (r >= 100000) return "₹" + (r / 100000).toFixed(1) + "L";
+      if (r >= 1000) return "₹" + (r / 1000).toFixed(1) + "k";
+      return "₹" + Math.round(r);
+    }
+    return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${Math.round(n)}`;
+  };
   const W = 600, H = 170, PAD_T = 10, PAD_B = 20;
   const chartH = H - PAD_T - PAD_B; // usable vertical pixels
 
@@ -84,30 +97,67 @@ export function AreaChart({ points }: { points?: number[] } = {}) {
 
   let linePath = DEMO_LINE;
   let areaPath = DEMO_AREA;
+  let maxVal = 0;
+  const hasData = !!(points && points.length >= 2);
 
-  if (points && points.length >= 2) {
-    const max = Math.max(...points, 1);
-    const step = W / (points.length - 1);
-    const coords = points.map((v, i) => {
+  if (hasData) {
+    maxVal = Math.max(...points!, 1);
+    const step = W / (points!.length - 1);
+    const coords = points!.map((v, i) => {
       const x = Math.round(i * step);
-      const y = Math.round(PAD_T + chartH - (v / max) * chartH);
+      const y = Math.round(PAD_T + chartH - (v / maxVal) * chartH);
       return `${x} ${y}`;
     });
     linePath = `M${coords.join(" L")}`;
     areaPath = `${linePath} L${W} ${H} L0 ${H} Z`;
   }
 
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%">
+  const svg = (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
       <defs>
         <linearGradient id="dxag" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="var(--primary)" stopOpacity="0.28" />
           <stop offset="1" stopColor="var(--primary)" stopOpacity="0" />
         </linearGradient>
       </defs>
+      {/* faint Y gridlines at max / mid / zero — only when real data is plotted */}
+      {hasData &&
+        [0, 0.5, 1].map((f) => {
+          const y = PAD_T + chartH * f;
+          return (
+            <line key={f} x1={0} y1={y} x2={W} y2={y} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" opacity="0.7" />
+          );
+        })}
       <path d={areaPath} fill="url(#dxag)" />
       <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+
+  // No real data → keep the bare demo curve (no axis to mislabel).
+  if (!hasData) return svg;
+
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          textAlign: "right",
+          fontSize: 10.5,
+          lineHeight: 1,
+          color: "var(--muted)",
+          paddingTop: 2,
+          paddingBottom: PAD_B,
+          minWidth: 30,
+        }}
+      >
+        <span>{format(maxVal)}</span>
+        <span>{format(maxVal / 2)}</span>
+        <span>{format(0)}</span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>{svg}</div>
+    </div>
   );
 }
 

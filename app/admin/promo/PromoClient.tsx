@@ -65,9 +65,12 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
   }
 
   const previewCode = (form.code || "CODE").toUpperCase().replace(/[^A-Z0-9]/g, "") || "CODE";
+  // Until a value is typed, preview the same example shown in the field placeholder
+  // (20% / ₹100) so the ticket never reads a misleading "0% OFF".
+  const previewVal = form.discount_value || (form.discount_type === "percent" ? 20 : 100);
   const previewOff = form.discount_type === "percent"
-    ? `${form.discount_value || 0}% OFF`
-    : `₹${form.discount_value || 0} OFF`;
+    ? `${previewVal}% OFF`
+    : `₹${previewVal} OFF`;
 
   return (
     <form className="pr-form" onSubmit={submit} autoComplete="off">

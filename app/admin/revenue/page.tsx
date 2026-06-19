@@ -237,7 +237,7 @@ export default async function RevenueAdminPage() {
             </>
           ) : (
             <>
-              <AreaChart points={monthGmvPoints} />
+              <AreaChart points={monthGmvPoints} money />
               <MonthAxisLabels labels={monthLabels} />
             </>
           )}
@@ -326,7 +326,7 @@ export default async function RevenueAdminPage() {
       {monthCommPoints.some((v) => v > 0) && (
         <div style={{ marginTop: 16 }}>
           <Card title="Monthly commission (from orders)" link="Last 6 months">
-            <AreaChart points={monthCommPoints} />
+            <AreaChart points={monthCommPoints} money />
             <MonthAxisLabels labels={monthLabels} />
             <p
               className="dx-muted"

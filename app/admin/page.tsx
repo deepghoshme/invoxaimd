@@ -46,6 +46,9 @@ function BarChart({
               justifyContent: "flex-end",
             }}
           >
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--text)", minHeight: 13 }}>
+              {v > 0 ? v : ""}
+            </span>
             <div
               style={{
                 width: "100%",
@@ -239,7 +242,7 @@ export default async function AdminPage() {
             </div>
           ) : (
             <>
-              <AreaChart points={monthGmv} />
+              <AreaChart points={monthGmv} money />
               <div
                 style={{
                   display: "flex",
