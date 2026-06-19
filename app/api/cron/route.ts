@@ -143,8 +143,9 @@ export async function GET(req: Request) {
 
   // 4. Daily wallet activity report.
   //    Gated internally on email_config.daily_wallet_enabled.
-  //    A dedicated systemd timer can hit ?job=wallet_report at 12:01.
-  if (job === "all" || job === "wallet_report") {
+  //    Runs ONLY via its dedicated ?job=wallet_report slot (12:01) — intentionally
+  //    excluded from "all" so the nightly batch doesn't double-send it.
+  if (job === "wallet_report") {
     try {
       result.wallet_report = await sendDailyWalletReport();
     } catch (e) {
