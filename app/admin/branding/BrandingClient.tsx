@@ -12,6 +12,11 @@ interface Props {
   showBrandBadge: boolean;
   /** True once migration 20260618260000 has been applied and logo_url column exists. */
   newColsExist: boolean;
+  /** GST / tax identity fields (from platform_settings GST migration). */
+  gstin: string;
+  legalName: string;
+  registeredAddress: string;
+  defaultTaxRate: number;
 }
 
 type Toast = { msg: string; kind: "ok" | "err" | "warn" };
@@ -43,6 +48,10 @@ export default function BrandingClient({
   invoiceFooter: initFooter,
   showBrandBadge: initBadge,
   newColsExist,
+  gstin: initGstin,
+  legalName: initLegalName,
+  registeredAddress: initRegisteredAddress,
+  defaultTaxRate: initDefaultTaxRate,
 }: Props) {
   const { toast, fire } = useToast();
   const [saving, setSaving] = useState(false);
@@ -53,6 +62,12 @@ export default function BrandingClient({
   const [faviconUrl, setFaviconUrl] = useState(initFavicon);
   const [invoiceFooter, setInvoiceFooter] = useState(initFooter);
   const [showBrandBadge, setShowBrandBadge] = useState(initBadge);
+
+  // GST / tax identity state
+  const [gstin, setGstin] = useState(initGstin);
+  const [legalName, setLegalName] = useState(initLegalName);
+  const [registeredAddress, setRegisteredAddress] = useState(initRegisteredAddress);
+  const [defaultTaxRate, setDefaultTaxRate] = useState(String(initDefaultTaxRate));
 
   async function handleUpload(kind: "logo" | "favicon", e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -77,6 +92,10 @@ export default function BrandingClient({
     fd.set("logo_url", logoUrl);
     fd.set("favicon_url", faviconUrl);
     fd.set("show_brand_badge", String(showBrandBadge));
+    fd.set("gstin", gstin);
+    fd.set("legal_name", legalName);
+    fd.set("registered_address", registeredAddress);
+    fd.set("default_tax_rate", defaultTaxRate);
     const res = await saveBrandingSettings(fd);
     setSaving(false);
     if (res.ok) {
@@ -93,8 +112,8 @@ export default function BrandingClient({
         @media(max-width:700px){.bc-grid{grid-template-columns:1fr}}
         .bc-field{margin-bottom:14px}
         .bc-field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px}
-        .bc-field input[type=text],.bc-field input[type=email],.bc-field textarea{width:100%;padding:9px 12px;border:1.5px solid var(--dx-border);border-radius:10px;background:var(--dx-bg);color:var(--dx-text);font:inherit;outline:none;resize:vertical}
-        .bc-field input[type=text]:focus,.bc-field textarea:focus{border-color:var(--dx-primary)}
+        .bc-field input[type=text],.bc-field input[type=email],.bc-field input[type=number],.bc-field textarea{width:100%;padding:9px 12px;border:1.5px solid var(--dx-border);border-radius:10px;background:var(--dx-bg);color:var(--dx-text);font:inherit;outline:none;resize:vertical}
+        .bc-field input[type=text]:focus,.bc-field input[type=number]:focus,.bc-field textarea:focus{border-color:var(--dx-primary)}
         .bc-field small{font-size:11.5px;color:var(--dx-muted);display:block;margin-top:4px}
         .bc-img-row{display:flex;align-items:center;gap:13px;margin-bottom:14px}
         .bc-img-pre{width:54px;height:54px;border-radius:13px;background:var(--dx-grad);flex:none;overflow:hidden;box-shadow:0 6px 16px -6px rgba(255,77,125,.4)}
@@ -124,6 +143,9 @@ export default function BrandingClient({
         .bc-toast.err .dot{background:#e5476f}
         .bc-toast.warn .dot{background:#ffb23e}
         .bc-note{font-size:11.5px;color:var(--dx-muted);font-style:italic;margin-top:4px}
+        .bc-gst-grid{display:grid;gap:14px;grid-template-columns:1fr 1fr;align-items:start}
+        @media(max-width:700px){.bc-gst-grid{grid-template-columns:1fr}}
+        .bc-gst-rate{width:120px!important}
       `}</style>
 
       <Phead
@@ -222,7 +244,7 @@ export default function BrandingClient({
           <Card title="Global controls">
             <div className="bc-srow">
               <div className="bc-tx">
-                <b>"Built with invoxai" badge</b>
+                <b>&quot;Built with invoxai&quot; badge</b>
                 <p>Show on all free-plan public seller pages.</p>
               </div>
               <Switch on={showBrandBadge} onChange={setShowBrandBadge} />
@@ -234,6 +256,64 @@ export default function BrandingClient({
                 Built with {platformName || "invoxai"}
               </div>
             )}
+          </Card>
+        </div>
+
+        {/* GST / Tax identity — full-width section below the two-column grid */}
+        <div style={{ marginTop: 16 }}>
+          <Card title="Platform GST / Tax identity">
+            <p style={{ fontSize: 12.5, color: "var(--dx-muted)", margin: "0 0 14px" }}>
+              Used on GST tax invoices generated for plan payments. Leave GSTIN blank if GST is not applicable.
+            </p>
+            <div className="bc-gst-grid">
+              <div className="bc-field">
+                <label>GSTIN</label>
+                <input
+                  type="text"
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                  placeholder="22AAAAA0000A1Z5"
+                  maxLength={15}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <small>15-character GST identification number. Leave blank if not registered.</small>
+              </div>
+              <div className="bc-field">
+                <label>Default tax rate (%)</label>
+                <input
+                  type="number"
+                  className="bc-gst-rate"
+                  value={defaultTaxRate}
+                  onChange={(e) => setDefaultTaxRate(e.target.value)}
+                  placeholder="18"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                />
+                <small>Platform-wide default tax rate applied to plan payments (0–100). Typical GST: 18.</small>
+              </div>
+              <div className="bc-field">
+                <label>Legal name</label>
+                <input
+                  type="text"
+                  value={legalName}
+                  onChange={(e) => setLegalName(e.target.value)}
+                  placeholder="Acme Technologies Private Limited"
+                />
+                <small>Registered legal entity name — printed on GST invoices.</small>
+              </div>
+              <div className="bc-field" style={{ gridColumn: "1 / -1" }}>
+                <label>Registered address</label>
+                <textarea
+                  value={registeredAddress}
+                  onChange={(e) => setRegisteredAddress(e.target.value)}
+                  placeholder="123, Business Park, Suite 4, Mumbai, Maharashtra 400001"
+                  rows={3}
+                />
+                <small>Full registered address including city, state, and PIN — printed on GST invoices.</small>
+              </div>
+            </div>
           </Card>
         </div>
       </form>

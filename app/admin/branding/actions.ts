@@ -20,13 +20,18 @@ async function assertAdmin() {
   return { supabase, error: null };
 }
 
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
 /**
- * Save branding settings: platform_name, logo_url, favicon_url, invoice_footer.
+ * Save branding settings: platform_name, logo_url, favicon_url, invoice_footer,
+ * plus GST/tax identity: gstin, legal_name, registered_address, default_tax_rate.
  * show_brand_badge reuses the existing setBrandBadge action from app/admin/actions.ts
  * via client-side BrandBadgeToggle — we intentionally keep that wiring separate.
  *
  * Columns platform_name, logo_url, favicon_url, invoice_footer are added by migration
- * 20260618260000. Until applied, writes to those columns will fail gracefully here.
+ * 20260618260000. GST columns (gstin, legal_name, registered_address, default_tax_rate)
+ * are added by the platform_settings GST migration. Until applied, writes to those
+ * columns will fail gracefully here.
  */
 export async function saveBrandingSettings(fd: FormData): Promise<Result> {
   const { supabase, error: authErr } = await assertAdmin();
@@ -38,23 +43,52 @@ export async function saveBrandingSettings(fd: FormData): Promise<Result> {
   const invoiceFooter = (fd.get("invoice_footer") as string | null)?.trim() ?? "";
   const showBrandBadge = fd.get("show_brand_badge") === "true";
 
+  // GST / tax identity fields
+  const gstin = (fd.get("gstin") as string | null)?.trim().toUpperCase() ?? "";
+  const legalName = (fd.get("legal_name") as string | null)?.trim() ?? "";
+  const registeredAddress = (fd.get("registered_address") as string | null)?.trim() ?? "";
+  const defaultTaxRateRaw = (fd.get("default_tax_rate") as string | null)?.trim() ?? "0";
+  const defaultTaxRate = parseFloat(defaultTaxRateRaw);
+
+  // --- Validation ---
   if (platformName && platformName.length > 80) {
     return { ok: false, error: "Platform name must be 80 characters or fewer." };
   }
   if (invoiceFooter && invoiceFooter.length > 200) {
     return { ok: false, error: "Invoice footer must be 200 characters or fewer." };
   }
+  if (gstin && !GSTIN_RE.test(gstin)) {
+    return {
+      ok: false,
+      error:
+        "GSTIN format invalid. Expected 15-character format: 2-digit state code + PAN + entity code + Z + checksum (e.g. 22AAAAA0000A1Z5).",
+    };
+  }
+  if (legalName && legalName.length > 200) {
+    return { ok: false, error: "Legal name must be 200 characters or fewer." };
+  }
+  if (registeredAddress && registeredAddress.length > 500) {
+    return { ok: false, error: "Registered address must be 500 characters or fewer." };
+  }
+  if (isNaN(defaultTaxRate) || defaultTaxRate < 0 || defaultTaxRate > 100) {
+    return { ok: false, error: "Default tax rate must be a number between 0 and 100." };
+  }
 
   // show_brand_badge always exists — safe to update unconditionally.
   const basePayload: Record<string, unknown> = { show_brand_badge: showBrandBadge };
 
-  // Try full payload first (requires migration).
+  // Try full payload first (requires migrations).
   const fullPayload: Record<string, unknown> = {
     ...basePayload,
     ...(platformName ? { platform_name: platformName } : {}),
     ...(logoUrl ? { logo_url: logoUrl } : {}),
     ...(faviconUrl ? { favicon_url: faviconUrl } : {}),
     ...(invoiceFooter ? { invoice_footer: invoiceFooter } : {}),
+    // GST fields — always include so clearing them (empty string → null) works.
+    gstin: gstin || null,
+    legal_name: legalName || null,
+    registered_address: registeredAddress || null,
+    default_tax_rate: defaultTaxRate,
   };
 
   const { error } = await supabase
@@ -74,7 +108,7 @@ export async function saveBrandingSettings(fd: FormData): Promise<Result> {
       return {
         ok: true,
         error:
-          "Badge toggle saved. Platform name, logo, favicon, and invoice footer will persist after migration 20260618260000 is applied.",
+          "Badge toggle saved. Other fields will persist after the required migrations are applied.",
       };
     }
     return { ok: false, error: error.message };

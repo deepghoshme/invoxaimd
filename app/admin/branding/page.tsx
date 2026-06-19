@@ -8,7 +8,7 @@ export default async function AdminBrandingPage() {
 
   const { data: ps } = await sb
     .from("platform_settings")
-    .select("platform_name, logo_url, favicon_url, invoice_footer, show_brand_badge")
+    .select("platform_name, logo_url, favicon_url, invoice_footer, show_brand_badge, gstin, legal_name, registered_address, default_tax_rate")
     .eq("id", true)
     .maybeSingle();
 
@@ -18,6 +18,10 @@ export default async function AdminBrandingPage() {
     favicon_url?: string | null;
     invoice_footer?: string | null;
     show_brand_badge?: boolean | null;
+    gstin?: string | null;
+    legal_name?: string | null;
+    registered_address?: string | null;
+    default_tax_rate?: number | null;
   } | null;
 
   return (
@@ -28,6 +32,10 @@ export default async function AdminBrandingPage() {
       invoiceFooter={row?.invoice_footer ?? ""}
       showBrandBadge={row?.show_brand_badge ?? true}
       newColsExist={row != null && "logo_url" in (row ?? {})}
+      gstin={row?.gstin ?? ""}
+      legalName={row?.legal_name ?? ""}
+      registeredAddress={row?.registered_address ?? ""}
+      defaultTaxRate={row?.default_tax_rate ?? 0}
     />
   );
 }
