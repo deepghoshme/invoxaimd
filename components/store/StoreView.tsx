@@ -27,9 +27,18 @@ export default function StoreView({
     if (!tracks.length) return;
     const id = setInterval(() => {
       tracks.forEach((tr) => {
-        const step = tr.firstElementChild ? (tr.firstElementChild as HTMLElement).offsetWidth + 16 : tr.clientWidth;
-        const nl = tr.scrollLeft >= tr.scrollWidth - tr.clientWidth - 4 ? 0 : tr.scrollLeft + step;
-        tr.scrollTo({ left: nl, behavior: "smooth" });
+        const atEnd = tr.scrollLeft >= tr.scrollWidth - tr.clientWidth - 4;
+        if (atEnd) { tr.scrollTo({ left: 0, behavior: "smooth" }); return; }
+        // Advance to the next child's exact left edge so we always land on a slide
+        // boundary. (The old fixed `width + 16` step assumed a 16px gap the gapless
+        // full-width banner doesn't have, so it overshot — animating past the edge
+        // and briefly overlapping two banner slides' text before snapping back.)
+        const trLeft = tr.getBoundingClientRect().left;
+        const next = Array.from(tr.children).find(
+          (k) => (k as HTMLElement).getBoundingClientRect().left - trLeft > 4
+        ) as HTMLElement | undefined;
+        if (!next) { tr.scrollTo({ left: 0, behavior: "smooth" }); return; }
+        tr.scrollTo({ left: tr.scrollLeft + (next.getBoundingClientRect().left - trLeft), behavior: "smooth" });
       });
     }, 3800);
     return () => clearInterval(id);
