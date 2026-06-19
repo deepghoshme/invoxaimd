@@ -68,6 +68,7 @@ function BellMenu({ items, viewAllHref, storageKey }: { items: DxNotifItem[]; vi
 
 export default function DxShell({
   brand,
+  logoUrl,
   badge,
   groups,
   user,
@@ -78,6 +79,7 @@ export default function DxShell({
   children,
 }: {
   brand: string;
+  logoUrl?: string | null;
   badge?: string;
   groups: DxNavGroup[];
   user?: { email?: string | null; name?: string | null; avatarUrl?: string | null };
@@ -108,7 +110,10 @@ export default function DxShell({
     <div className={`dx${dark ? " dark" : ""}`}>
       <aside className="dx-side">
         <Link className="dx-logo" href={homeHref}>
-          <span className="dx-dot" /> {brand}
+          {logoUrl
+            ? /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={logoUrl} alt={brand} style={{ height: 22, width: "auto", maxWidth: 120, objectFit: "contain", display: "block" }} />
+            : <><span className="dx-dot" /> {brand}</>}
           {badge && <span className="dx-pill" style={badge === "buyer" ? { background: "var(--secondary)" } : undefined}>{badge}</span>}
         </Link>
 

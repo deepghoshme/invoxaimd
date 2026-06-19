@@ -3,6 +3,7 @@ import DxShell, { type DxNavGroup } from "@/components/dx/Shell";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStore } from "@/lib/auth";
 import { getStoreNotifications } from "@/lib/notifications";
+import { getPlatformSettings } from "@/lib/sites";
 import ImpersonationBanner from "./ImpersonationBanner";
 import "./dx.css";
 
@@ -63,10 +64,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const notifItems = store ? await getStoreNotifications(store.id) : [];
 
   const meta = (user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string; picture?: string };
+  const branding = await getPlatformSettings();
 
   return (
     <DxShell
-      brand="invoxai"
+      brand={branding.platform_name || "invoxai"}
+      logoUrl={branding.logo_url}
       groups={NAV}
       user={{ email: user.email, name: meta.full_name ?? meta.name, avatarUrl: meta.avatar_url ?? meta.picture }}
       notifItems={notifItems}

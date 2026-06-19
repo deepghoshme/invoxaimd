@@ -66,6 +66,40 @@ export async function POST(req: Request) {
     await incrementCouponUsageByCode(order.store_id, order.coupon_code);
   }
 
+  // ── Platform commission ────────────────────────────────────────────────────
+  // Debit the platform's commission from the seller's wallet now that the sale
+  // is confirmed. Idempotent: the unique index on wallet_ledger.razorpay_order_id
+  // makes a duplicate insert (e.g. a retried verify) a no-op rather than a
+  // double-charge. Non-fatal — a ledger hiccup must never block the buyer.
+  if (order.commission_amount && order.commission_amount > 0) {
+    try {
+      const admin = createAdminClient();
+      const { data: storeRow } = await admin
+        .from("stores")
+        .select("wallet_balance")
+        .eq("id", order.store_id)
+        .maybeSingle();
+      const currentBalance = Number(storeRow?.wallet_balance ?? 0);
+      const newBalance = currentBalance - order.commission_amount;
+      const { error: ledgerErr } = await admin.from("wallet_ledger").insert({
+        store_id: order.store_id,
+        type: "debit",
+        amount: order.commission_amount,
+        balance_after: newBalance,
+        reason: "commission",
+        gateway_payment_id: razorpay_payment_id,
+        razorpay_order_id: razorpay_order_id,
+      });
+      // Only move the denormalised balance if the ledger row was actually written
+      // (a unique-violation means commission was already taken for this order).
+      if (!ledgerErr) {
+        await admin.from("stores").update({ wallet_balance: newBalance }).eq("id", order.store_id);
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
   // ── Booking confirmation ───────────────────────────────────────────────────
   // If this order was for a paid booking session, flip the SPECIFIC matching
   // pending booking row to "confirmed" and record the order_id on it.

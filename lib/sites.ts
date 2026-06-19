@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const ROOT = "invoxai.io";
@@ -306,25 +307,38 @@ export async function getStoreSeoDefaults(storeId: string): Promise<StoreSeoDefa
   }
 }
 
-export type PlatformSettings = { show_brand_badge: boolean };
+export type PlatformSettings = {
+  show_brand_badge: boolean;
+  logo_url: string | null;
+  favicon_url: string | null;
+  platform_name: string | null;
+};
 
 /**
- * Read the singleton platform settings (admin-controlled global switches).
- * Defaults to show_brand_badge=true and tolerates the table not existing yet
- * (before the migration is applied) so public pages never break.
+ * Read the singleton platform settings (admin-controlled global switches +
+ * branding). Defaults are safe and tolerate the table/columns not existing yet
+ * so public pages never break. Wrapped in React cache() so the multiple callers
+ * in one request (root layout metadata + the site renderer) share a single read.
  */
-export async function getPlatformSettings(): Promise<PlatformSettings> {
+export const getPlatformSettings = cache(async function getPlatformSettings(): Promise<PlatformSettings> {
+  const fallback: PlatformSettings = { show_brand_badge: true, logo_url: null, favicon_url: null, platform_name: null };
   try {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from("platform_settings")
-      .select("show_brand_badge")
+      .select("show_brand_badge, logo_url, favicon_url, platform_name")
       .maybeSingle();
-    return { show_brand_badge: data?.show_brand_badge ?? true };
+    if (!data) return fallback;
+    return {
+      show_brand_badge: data.show_brand_badge ?? true,
+      logo_url: (data.logo_url as string) ?? null,
+      favicon_url: (data.favicon_url as string) ?? null,
+      platform_name: (data.platform_name as string) ?? null,
+    };
   } catch {
-    return { show_brand_badge: true };
+    return fallback;
   }
-}
+});
 
 /** Legal/policy doc slugs (kept in sync with lib/website.ts LEGAL_DOCS). */
 const LEGAL_KEYS = ["privacy", "terms", "refund", "shipping", "disclaimer", "cookies"];
