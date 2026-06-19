@@ -2,6 +2,7 @@ import "server-only";
 import { getPlatformMailer } from "@/lib/email";
 import { EMAIL_ROUTES } from "@/lib/emailRoutes";
 import type { InvoiceRow } from "@/lib/invoice";
+import { renderInvoicePdf } from "@/lib/invoicePdf";
 
 // All senders are NON-FATAL: a mail hiccup must never block a payment response.
 // Each is called from a verify route AFTER the payment is confirmed, and those
@@ -331,6 +332,22 @@ export async function sendTaxInvoiceEmail(o: {
     </table>
     <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>`;
 
+  // Generate the PDF attachment — non-fatal: if PDF generation fails, the
+  // email is still sent without the attachment so the payment is never blocked.
+  let pdfAttachments: { filename: string; content: Buffer; contentType: string }[] = [];
+  try {
+    const pdfBuffer = await renderInvoicePdf(o.invoice, {
+      sellerLegalName: o.sellerName,
+    });
+    pdfAttachments = [{
+      filename: `Invoice-${o.invoice.invoice_number}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    }];
+  } catch (pdfErr) {
+    console.warn("[transactional] PDF generation failed for tax invoice; sending email without attachment", pdfErr);
+  }
+
   try {
     await m.mailer.send({
       from: r.from,
@@ -339,6 +356,7 @@ export async function sendTaxInvoiceEmail(o: {
       subject: `Tax Invoice ${esc(o.invoice.invoice_number)} — ${o.productTitle || "Purchase"}`,
       html: shell("Tax Invoice", inner),
       ...(o.replyTo ? { replyTo: o.replyTo } : {}),
+      ...(pdfAttachments.length ? { attachments: pdfAttachments } : {}),
     });
   } catch { /* non-fatal */ }
 }
@@ -397,6 +415,24 @@ export async function sendPlanInvoiceEmail(o: {
     </table>
     <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>`;
 
+  // Generate the PDF attachment — non-fatal: if PDF generation fails, the
+  // email is still sent without the attachment so the payment is never blocked.
+  let pdfAttachments: { filename: string; content: Buffer; contentType: string }[] = [];
+  try {
+    const pdfBuffer = await renderInvoicePdf(o.invoice, {
+      sellerLegalName: o.invoice.seller_legal_name,
+      sellerGstin: o.invoice.gstin,
+      sellerAddress: o.invoice.seller_address,
+    });
+    pdfAttachments = [{
+      filename: `Invoice-${o.invoice.invoice_number}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    }];
+  } catch (pdfErr) {
+    console.warn("[transactional] PDF generation failed for plan invoice; sending email without attachment", pdfErr);
+  }
+
   try {
     await m.mailer.send({
       from: r.from,
@@ -404,6 +440,7 @@ export async function sendPlanInvoiceEmail(o: {
       to: o.to,
       subject: `Tax Invoice ${esc(o.invoice.invoice_number)} — ${o.planName} plan`,
       html: shell("Plan Tax Invoice", inner),
+      ...(pdfAttachments.length ? { attachments: pdfAttachments } : {}),
     });
   } catch { /* non-fatal */ }
 }

@@ -128,6 +128,24 @@ export default async function BillingPage() {
       <span key="sub" style={{ whiteSpace: "nowrap" }}>{inr(Number(inv.subtotal_paise))}</span>,
       <span key="gst" style={{ fontSize: 11.5, color: "#7a6770" }}>{gstBreakdown}</span>,
       <span key="tot" style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{inr(Number(inv.total_paise))}</span>,
+      <a
+        key="dl"
+        href={`/api/invoices/${inv.id}/pdf`}
+        download={`Invoice-${inv.invoice_number}.pdf`}
+        style={{
+          display: "inline-block",
+          padding: "3px 10px",
+          fontSize: 11.5,
+          fontWeight: 600,
+          color: "#7b3fe4",
+          border: "1px solid #c4a8f0",
+          borderRadius: 6,
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Download PDF
+      </a>,
     ];
   });
 
@@ -147,7 +165,7 @@ export default async function BillingPage() {
       <div style={{ marginTop: 20 }}>
         <Card title="Tax invoices">
           <Table
-            cols={["Invoice No.", "Date", "Type", "Taxable Value", "GST Breakdown", "Total"]}
+            cols={["Invoice No.", "Date", "Type", "Taxable Value", "GST Breakdown", "Total", ""]}
             rows={taxInvoiceRows}
             empty="No tax invoices yet. They are auto-generated on each confirmed order and plan payment."
           />

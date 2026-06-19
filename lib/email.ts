@@ -7,15 +7,33 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * clear error if sending isn't configured, so callers can stay honest rather
  * than pretend an email went out. Credentials live only on the server.
  */
+/** A single file attachment for nodemailer's `attachments` array. */
+export type MailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+};
+
 export type PlatformMailer = {
   from: string;
   /**
    * Send one message. `from` overrides the default sender (used to send AS a
    * domain alias like billing@ / no-reply@ — requires the sending account to be
    * authorised for that alias). `cc` copies admin record addresses; `bcc` fans
-   * out to many recipients.
+   * out to many recipients. `attachments` is an optional list of file
+   * attachments passed through directly to nodemailer — backwards-compatible
+   * (omitting it leaves existing behaviour unchanged).
    */
-  send: (opts: { from?: string; to?: string; cc?: string[]; bcc?: string[]; subject: string; html: string; replyTo?: string }) => Promise<void>;
+  send: (opts: {
+    from?: string;
+    to?: string;
+    cc?: string[];
+    bcc?: string[];
+    subject: string;
+    html: string;
+    replyTo?: string;
+    attachments?: MailAttachment[];
+  }) => Promise<void>;
 };
 
 export async function getPlatformMailer():
@@ -62,9 +80,20 @@ export async function getPlatformMailer():
     ok: true,
     mailer: {
       from,
-      send: ({ from: fromOverride, to, cc, bcc, subject, html, replyTo }) =>
+      send: ({ from: fromOverride, to, cc, bcc, subject, html, replyTo, attachments }) =>
         transport
-          .sendMail({ from: fromOverride || from, to: to ?? fromAddr, cc, bcc, subject, html, replyTo })
+          .sendMail({
+            from: fromOverride || from,
+            to: to ?? fromAddr,
+            cc,
+            bcc,
+            subject,
+            html,
+            replyTo,
+            // Pass attachments through to nodemailer when provided.
+            // Omitting the key entirely when undefined keeps existing behaviour.
+            ...(attachments?.length ? { attachments } : {}),
+          })
           .then(() => undefined),
     },
   };
