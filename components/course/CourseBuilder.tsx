@@ -375,7 +375,7 @@ export default function CourseBuilder({
           {publicUrl && status === "published" && (
             <a className="dx-editbtn" href={`${publicUrl}/course/${pageId}`} target="_blank" rel="noreferrer">View ↗</a>
           )}
-          <button className="dx-editbtn" onClick={() => save()} disabled={busy || isImpersonating}>Save draft</button>
+          <button className={status === "published" ? "btn grad" : "dx-editbtn"} onClick={() => save()} disabled={busy || isImpersonating}>{status === "published" ? "Update live" : "Save draft"}</button>
           {status === "published"
             ? <button className="dx-editbtn" onClick={() => save("unpublish")} disabled={busy || isImpersonating}>Unpublish</button>
             : <button className="btn grad" onClick={() => save("publish")} disabled={busy || isImpersonating}>Publish</button>

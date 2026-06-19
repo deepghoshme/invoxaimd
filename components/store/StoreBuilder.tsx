@@ -87,7 +87,7 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus, initia
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {msg && <span className="dx-muted" style={{ fontSize: 13 }}>{msg}</span>}
           {publicUrl && status === "published" && <a className="dx-editbtn" href={`${publicUrl}/store`} target="_blank" rel="noreferrer">View ↗</a>}
-          <button className="dx-editbtn" onClick={() => save()} disabled={busy}>Save draft</button>
+          <button className={status === "published" ? "btn grad" : "dx-editbtn"} onClick={() => save()} disabled={busy}>{status === "published" ? "Update live" : "Save draft"}</button>
           {status === "published" ? <button className="dx-editbtn" onClick={() => save(false)} disabled={busy}>Unpublish</button> : <button className="btn grad" onClick={() => save(true)} disabled={busy}>Publish</button>}
         </div>
       </div>

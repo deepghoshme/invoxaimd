@@ -175,7 +175,7 @@ export default function VipBuilder({
           )}
           {!readOnly && (
             <>
-              <button className="dx-editbtn" onClick={() => save()} disabled={busy}>Save draft</button>
+              <button className={status === "published" ? "btn grad" : "dx-editbtn"} onClick={() => save()} disabled={busy}>{status === "published" ? "Update live" : "Save draft"}</button>
               {status === "published"
                 ? <button className="dx-editbtn" onClick={() => save(false)} disabled={busy}>Unpublish</button>
                 : <button className="btn grad" onClick={() => save(true)} disabled={busy}>Publish</button>

@@ -149,7 +149,7 @@ export default function BookingBuilder({
           {publicUrl && status === "published" && (
             <a className="dx-editbtn" href={publicUrl} target="_blank" rel="noreferrer">View ↗</a>
           )}
-          {!readOnly && <button className="dx-editbtn" onClick={() => save()} disabled={busy}>Save draft</button>}
+          {!readOnly && <button className={status === "published" ? "btn grad" : "dx-editbtn"} onClick={() => save()} disabled={busy}>{status === "published" ? "Update live" : "Save draft"}</button>}
           {!readOnly && (
             status === "published"
               ? <button className="dx-editbtn" onClick={() => save(false)} disabled={busy}>Unpublish</button>

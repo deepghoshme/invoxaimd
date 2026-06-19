@@ -303,7 +303,7 @@ export default function ProductEditor({
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {msg && <span className="dx-muted" style={{ fontSize: 13 }}>{msg}</span>}
           {publicUrl && status === "published" && <a className="dx-editbtn" href={publicUrl} target="_blank" rel="noreferrer">View ↗</a>}
-          <button className="dx-editbtn" onClick={save} disabled={state === "saving"}>{state === "saving" ? "Saving…" : "Save draft"}</button>
+          <button className={status === "published" ? "btn grad" : "dx-editbtn"} onClick={save} disabled={state === "saving"}>{state === "saving" ? "Saving…" : status === "published" ? "Update live" : "Save draft"}</button>
           {status === "published" ? <button className="dx-editbtn" onClick={unpublish}>Unpublish</button> : <button className="btn grad" onClick={publish}>Publish</button>}
         </div>
       </div>

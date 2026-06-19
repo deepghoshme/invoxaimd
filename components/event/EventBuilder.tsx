@@ -259,8 +259,8 @@ export default function EventBuilder({
               View ↗
             </a>
           )}
-          <button className="dx-editbtn" onClick={() => save()} disabled={busy || !!readOnly}>
-            Save draft
+          <button className={status === "published" ? "btn grad" : "dx-editbtn"} onClick={() => save()} disabled={busy || !!readOnly}>
+            {status === "published" ? "Update live" : "Save draft"}
           </button>
           {status === "published" ? (
             <button
