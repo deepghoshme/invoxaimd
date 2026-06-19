@@ -34,7 +34,7 @@ export default async function BioPage() {
 
   return (
     <>
-      <Phead title="Bio page" sub="Your link-in-bio." action={<a className="btn grad" href="/dashboard/pages/bio/edit">{bio ? "Open builder" : "Build bio page"}</a>} />
+      <Phead title="Bio page" sub="Your link-in-bio." action={<a className="btn grad" href="/studio/bio">{bio ? "Open builder" : "Build bio page"}</a>} />
 
       <Kpis items={[
         { icon: "eye", color: "var(--primary)", label: "Total views", value: views.toLocaleString("en-IN") },
@@ -49,7 +49,7 @@ export default async function BioPage() {
             <div className="dx-kv"><span className="dx-fw6">{publicUrl ? `${store.subdomain}.invoxai.io/bio` : "—"}</span>{bio ? (published ? <Live /> : <Tag kind="neu">Draft</Tag>) : <Tag kind="neu">Not created</Tag>}</div>
             <div className="dx-kv"><span>Links</span><span className="dx-fw6">{(content.links ?? []).length}</span></div>
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-              <a className="btn grad" href="/dashboard/pages/bio/edit">{bio ? "Open builder" : "Build bio page"}</a>
+              <a className="btn grad" href="/studio/bio">{bio ? "Open builder" : "Build bio page"}</a>
               {publicUrl && published && <a className="dx-editbtn" href={publicUrl} target="_blank" rel="noreferrer">View ↗</a>}
             </div>
           </Card>
