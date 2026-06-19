@@ -26,3 +26,4 @@ scripts/qa-six-settings.mjs
 scripts/qa-verify-8.mjs
 scripts/qa-notes.mjs
 scripts/qa-leadform-bio.mjs
+scripts/qa-reviews.mjs
