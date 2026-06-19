@@ -16,6 +16,9 @@ const ADMIN_NAV: DxNavGroup[] = [
     { label: "Sellers", icon: "users", href: "/admin/sellers" },
     { label: "Buyers", icon: "bag", href: "/admin/buyers" },
   ] },
+  { label: "Commerce", items: [
+    { label: "Orders", icon: "card", href: "/admin/orders" },
+  ] },
   { label: "Monetization", items: [
     { label: "Plans & Features", icon: "tag", href: "/admin/plans" },
     { label: "Commission", icon: "rupee", href: "/admin/commission" },
