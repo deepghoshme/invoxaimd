@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card, Tag, Live } from "@/components/dx/ui";
 import Pagination from "@/components/dx/Pagination";
+import ExtraSubdomains from "./ExtraSubdomains";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,18 @@ export default async function DomainsPage({
       customDomains = data;
       domainTotal = count ?? 0;
     }
+  } catch {}
+
+  // Fetch extra subdomains via session client (owner-read RLS)
+  let extraSubdomains: { id: string; subdomain: string; created_at: string }[] = [];
+  try {
+    const sessionClient = await createClient();
+    const { data } = await sessionClient
+      .from("store_subdomains")
+      .select("id, subdomain, created_at")
+      .eq("store_id", store.id)
+      .order("created_at", { ascending: true });
+    if (data) extraSubdomains = data;
   } catch {}
 
   const subdomain = store.subdomain;
@@ -146,6 +160,25 @@ export default async function DomainsPage({
                 "— complete onboarding to claim your subdomain"
               )}
             </p>
+          </Card>
+
+          <div style={{ height: 14 }} />
+
+          {/* Extra subdomains card */}
+          <Card title="Extra subdomains">
+            <p
+              style={{
+                fontSize: 12.5,
+                color: "var(--muted)",
+                marginBottom: 12,
+                marginTop: 2,
+              }}
+            >
+              Add alias subdomains that point to the same store. Useful for
+              campaign links, A/B landing pages, or branded entry points — all
+              resolve to your store automatically.
+            </p>
+            <ExtraSubdomains initial={extraSubdomains} />
           </Card>
 
           <div style={{ height: 14 }} />

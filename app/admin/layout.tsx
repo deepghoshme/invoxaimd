@@ -35,6 +35,7 @@ const ADMIN_NAV: DxNavGroup[] = [
   { label: "Platform", items: [
     { label: "Team & roles", icon: "users", href: "/admin/team" },
     { label: "Audit log", icon: "shield", href: "/admin/audit" },
+    { label: "Cron jobs", icon: "cal", href: "/admin/cron" },
     { label: "Branding", icon: "img", href: "/admin/branding" },
     { label: "Payment gateways", icon: "card", href: "/admin/gateways" },
     { label: "Maintenance", icon: "shield", href: "/admin/maintenance" },

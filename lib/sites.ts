@@ -44,12 +44,31 @@ export async function resolveStoreByHost(host: string): Promise<SiteStore | null
   if (h.endsWith(`.${ROOT}`)) {
     const sub = h.slice(0, -(ROOT.length + 1));
     if (!sub || sub.includes(".")) return null;
-    const { data } = await supabase
+
+    // Primary path: check stores.subdomain first (fast, indexed).
+    const { data: primary } = await supabase
       .from("stores")
       .select(cols)
       .eq("subdomain", sub)
       .maybeSingle();
-    return (data as SiteStore | null) ?? null;
+    if (primary) return primary as SiteStore;
+
+    // Fallback: check store_subdomains for extra alias subdomains.
+    // A seller can add extra {alias}.invoxai.io labels that resolve to their
+    // store without changing their primary subdomain.
+    const { data: alias } = await supabase
+      .from("store_subdomains")
+      .select("store_id")
+      .eq("subdomain", sub)
+      .maybeSingle();
+    if (!alias?.store_id) return null;
+
+    const { data: aliasStore } = await supabase
+      .from("stores")
+      .select(cols)
+      .eq("id", alias.store_id)
+      .maybeSingle();
+    return (aliasStore as SiteStore | null) ?? null;
   }
 
   // Custom domain (must be verified to serve).
