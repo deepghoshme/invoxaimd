@@ -3,6 +3,7 @@ import { getOrderById, getStoreGateway, updateOrder } from "@/lib/sites";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { incrementCouponUsageByCode } from "@/lib/coupons";
+import { sendOrderReceipt } from "@/lib/transactional";
 
 /**
  * Verify a Razorpay checkout signature and mark the order paid. The signature
@@ -99,6 +100,16 @@ export async function POST(req: Request) {
       // non-fatal
     }
   }
+
+  // Buyer order receipt (from hello@, record copy to admin@). Non-fatal.
+  await sendOrderReceipt({
+    to: order.buyer_email,
+    buyerName: order.buyer_name,
+    productTitle: order.product_title,
+    amountPaise: order.amount,
+    currency: order.currency,
+    orderId: order.id,
+  });
 
   // ── Booking confirmation ───────────────────────────────────────────────────
   // If this order was for a paid booking session, flip the SPECIFIC matching

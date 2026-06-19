@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
 import { upsertSubscription } from "@/lib/subscriptions";
+import { sendPlanReceipt } from "@/lib/transactional";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
 
   const { data: plan } = await admin
     .from("plans")
-    .select("id, price, is_active")
+    .select("id, name, price, is_active")
     .eq("id", orderPlanId)
     .eq("is_active", true)
     .maybeSingle();
@@ -104,6 +105,14 @@ export async function POST(req: Request) {
     periodEndDate: periodEnd,
   });
   if (!result.ok) return NextResponse.json({ error: result.error ?? "Could not activate plan." }, { status: 500 });
+
+  // Plan invoice (from billing@, record copy to admin@). Non-fatal.
+  await sendPlanReceipt({
+    to: user.email ?? null,
+    planName: (plan.name as string) || "Plan",
+    amountPaise: expectedPaise,
+    periodEnd: periodEnd.toDateString(),
+  });
 
   return NextResponse.json({ ok: true });
 }

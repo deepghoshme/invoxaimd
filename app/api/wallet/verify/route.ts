@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
+import { sendWalletReceipt } from "@/lib/transactional";
 
 /**
  * POST /api/wallet/verify
@@ -192,6 +193,9 @@ export async function POST(req: Request) {
     .from("stores")
     .update({ wallet_balance: newBalance })
     .eq("id", store.id);
+
+  // Wallet recharge receipt (from wallet@, record copy to admin@). Non-fatal.
+  await sendWalletReceipt({ to: user.email ?? null, creditedPaise: totalCredit, balancePaise: newBalance });
 
   return NextResponse.json({
     ok: true,
