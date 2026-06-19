@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAuditReport, sendUserAuditReport, sendDailyWalletReport } from "@/lib/transactional";
 import { runRecoveryForAllStores } from "@/lib/recovery";
 import { expireOverdueSubscriptions } from "@/lib/subscriptionExpiry";
+import { runRechargeReminders } from "@/lib/walletReminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,9 +39,9 @@ function authorized(req: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-type CronJob = "recovery" | "audit" | "subscriptions" | "wallet_report" | "all";
+type CronJob = "recovery" | "audit" | "subscriptions" | "wallet_report" | "wallet_reminder" | "all";
 
-const VALID_JOBS: CronJob[] = ["recovery", "audit", "subscriptions", "wallet_report", "all"];
+const VALID_JOBS: CronJob[] = ["recovery", "audit", "subscriptions", "wallet_report", "wallet_reminder", "all"];
 
 /** Insert a cron_runs row and return its id (non-fatal — returns null on failure). */
 async function logCronStart(
@@ -103,6 +104,7 @@ export async function GET(req: Request) {
     audit?: string;
     subscriptions?: unknown;
     wallet_report?: unknown;
+    wallet_reminder?: unknown;
     errors: string[];
   } = { errors: [] };
 
@@ -150,6 +152,17 @@ export async function GET(req: Request) {
       result.wallet_report = await sendDailyWalletReport();
     } catch (e) {
       result.errors.push("wallet_report: " + (e instanceof Error ? e.message : "failed"));
+    }
+  }
+
+  // 5. Wallet-low recharge reminders (friendly, throttled, active+high-revenue only).
+  //    Runs ONLY via its dedicated ?job=wallet_reminder slot (every 30 min) —
+  //    excluded from "all" so the nightly batch doesn't trigger it.
+  if (job === "wallet_reminder") {
+    try {
+      result.wallet_reminder = await runRechargeReminders();
+    } catch (e) {
+      result.errors.push("wallet_reminder: " + (e instanceof Error ? e.message : "failed"));
     }
   }
 

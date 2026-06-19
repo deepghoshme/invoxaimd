@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
 import { sendWalletReceipt } from "@/lib/transactional";
 import { createInvoiceForWallet } from "@/lib/invoice";
+import { getWalletGatePlatformConfig, isCheckoutBlockedForStore } from "@/lib/walletGate";
 
 /**
  * POST /api/wallet/verify
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
   // ── Resolve store ─────────────────────────────────────────────────────────
   const { data: store } = await admin
     .from("stores")
-    .select("id, wallet_balance")
+    .select("id, wallet_balance, checkout_blocked, wallet_floor_paise")
     .eq("owner_id", user.id)
     .maybeSingle();
 
@@ -190,10 +191,30 @@ export async function POST(req: Request) {
   }
 
   // Update denormalised balance on stores
-  await admin
-    .from("stores")
-    .update({ wallet_balance: newBalance })
-    .eq("id", store.id);
+  await admin.from("stores").update({ wallet_balance: newBalance }).eq("id", store.id);
+
+  // ── Auto-ON: if wallet gate was blocking this store and the new balance
+  //    now exceeds the effective floor, clear checkout_blocked.
+  //    Additive and non-fatal — must never block the recharge response.
+  try {
+    const platformConfig = await getWalletGatePlatformConfig();
+    if (platformConfig.wallet_gate_enabled) {
+      const storeWithNewBalance = {
+        wallet_balance: newBalance,
+        checkout_blocked: (store as Record<string, unknown>).checkout_blocked as boolean | null ?? false,
+        wallet_floor_paise: (store as Record<string, unknown>).wallet_floor_paise as number | null ?? null,
+      };
+      const gateResult = isCheckoutBlockedForStore(storeWithNewBalance, platformConfig);
+      if (!gateResult.blocked && storeWithNewBalance.checkout_blocked) {
+        await admin.from("stores").update({ checkout_blocked: false }).eq("id", store.id);
+        console.log(
+          `[wallet/verify] Auto-ON: cleared checkout_blocked for store ${store.id} (new balance ${newBalance} > floor ${gateResult.effectiveFloor})`,
+        );
+      }
+    }
+  } catch (autoOnErr) {
+    console.warn("[wallet/verify] Auto-ON gate sync failed (non-fatal):", autoOnErr);
+  }
 
   // Create a wallet invoice (kind='wallet') — non-fatal: failure must never
   // block the wallet credit or the 200 response.

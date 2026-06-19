@@ -795,6 +795,53 @@ export async function sendDailyWalletReport(): Promise<{ sent: boolean; credits:
 }
 
 /**
+ * Send a friendly wallet recharge reminder to a seller whose balance is at or
+ * below the floor threshold. The tone is helpful — not alarming — so the seller
+ * knows to top up before checkout is blocked. Non-fatal.
+ *
+ * Sent from wallet@ (same alias as wallet receipts) with no admin CC, since
+ * these are high-frequency operational messages not financial transactions.
+ */
+export async function sendRechargeReminderEmail(o: {
+  to: string;
+  storeName: string;
+  walletBalancePaise: number;
+  rechargeUrl: string;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.wallet_txn;
+  const balance = money(o.walletBalancePaise);
+  const inner = `
+    <p>Hi,</p>
+    <p>Your invoxai wallet for <b>${esc(o.storeName)}</b> is running low (current balance: <b>${balance}</b>).</p>
+    <p>A low wallet balance means checkout may be paused for your buyers once the balance hits zero. Recharging now keeps everything running smoothly.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      ${row("Store", esc(o.storeName))}
+      ${row("Current wallet balance", balance)}
+    </table>
+    <div style="text-align:center;margin:22px 0">
+      <a href="${esc(o.rechargeUrl)}"
+         style="display:inline-block;background:linear-gradient(135deg,#ff6a3d,#ff4d7d);color:#fff;font-weight:700;font-size:15px;padding:13px 32px;border-radius:10px;text-decoration:none">
+        Recharge wallet
+      </a>
+    </div>
+    <p style="font-size:12.5px;color:#8a8088">
+      You received this because your wallet balance is near the floor threshold.
+      After recharging, reminders will pause automatically.
+    </p>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: o.to,
+      subject: `Low wallet balance — recharge ${esc(o.storeName)} to keep accepting orders`,
+      html: shell("Wallet balance low — recharge needed", inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/**
  * Notify a store owner that their subscription has expired (past_due).
  */
 export async function sendSubscriptionExpiredEmail(o: {

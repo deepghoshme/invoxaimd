@@ -2,6 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getWalletGatePlatformConfig, isCheckoutBlockedForStore } from "@/lib/walletGate";
+import { isStoreStoppedForPlan, type PlanGateStatus } from "@/lib/planGate";
 
 const ROOT = "invoxai.io";
 
@@ -399,4 +401,95 @@ export function websiteSubPage(path?: string[]): string {
   if (seg === "about" || seg === "contact") return seg;
   if (LEGAL_KEYS.includes(seg)) return `legal:${seg}`;
   return seg; // custom page slug (validated in the renderer)
+}
+
+/**
+ * Storefront pay-enable resolution — the canonical function that decides
+ * whether a store is currently accepting buyer checkouts.
+ *
+ * Checks (in order):
+ *   1. Gateway configured + enabled.
+ *   2. Wallet gate: feature on AND wallet_balance <= effectiveFloor.
+ *   3. Plan expiry: store HAS a subscription row AND status is 'past_due'.
+ *
+ * Backwards-compatibility:
+ *   - Free-plan sellers (no subscription row) are NEVER plan-blocked.
+ *   - Sellers who deliberately canceled (status='canceled') are NOT plan-blocked.
+ *   - wallet_gate_enabled=false in platform_settings disables the wallet check.
+ *   - Any DB error in checks 2 or 3 fails OPEN (never blocks on infrastructure hiccup).
+ *
+ * "Auto stop everything" scope for plan-expiry:
+ *   STOPS:   New buyer checkouts via this function + the checkout/start API.
+ *   DOES NOT stop: seller login, dashboard, data access, page viewing, admin.
+ *   DOES NOT: delete data, modify existing orders, change any amounts.
+ *   Reversible: seller renews → subscription.status='active' → next checkout passes immediately.
+ */
+export type StorePayStatus = {
+  payEnabled: boolean;
+  reason: "gateway_missing" | "wallet_gate" | "plan_expired" | null;
+};
+
+export async function getStorePayStatus(storeId: string): Promise<StorePayStatus> {
+  const supabase = createAdminClient();
+
+  const [gatewayRes, storeRes, platformConfig] = await Promise.all([
+    supabase
+      .from("payment_gateways")
+      .select("key_id, key_secret, is_enabled")
+      .eq("store_id", storeId)
+      .maybeSingle(),
+    supabase
+      .from("stores")
+      .select("wallet_balance, checkout_blocked, wallet_floor_paise")
+      .eq("id", storeId)
+      .maybeSingle(),
+    getWalletGatePlatformConfig(),
+  ]);
+
+  // 1. Gateway check.
+  const gw = gatewayRes.data as {
+    key_id: string | null;
+    key_secret: string | null;
+    is_enabled: boolean;
+  } | null;
+  if (!gw || !gw.is_enabled || !gw.key_id || !gw.key_secret) {
+    return { payEnabled: false, reason: "gateway_missing" };
+  }
+
+  // 2. Wallet gate check.
+  const storeData = storeRes.data as {
+    wallet_balance: number | null;
+    checkout_blocked: boolean | null;
+    wallet_floor_paise: number | null;
+  } | null;
+
+  if (storeData) {
+    const gateResult = isCheckoutBlockedForStore(storeData, platformConfig);
+    if (gateResult.blocked) {
+      return { payEnabled: false, reason: "wallet_gate" };
+    }
+  }
+
+  // 3. Plan-expiry check.
+  // isStoreStoppedForPlan(null) → not stopped (free-plan / no subscription row).
+  // isStoreStoppedForPlan('active') → not stopped.
+  // isStoreStoppedForPlan('canceled') → not stopped (voluntary).
+  // isStoreStoppedForPlan('past_due') → stopped.
+  // On DB error → fail open.
+  try {
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("store_id", storeId)
+      .maybeSingle();
+
+    const planGate = isStoreStoppedForPlan((sub?.status as PlanGateStatus) ?? null);
+    if (planGate.stopped) {
+      return { payEnabled: false, reason: "plan_expired" };
+    }
+  } catch {
+    // subscriptions table may not exist yet — gracefully skip.
+  }
+
+  return { payEnabled: true, reason: null };
 }
