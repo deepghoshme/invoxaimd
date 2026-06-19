@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { requireDashboardStore } from "@/lib/auth";
 import CustomerList, { type CustomerListItem } from "./CustomerList";
+import CustomerNotes, { type NoteRow } from "./CustomerNotes";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +141,22 @@ export default async function CustomerDetailPage({
   const customer = customerMap.get(selectedEmail!);
   if (!customer) notFound();
 
+  // ── Fetch customer notes via session client so RLS owns_store policy applies ─
+  const sessionSupabase = await createClient();
+  const { data: rawNotes } = await sessionSupabase
+    .from("customer_notes")
+    .select("id, body, created_at, updated_at")
+    .eq("store_id", store.id)
+    .eq("buyer_email", selectedEmail!)
+    .order("created_at", { ascending: false });
+
+  const customerNotes: NoteRow[] = (rawNotes ?? []).map((n) => ({
+    id: n.id as string,
+    body: n.body as string,
+    created_at: n.created_at as string,
+    updated_at: n.updated_at as string | null,
+  }));
+
   // ── Build left-pane list items ─────────────────────────────────────────────
   const listItems: CustomerListItem[] = allCustomers.map((c) => ({
     email: c.email,
@@ -237,17 +255,6 @@ export default async function CustomerDetailPage({
               >
                 ✉ Email
               </a>
-              <button
-                className="cr-btn grad"
-                title="Notes are not yet persisted — coming soon"
-                disabled
-                style={{ cursor: "not-allowed", opacity: 0.7 }}
-              >
-                + Add note
-                <span style={{ fontSize: 10, marginLeft: 5, opacity: 0.8, fontWeight: 400 }}>
-                  (coming soon)
-                </span>
-              </button>
             </div>
           </div>
 
@@ -420,6 +427,9 @@ export default async function CustomerDetailPage({
               </div>
             </div>
           </div>
+
+          {/* Notes section — real, persisted, seller CRUD via RLS */}
+          <CustomerNotes notes={customerNotes} buyerEmail={selectedEmail!} />
         </main>
       </div>
     </div>
