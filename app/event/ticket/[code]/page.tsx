@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import QRCode from "react-qr-code";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { type EventContent, formatEventDate } from "@/lib/event";
 
@@ -56,6 +58,11 @@ export default async function TicketPage({
       : content.location || "See confirmation email";
 
   const orderId = ticket.order_id ? String(ticket.order_id).slice(-6).toUpperCase() : "—";
+
+  // Absolute ticket URL for the QR (scanning re-opens this verification page).
+  const host = (await headers()).get("host") ?? "invoxai.io";
+  const proto = host.includes("localhost") || host.startsWith("127.") ? "http" : "https";
+  const ticketUrl = `${proto}://${host}/event/ticket/${ticket.code}`;
 
   return (
     <TicketShell>
@@ -125,7 +132,7 @@ export default async function TicketPage({
             </div>
 
             <div className="et-perf">
-              <QrBlock code={ticket.code} />
+              <QrBlock value={ticketUrl} />
               <div className="et-code">{ticket.code}</div>
               <div className="et-codel">
                 Show this at entry · {ticket.qty > 1 ? `${ticket.qty} admits` : "1 admit"}
@@ -156,25 +163,12 @@ export default async function TicketPage({
   );
 }
 
-function QrBlock({ code }: { code: string }) {
-  const cells = 11;
-  const bits: boolean[] = [];
-  for (let i = 0; i < cells * cells; i++) {
-    const charCode = code.charCodeAt(i % code.length);
-    bits.push(((charCode >> (i % 8)) & 1) === 1);
-  }
-  const corners = [0, 1, 2, 3, 4, 11, 22, 33, 44, 5, 16, 27, 38, 49, 6, 7, 8, 9, 10];
-  corners.forEach((idx) => { if (idx < bits.length) bits[idx] = true; });
+// Real, scannable QR encoding the absolute ticket URL. react-qr-code renders
+// pure SVG, so it works in this server component with no client JS.
+function QrBlock({ value }: { value: string }) {
   return (
     <div style={{ width: 120, height: 120, background: "#fff", borderRadius: 12, padding: 8, margin: "0 auto", display: "grid", placeItems: "center" }}>
-      <svg viewBox={`0 0 ${cells} ${cells}`} width="104" height="104" shapeRendering="crispEdges">
-        {bits.map((on, i) => {
-          const x = i % cells;
-          const y = Math.floor(i / cells);
-          return on ? <rect key={i} x={x} y={y} width={1} height={1} fill="#111" /> : null;
-        })}
-        <rect x={4.5} y={4.5} width={2} height={2} fill="#111" />
-      </svg>
+      <QRCode value={value} size={104} level="M" bgColor="#ffffff" fgColor="#111111" style={{ width: 104, height: 104 }} />
     </div>
   );
 }

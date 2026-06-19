@@ -1,24 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import QRCode from "react-qr-code";
 import { type EventContent, type EventTier, formatEventDate } from "@/lib/event";
 
-// ── QR Code: inline SVG-based visual representation ──────────────────────────
-// We don't have a QR lib installed, so we render a human-readable
-// verification code with a branded visual block that looks like a QR card.
-// The actual verification uses the text code directly.
+// ── QR Code: a real, scannable QR encoding the ticket verification URL ────────
+// Scanning opens /event/ticket/<code>, which looks the ticket up by code.
 function QrBlock({ code }: { code: string }) {
-  // Create a deterministic pixel pattern from the code for a QR-like visual
-  const cells = 11;
-  const bits: boolean[] = [];
-  for (let i = 0; i < cells * cells; i++) {
-    const charCode = code.charCodeAt(i % code.length);
-    bits.push(((charCode >> (i % 8)) & 1) === 1);
-  }
-  // Force corner finder-pattern squares on
-  const corners = [0, 1, 2, 3, 4, 11, 22, 33, 44, 5, 16, 27, 38, 49, 6, 7, 8, 9, 10];
-  corners.forEach((idx) => { if (idx < bits.length) bits[idx] = true; });
-
+  const url =
+    (typeof window !== "undefined" ? window.location.origin : "") +
+    "/event/ticket/" +
+    code;
   return (
     <div
       style={{
@@ -32,17 +24,7 @@ function QrBlock({ code }: { code: string }) {
         placeItems: "center",
       }}
     >
-      <svg viewBox={`0 0 ${cells} ${cells}`} width="104" height="104" shapeRendering="crispEdges">
-        {bits.map((on, i) => {
-          const x = i % cells;
-          const y = Math.floor(i / cells);
-          return on ? (
-            <rect key={i} x={x} y={y} width={1} height={1} fill="#111" />
-          ) : null;
-        })}
-        {/* Centre mark */}
-        <rect x={4.5} y={4.5} width={2} height={2} fill="#111" />
-      </svg>
+      <QRCode value={url} size={104} level="M" bgColor="#ffffff" fgColor="#111111" style={{ width: 104, height: 104 }} />
     </div>
   );
 }
