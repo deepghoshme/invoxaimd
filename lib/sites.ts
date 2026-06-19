@@ -200,6 +200,7 @@ export type Order = {
   buyer_email: string | null;
   buyer_name: string | null;
   buyer_phone: string | null;
+  buyer_state: string | null;
   product_title: string | null;
   amount: number;
   currency: string;

@@ -151,6 +151,7 @@ export async function POST(req: Request) {
           store_id: order.store_id,
           buyer_email: order.buyer_email,
           buyer_name: order.buyer_name,
+          buyer_state: order.buyer_state ?? null,
           amount: order.amount,
           currency: order.currency,
           product_title: order.product_title,
