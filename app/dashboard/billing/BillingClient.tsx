@@ -4,6 +4,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { selectPlan } from "./actions";
 
+declare global {
+  interface Window {
+    Razorpay?: new (opts: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
 type Plan = {
   id: string;
   name: string;
@@ -96,16 +113,76 @@ export default function BillingClient({
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   async function handleSelect(planId: string) {
+    const plan = plans.find((p) => p.id === planId);
+    if (!plan) return;
     setBusy(true);
     setMsg(null);
-    const res = await selectPlan(planId);
-    setBusy(false);
-    if (res.ok) {
-      setMsg({ text: "Plan updated.", ok: true });
-      router.refresh();
-      setTimeout(() => setMsg(null), 3000);
-    } else {
-      setMsg({ text: res.error ?? "Failed to update plan.", ok: false });
+
+    // Free plan → switch immediately, no charge.
+    if (!plan.price || plan.price <= 0) {
+      const res = await selectPlan(planId);
+      setBusy(false);
+      if (res.ok) {
+        setMsg({ text: "Plan updated.", ok: true });
+        router.refresh();
+        setTimeout(() => setMsg(null), 3000);
+      } else {
+        setMsg({ text: res.error ?? "Failed to update plan.", ok: false });
+      }
+      return;
+    }
+
+    // Paid plan → charge via the platform Razorpay gateway, then activate.
+    if (!(await loadRazorpay())) {
+      setBusy(false);
+      return setMsg({ text: "Couldn’t load the payment library. Check your connection.", ok: false });
+    }
+    try {
+      const sRes = await fetch("/api/plans/subscribe/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_id: planId }),
+      });
+      const start = await sRes.json();
+      if (!sRes.ok) throw new Error(start.error || "Couldn’t start payment.");
+
+      const rzp = new window.Razorpay!({
+        key: start.key_id,
+        order_id: start.razorpay_order_id,
+        amount: start.amount,
+        currency: start.currency,
+        name: "invoxai",
+        description: `${start.plan_name} plan`,
+        theme: { color: "#FF6A3D" },
+        modal: { ondismiss: () => setBusy(false) },
+        handler: async (resp: Record<string, string>) => {
+          try {
+            const vRes = await fetch("/api/plans/subscribe/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                plan_id: planId,
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+              }),
+            });
+            const v = await vRes.json();
+            if (!vRes.ok || !v.ok) throw new Error(v.error || "Verification failed");
+            setMsg({ text: "Plan activated ✓", ok: true });
+            router.refresh();
+            setTimeout(() => setMsg(null), 3000);
+          } catch (e) {
+            setMsg({ text: e instanceof Error ? e.message : "Verification failed", ok: false });
+          } finally {
+            setBusy(false);
+          }
+        },
+      });
+      rzp.open();
+    } catch (e) {
+      setBusy(false);
+      setMsg({ text: e instanceof Error ? e.message : "Payment failed", ok: false });
     }
   }
 
@@ -224,9 +301,8 @@ export default function BillingClient({
 
       {!migrationPending && (
         <p className="bl-note">
-          Plan selection takes effect immediately. Payment charging for paid
-          plans is coming soon — your selected plan is recorded now and billing
-          will be wired in the next release.
+          Free plans switch instantly. Paid plans are charged securely via
+          Razorpay and activate as soon as payment succeeds.
         </p>
       )}
     </>
