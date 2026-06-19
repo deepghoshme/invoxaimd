@@ -9,13 +9,19 @@ import FooterPolicies from "@/components/checkout/FooterPolicies";
 import LiveProof from "@/components/checkout/LiveProof";
 import CountdownTimer from "@/components/checkout/CountdownTimer";
 import { sanitizeHtml } from "@/lib/sanitize";
+import ReviewsSection, { type ProductReview, type ReviewStats } from "@/components/templates/ReviewsSection";
 
 /** Catalog-style Product Detail Page (opp layout = "pdp"). Reuses the existing
  * checkout (InlineCheckout) for the buy flow. */
 export default function PDPTemplate({
   content, pageId, fallbackTitle, payEnabled, showBrand = true, preview = false, storeName = "Store", sold = 0,
+  reviews: realReviews, reviewStats,
 }: {
   content: OppContent; pageId: string; fallbackTitle?: string; payEnabled: boolean; showBrand?: boolean; preview?: boolean; storeName?: string; sold?: number;
+  /** Real product_reviews rows fetched server-side (approved + visible). */
+  reviews?: ProductReview[];
+  /** Aggregate computed server-side: avg (1 decimal) + count. */
+  reviewStats?: ReviewStats;
 }) {
   const currency = (content.currency || DEFAULT_CURRENCY).toUpperCase();
   const title = content.headline || fallbackTitle || "Product";
@@ -34,7 +40,8 @@ export default function PDPTemplate({
   const includes = featTexts;
   const offers = (content.offers ?? []).filter(Boolean);
   const specs = (content.specs ?? []).filter((s) => s[0]);
-  const reviews = (content.testimonials ?? []).filter((t) => t?.text);
+  // Seller-curated testimonials (kept separate from real product_reviews).
+  const testimonials = (content.testimonials ?? []).filter((t) => t?.text);
   const related = (content.related ?? []).filter((r) => r.name);
   const descHtml = sanitizeHtml(
     content.description_html || (content.description ? content.description.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("") : ""),
@@ -45,8 +52,11 @@ export default function PDPTemplate({
   const selPlan = plans[plan];
   const buyPrice = selPlan ? selPlan.price : price;
   const buyAmount = selPlan ? toMinorUnit(selPlan.price, currency) : amount;
-  const rating = content.rating || "4.9";
-  const rcount = content.reviews_count || "";
+  // Real aggregate from product_reviews (server-fetched); never fall back to
+  // the hardcoded "4.9". If no real reviews exist, we show "No reviews yet".
+  const hasRealReviews = !!(reviewStats && reviewStats.count > 0);
+  const realAvg = hasRealReviews ? reviewStats!.avg.toFixed(1) : null;
+  const realCount = hasRealReviews ? reviewStats!.count : 0;
   const [tab, setTab] = useState("desc");
   const [pin, setPin] = useState(""); const [pinRes, setPinRes] = useState("");
   const faqs = (content.faqs ?? []).filter((f) => f?.q);
@@ -79,11 +89,17 @@ export default function PDPTemplate({
   };
   const rootClass = `pdp-site pdp-bt-${th.btshape}${th.dark ? " pdp-dark" : ""}`;
 
+  const displayedReviews = realReviews ?? [];
   const TABS: [string, string, boolean][] = [
     ["desc", "Description", !!descHtml],
     ["inc", "What's included", includes.length > 0],
     ["spec", "Specifications", specs.length > 0],
-    ["rev", `Reviews${reviews.length ? ` (${reviews.length})` : ""}`, reviews.length > 0],
+    // "Reviews" tab always shows when real reviews exist OR we want to surface
+    // the empty state. Show it whenever we have real data (even 0 rows) so
+    // shoppers can see "No reviews yet" rather than a missing tab.
+    ["rev", `Reviews${realCount > 0 ? ` (${realCount})` : ""}`, true],
+    // Seller-curated testimonials shown as a separate "Testimonials" tab.
+    ["testi", `Testimonials (${testimonials.length})`, testimonials.length > 0],
     ["faq", `FAQ${faqs.length ? ` (${faqs.length})` : ""}`, faqs.length > 0],
   ];
   const tabs = TABS.filter((t) => t[2]);
@@ -111,7 +127,11 @@ export default function PDPTemplate({
           <nav className="pdp-crumb"><span>Store</span>{content.category && <><span className="sep">›</span><span>{content.category}</span></>}<span className="sep">›</span><b>{title}</b></nav>
           {content.category && <div className="pdp-cat">{content.category}</div>}
           <h1 className="pdp-title">{title}</h1>
-          <div className="pdp-rate"><span className="st">★★★★★</span> <b>{rating}</b>{rcount && ` · ${rcount} reviews`}</div>
+          {hasRealReviews ? (
+            <div className="pdp-rate"><span className="st">★★★★★</span> <b>{realAvg}</b>{` · ${realCount} review${realCount === 1 ? "" : "s"}`}</div>
+          ) : (
+            <div className="pdp-rate pdp-rate-empty" style={{ opacity: 0.5, fontSize: "0.85em" }}>No reviews yet</div>
+          )}
           {seatsTotal > 0 && <div className={`pdp-stock${soldOut ? " out" : lowStock ? " low" : ""}`}>{soldOut ? "● Sold out" : lowStock ? `● Hurry — only ${seatsLeft} left` : "● In stock"}</div>}
           {highlights.length > 0 && <ul className="pdp-hl">{highlights.map((h, i) => <li key={i}>{h}</li>)}</ul>}
           {plans.length > 0 && (
@@ -148,7 +168,29 @@ export default function PDPTemplate({
             {activeTab === "desc" && <div className="pdp-rt" dangerouslySetInnerHTML={{ __html: descHtml }} />}
             {activeTab === "inc" && <div className="pdp-inc">{includes.map((i, k) => <div className="pdp-inci" key={k}><span className="ck">✓</span><span>{i}</span></div>)}</div>}
             {activeTab === "spec" && <table className="pdp-spec"><tbody>{specs.map((s, k) => <tr key={k}><td>{s[0]}</td><td>{s[1]}</td></tr>)}</tbody></table>}
-            {activeTab === "rev" && <div>{reviews.map((r, k) => <div className="pdp-rc" key={k}><div className="rh"><div className="rav">{(r.name || "?").charAt(0)}</div><div><div className="rn">{r.name}</div><div className="rst">★★★★★</div></div></div><p>{r.text}</p></div>)}</div>}
+            {activeTab === "rev" && (
+              <ReviewsSection reviews={displayedReviews} stats={reviewStats} />
+            )}
+            {activeTab === "testi" && (
+              <div>
+                {testimonials.map((r, k) => (
+                  <div className="pdp-rc" key={k}>
+                    <div className="rh">
+                      <div className="rav">{(r.name || "?").charAt(0)}</div>
+                      <div>
+                        <div className="rn">{r.name}</div>
+                        <div className="rst">
+                          {typeof r.rating === "number" && r.rating > 0
+                            ? "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating))
+                            : "★★★★★"}
+                        </div>
+                      </div>
+                    </div>
+                    <p>{r.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
             {activeTab === "faq" && (
               <div className="prod-faqs">
                 {faqs.map((f, k) => (

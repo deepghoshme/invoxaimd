@@ -34,6 +34,8 @@ export type BuyerOrder = {
   id: string;
   store_id: string;
   page_id: string;
+  /** If this order is for a catalog store product, the products.id. Null for page-based orders. */
+  product_id: string | null;
   page_type: PageType;
   /** Product / page title from the order row itself (snapshot at purchase time). */
   product_title: string | null;
@@ -150,6 +152,7 @@ type OrderRow = {
   id: string;
   store_id: string;
   page_id: string;
+  product_id: string | null;
   page_type: string;
   product_title: string | null;
   amount: number;
@@ -195,6 +198,7 @@ function toTypedOrder(
     id: row.id,
     store_id: row.store_id,
     page_id: row.page_id,
+    product_id: row.product_id ?? null,
     page_type: row.page_type as PageType,
     product_title: row.product_title,
     amount: row.amount,
@@ -283,7 +287,7 @@ export async function getBuyerOrder(
   const { data: row, error } = await sb
     .from("orders")
     .select(
-      "id, store_id, page_id, page_type, product_title, amount, currency, status, created_at, paid_at, buyer_email, buyer_name, buyer_phone",
+      "id, store_id, page_id, product_id, page_type, product_title, amount, currency, status, created_at, paid_at, buyer_email, buyer_name, buyer_phone",
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -498,4 +502,58 @@ export async function getBuyerDownload(
   }
 
   return { kind, url: rawUrl, page_url };
+}
+
+// ── Review types + reader ──────────────────────────────────────────────────
+
+/**
+ * A buyer's existing review for a single order.
+ * Sourced from public.product_reviews; defaults status='approved' is_visible=true
+ * so the public read policy covers it and the buyer can see their own review via
+ * the session client. If a seller hides it, the buyer won't see it here — acceptable
+ * for MVP (they'll just see the form again; re-submit will get a unique-violation
+ * error handled gracefully).
+ */
+export type BuyerReview = {
+  id: string;
+  order_id: string;
+  rating: number;
+  body: string | null;
+  created_at: string;
+  seller_reply: string | null;
+  replied_at: string | null;
+};
+
+/**
+ * Returns the buyer's existing review for a given order, or null if none exists
+ * (or if it is hidden/unapproved — see BuyerReview note above).
+ *
+ * Uses the session-bound RLS client. The public read policy on product_reviews
+ * exposes rows where is_visible=true AND status='approved', which covers the
+ * default case. We filter by order_id so only this buyer's review can ever match
+ * (the order_id is globally unique and the buyer proved ownership through getBuyerOrder).
+ */
+export async function getBuyerReviewForOrder(
+  orderId: string,
+): Promise<BuyerReview | null> {
+  if (!orderId) return null;
+  const sb = await createClient();
+
+  const { data, error } = await sb
+    .from("product_reviews")
+    .select("id, order_id, rating, body, created_at, seller_reply, replied_at")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id as string,
+    order_id: data.order_id as string,
+    rating: data.rating as number,
+    body: (data.body as string | null) ?? null,
+    created_at: data.created_at as string,
+    seller_reply: (data.seller_reply as string | null) ?? null,
+    replied_at: (data.replied_at as string | null) ?? null,
+  };
 }

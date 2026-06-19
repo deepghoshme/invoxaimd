@@ -16,6 +16,7 @@ import {
   getBuyerCourseEnrollment,
   getBuyerBooking,
   getBuyerDownload,
+  getBuyerReviewForOrder,
   type BuyerOrder,
   type BuyerEventTicket,
   type BuyerVipMembership,
@@ -26,6 +27,7 @@ import {
 import Link from "next/link";
 import QRCode from "react-qr-code";
 import PrintButton from "./PrintButton";
+import ReviewForm from "./ReviewForm";
 
 export const dynamic = "force-dynamic";
 
@@ -457,6 +459,7 @@ export default async function OrderDetailPage({
 
   // Load order (RLS: returns null if not owned by this buyer)
   const order = await getBuyerOrder(id);
+  // Load existing review in parallel below (after order is confirmed)
 
   if (!order) {
     return (
@@ -478,6 +481,10 @@ export default async function OrderDetailPage({
 
   const title = order.product_title || order.page_title || "Order";
   const ptLabel = PAGE_TYPE_LABEL[order.page_type] ?? order.page_type;
+
+  // Only offer reviews for paid orders
+  const isPaid = order.status === "paid";
+  const existingReview = isPaid ? await getBuyerReviewForOrder(id) : null;
 
   return (
     <>
@@ -530,6 +537,15 @@ export default async function OrderDetailPage({
 
           {/* Deliverable panel — dispatches by page_type */}
           <DeliverablePanel order={order} />
+
+          {/* Review section — only for paid orders */}
+          {isPaid && (
+            <ReviewForm
+              orderId={order.id}
+              existingReview={existingReview}
+              productTitle={title}
+            />
+          )}
 
           {/* Printable receipt (hidden on screen, shown on print) */}
           <ReceiptSection order={order} />

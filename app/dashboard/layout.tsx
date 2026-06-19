@@ -34,6 +34,7 @@ const NAV: DxNavGroup[] = [
     { label: "Abandoned cart", icon: "cart", href: "/dashboard/abandoned" },
     { label: "Upsell", icon: "up", href: "/dashboard/upsell" },
     { label: "Checkout", icon: "card", href: "/dashboard/checkout" },
+    { label: "Reviews", icon: "star", href: "/dashboard/reviews" },
   ] },
   { label: "Money", items: [
     { label: "Payment gateways", icon: "card", href: "/dashboard/settings/payments" },

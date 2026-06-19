@@ -12,6 +12,7 @@ import InlineCheckout from "@/components/checkout/InlineCheckout";
 import BuyBar from "@/components/checkout/BuyBar";
 import FooterPolicies from "@/components/checkout/FooterPolicies";
 import PDPTemplate from "@/components/templates/PDPTemplate";
+import { type ProductReview, type ReviewStats } from "@/components/templates/ReviewsSection";
 import { resolveOppTheme } from "@/lib/oppTheme";
 import { sanitizeHtml } from "@/lib/sanitize";
 
@@ -36,6 +37,8 @@ export default function ProductTemplate({
   forceMobile = false,
   sold = 0,
   storeName = "Store",
+  reviews,
+  reviewStats,
 }: {
   content: OppContent;
   pageId: string;
@@ -46,10 +49,14 @@ export default function ProductTemplate({
   forceMobile?: boolean;
   sold?: number;
   storeName?: string;
+  /** Real product_reviews rows (approved + visible), fetched server-side. */
+  reviews?: ProductReview[];
+  /** Aggregate: avg (1 decimal) + count. */
+  reviewStats?: ReviewStats;
 }) {
   // Catalog product-detail layout → delegate to PDPTemplate (reuses checkout).
   if (content.layout === "pdp") {
-    return <PDPTemplate content={content} pageId={pageId} fallbackTitle={fallbackTitle} payEnabled={payEnabled} showBrand={showBrand} preview={preview} storeName={storeName} sold={sold} />;
+    return <PDPTemplate content={content} pageId={pageId} fallbackTitle={fallbackTitle} payEnabled={payEnabled} showBrand={showBrand} preview={preview} storeName={storeName} sold={sold} reviews={reviews} reviewStats={reviewStats} />;
   }
   const currency = (content.currency || DEFAULT_CURRENCY).toUpperCase();
   const title = content.headline || fallbackTitle || "Product";

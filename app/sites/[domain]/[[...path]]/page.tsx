@@ -19,6 +19,7 @@ import {
   type StoreSeoDefaults,
 } from "@/lib/sites";
 import { formatPrice, type OppContent } from "@/lib/products";
+import { type ProductReview, type ReviewStats } from "@/components/templates/ReviewsSection";
 import BioView from "@/components/bio/BioView";
 import BioTracker from "@/components/bio/BioTracker";
 import { type BioContent } from "@/lib/bio";
@@ -180,7 +181,10 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
   if (page.page_type === "opp") {
     const gateway = await getStoreGateway(store.id);
     const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
-    const sold = await getPaidOrderCount(page.id);
+    const [sold, { reviews: oppReviews, stats: oppReviewStats }] = await Promise.all([
+      getPaidOrderCount(page.id),
+      fetchProductReviews({ page_id: page.id }),
+    ]);
     return (
       <>
         <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
@@ -192,6 +196,8 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
           showBrand={show_brand_badge}
           sold={sold}
           storeName={store.store_name ?? "Store"}
+          reviews={oppReviews}
+          reviewStats={oppReviewStats}
         />
       </>
     );
@@ -364,7 +370,10 @@ async function CatalogProductPage({ domain, productId }: { domain: string; produ
   const storeSeo = await getStoreSeoDefaults(store.id);
 
   // "You may also like" — other visible products from the same store.
-  const relRows = await getStoreCatalog(store.id, 12);
+  const [relRows, { reviews: catalogReviews, stats: catalogReviewStats }] = await Promise.all([
+    getStoreCatalog(store.id, 12),
+    fetchProductReviews({ product_id: product.id }),
+  ]);
   const related = relRows
     .filter((r) => String(r.id) !== product.id)
     .slice(0, 4)
@@ -381,7 +390,7 @@ async function CatalogProductPage({ domain, productId }: { domain: string; produ
         pixels={storePage ? (storePage.pixels as { meta_pixel_id?: string; google_id?: string }) : undefined}
         storePixels={storeSeo}
       />
-      <ProductPage product={product} store={storeContent} storeName={store.store_name ?? "Store"} storeUrl="/store" payEnabled={payEnabled} related={related} />
+      <ProductPage product={product} store={storeContent} storeName={store.store_name ?? "Store"} storeUrl="/store" payEnabled={payEnabled} related={related} realReviews={catalogReviews} realReviewStats={catalogReviewStats} />
       {storePage && <WebsiteTracker pageId={storePage.id} storeId={store.id} />}
     </>
   );
@@ -432,6 +441,42 @@ async function Checkout({
       />
     </main>
   );
+}
+
+/**
+ * Fetch approved + visible product_reviews for a page (opp) or product
+ * (catalog). Returns { reviews, stats } — gracefully returns empty on error
+ * (e.g. if the migration hasn't been applied yet).
+ */
+async function fetchProductReviews(
+  filter: { page_id: string } | { product_id: string },
+  limit = 50,
+): Promise<{ reviews: ProductReview[]; stats: ReviewStats }> {
+  const empty = { reviews: [], stats: { avg: 0, count: 0 } };
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const sb = createAdminClient();
+    let q = sb
+      .from("product_reviews")
+      .select("id, buyer_name, buyer_email, rating, body, created_at, seller_reply, replied_at")
+      .eq("is_visible", true)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if ("page_id" in filter) {
+      q = q.eq("page_id", filter.page_id);
+    } else {
+      q = q.eq("product_id", filter.product_id);
+    }
+    const { data, error } = await q;
+    if (error || !data || !data.length) return empty;
+    const rows = data as ProductReview[];
+    const count = rows.length;
+    const avg = count ? Math.round((rows.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : 0;
+    return { reviews: rows, stats: { avg, count } };
+  } catch {
+    return empty;
+  }
 }
 
 /**

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { type StoreContent, type StoreProduct, ACCENTS, FONT_FAMILY, WIDTH_PX } from "@/lib/store";
 import { type CatalogProduct, formatPrice } from "@/lib/catalog";
 import StoreCheckout from "./StoreCheckout";
+import ReviewsSection, { type ProductReview, type ReviewStats } from "@/components/templates/ReviewsSection";
 
 export type RelatedProduct = { id: string; name: string; image: string; price: string };
 
@@ -18,7 +19,14 @@ function Stars({ value, size = 15 }: { value: number; size?: number }) {
 /** Full Shopify-style product detail page for a catalog product. */
 export default function ProductPage({
   product, store: c, storeName, storeUrl, payEnabled, related = [],
-}: { product: CatalogProduct; store: StoreContent; storeName: string; storeUrl: string; payEnabled: boolean; related?: RelatedProduct[] }) {
+  realReviews, realReviewStats,
+}: {
+  product: CatalogProduct; store: StoreContent; storeName: string; storeUrl: string; payEnabled: boolean; related?: RelatedProduct[];
+  /** Real product_reviews rows (approved + visible), fetched server-side. */
+  realReviews?: ProductReview[];
+  /** Aggregate: avg (1 decimal) + count. */
+  realReviewStats?: ReviewStats;
+}) {
   const images = [product.image, ...(product.gallery ?? [])].filter(Boolean) as string[];
   const [main, setMain] = useState(0);
   const [qty, setQty] = useState(1);
@@ -50,9 +58,15 @@ export default function ProductPage({
   const off = product.price != null && product.compare_at_price != null && product.compare_at_price > product.price
     ? Math.round((1 - product.price / product.compare_at_price) * 100) : 0;
 
-  const reviews = product.reviews ?? [];
-  const ratingVal = product.rating ?? (reviews.length ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length : 0);
-  const reviewCount = product.reviews_count ?? reviews.length;
+  // Use real product_reviews (server-fetched) if provided; fall back to seller-
+  // curated static reviews from the products table JSONB only when real ones
+  // are absent (e.g. no real review rows yet and static ones exist as legacy).
+  const hasRealReviews = !!(realReviews && realReviews.length > 0);
+  const displayReviews = hasRealReviews ? realReviews! : [];
+  const ratingVal = hasRealReviews
+    ? (realReviewStats?.avg ?? 0)
+    : 0;
+  const reviewCount = hasRealReviews ? (realReviewStats?.count ?? 0) : 0;
   const soldOut = product.stock != null && product.stock <= 0;
   const lowStock = product.stock != null && product.stock > 0 && product.stock <= 5;
   const trust = (product.trust_badges ?? []).length ? product.trust_badges : ["Secure checkout", "Money-back guarantee", "Fast delivery"];
@@ -173,21 +187,10 @@ export default function ProductPage({
           </div>
         </div>
 
-        {(reviews.length > 0 || reviewCount > 0) && (
-          <div className="pdpx-reviews" id="pdpx-reviews">
-            <h2>Customer reviews</h2>
-            <div className="pdpx-rsum"><div className="pdpx-rbig">{ratingVal.toFixed(1)}</div><div><Stars value={ratingVal} size={18} /><div className="pdpx-rcount">Based on {reviewCount} review{reviewCount === 1 ? "" : "s"}</div></div></div>
-            <div className="pdpx-rlist">
-              {reviews.map((r, i) => (
-                <div className="pdpx-ritem" key={i}>
-                  <div className="pdpx-rhead"><span className="pdpx-rav">{(r.name || "A")[0].toUpperCase()}</span><b>{r.name || "Verified buyer"}</b><span className="pdpx-rverif">✓ Verified</span></div>
-                  <Stars value={r.rating} />
-                  <p>{r.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="pdpx-reviews" id="pdpx-reviews">
+          <h2>Customer reviews</h2>
+          <ReviewsSection reviews={displayReviews} stats={realReviewStats} />
+        </div>
 
         {related.length > 0 && (
           <div className="pdpx-related">
