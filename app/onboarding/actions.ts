@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { sendWelcomeEmail, sendSignupAdminNotify } from "@/lib/transactional";
+import { getEmailConfig } from "@/app/admin/emails/actions";
 
 type Result = { ok: boolean; error?: string };
 
@@ -131,6 +133,13 @@ export async function saveBilling(input: BillingInput): Promise<Result> {
     Object.entries(input).map(([k, v]) => [k, (v ?? "").toString().trim()]),
   );
 
+  // Fetch store name for the welcome email before the update (if already set).
+  const { data: storeRow } = await supabase
+    .from("stores")
+    .select("store_name")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("stores")
     .update({
@@ -143,5 +152,20 @@ export async function saveBilling(input: BillingInput): Promise<Result> {
   if (error) return { ok: false, error: error.message };
   revalidatePath("/onboarding");
   revalidatePath("/dashboard");
+
+  // Fire welcome emails non-blocking; never let a mail error break onboarding.
+  // Honor the welcome_enabled feature flag from email_config when available.
+  void (async () => {
+    try {
+      const cfg = await getEmailConfig();
+      const welcomeEnabled = cfg === null || (cfg.welcome_enabled ?? true);
+      if (!welcomeEnabled) return;
+      const name = input.full_name?.trim() || "";
+      const storeName = storeRow?.store_name ?? "";
+      await sendWelcomeEmail({ to: user.email!, name, storeName });
+      await sendSignupAdminNotify({ email: user.email!, name, storeName });
+    } catch { /* non-fatal — onboarding is already complete */ }
+  })();
+
   return { ok: true };
 }

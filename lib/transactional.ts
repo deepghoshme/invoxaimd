@@ -36,6 +36,9 @@ export async function sendOrderReceipt(o: {
   amountPaise: number;
   currency: string;
   orderId: string;
+  /** Seller's reply_to_email, if set. Used as Reply-To so buyer replies reach
+   *  the seller. From remains the platform invoxai alias for deliverability. */
+  sellerReplyTo?: string | null;
 }): Promise<void> {
   if (!o.to) return;
   const m = await getPlatformMailer();
@@ -49,7 +52,16 @@ export async function sendOrderReceipt(o: {
     </table>
     <p style="margin-top:14px">Access / details will follow by email. Thank you!</p>`;
   try {
-    await m.mailer.send({ from: r.from, cc: r.cc, to: o.to, subject: `Your order is confirmed ✓ — ${o.productTitle || "Purchase"}`, html: shell("Payment successful", inner) });
+    await m.mailer.send({
+      from: r.from,
+      cc: r.cc,
+      to: o.to,
+      subject: `Your order is confirmed ✓ — ${o.productTitle || "Purchase"}`,
+      html: shell("Payment successful", inner),
+      // Reply-To: seller's address so buyer replies land with the seller.
+      // From stays the platform alias — never the seller's address.
+      ...(o.sellerReplyTo ? { replyTo: o.sellerReplyTo } : {}),
+    });
   } catch { /* non-fatal */ }
 }
 
@@ -96,5 +108,163 @@ export async function sendPlanReceipt(o: {
     </table>`;
   try {
     await m.mailer.send({ from: r.from, cc: r.cc, to: o.to, subject: `Invoice — ${o.planName} plan`, html: shell("Plan activated", inner) });
+  } catch { /* non-fatal */ }
+}
+
+/** Welcome email to a newly onboarded seller (from info@, copy to admin@). */
+export async function sendWelcomeEmail(o: {
+  to: string;
+  name: string;
+  storeName: string;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.welcome;
+  const inner = `<p>Hi ${esc(o.name || "there")}, welcome to invoxai! Your store is ready.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      ${row("Store", esc(o.storeName))}
+    </table>
+    <p style="margin-top:14px">Head to your dashboard to add products, customise your storefront, and start selling. If you have any questions the support team is always here.</p>
+    <p>Happy selling!</p>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      cc: r.cc,
+      to: o.to,
+      subject: `Welcome to invoxai — ${esc(o.storeName)} is live`,
+      html: shell("Welcome to invoxai", inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/** Internal admin notice that a new seller has joined (from info@, to admin@). */
+export async function sendSignupAdminNotify(o: {
+  email: string;
+  name: string;
+  storeName: string;
+}): Promise<void> {
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.signup_admin_notify;
+  if (!r.to?.length) return;
+  const inner = `<p>A new seller has completed onboarding.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      ${row("Name", esc(o.name))}
+      ${row("Email", esc(o.email))}
+      ${row("Store", esc(o.storeName))}
+    </table>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: r.to[0],
+      subject: `New seller joined — ${esc(o.storeName)}`,
+      html: shell("New seller joined", inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/** Admin notice that a custom domain was verified or went live (from domains@, to admin@). */
+export async function sendDomainNotify(o: {
+  domain: string;
+  storeName: string;
+  event: "verified" | "live";
+}): Promise<void> {
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.domain_notify;
+  if (!r.to?.length) return;
+  const label = o.event === "live" ? "Domain went live" : "Domain DNS verified";
+  const inner = `<p>A custom domain event occurred on the platform.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      ${row("Event", esc(label))}
+      ${row("Domain", esc(o.domain))}
+      ${row("Store", esc(o.storeName))}
+    </table>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: r.to[0],
+      subject: `[domains] ${label} — ${esc(o.domain)}`,
+      html: shell(label, inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+// ─── Audit report helpers ────────────────────────────────────────────────────
+
+export type AuditLogRow = {
+  actor_email?: string | null;
+  actor_role?: string | null;
+  action?: string | null;
+  target_type?: string | null;
+  target_id?: string | null;
+  created_at?: string | null;
+};
+
+/** Build a compact HTML table summarising recent audit_log rows. */
+export function buildAuditReportHtml(rows: AuditLogRow[], kind: "admin" | "user"): string {
+  const title = kind === "admin" ? "Admin audit report" : "User activity report";
+  if (!rows.length) {
+    return shell(title, `<p style="color:#8a8088">No audit events in this period.</p>`);
+  }
+  const trs = rows
+    .map((r) => {
+      const ts = r.created_at ? new Date(r.created_at).toLocaleString("en-IN") : "";
+      return `<tr>
+        <td style="padding:4px 6px;font-size:12px;color:#7a6770;white-space:nowrap">${esc(ts)}</td>
+        <td style="padding:4px 6px;font-size:12px">${esc(r.actor_email ?? "—")}</td>
+        <td style="padding:4px 6px;font-size:12px">${esc(r.actor_role ?? "—")}</td>
+        <td style="padding:4px 6px;font-size:12px;font-weight:600">${esc(r.action ?? "—")}</td>
+        <td style="padding:4px 6px;font-size:12px">${esc(r.target_type ?? "—")}</td>
+        <td style="padding:4px 6px;font-size:12px;color:#7a6770">${esc((r.target_id ?? "").slice(-8))}</td>
+      </tr>`;
+    })
+    .join("");
+  const table = `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">
+    <thead>
+      <tr style="background:#f5f3f7">
+        <th style="padding:5px 6px;text-align:left;font-size:11px;color:#7a6770">Time</th>
+        <th style="padding:5px 6px;text-align:left;font-size:11px;color:#7a6770">Actor</th>
+        <th style="padding:5px 6px;text-align:left;font-size:11px;color:#7a6770">Role</th>
+        <th style="padding:5px 6px;text-align:left;font-size:11px;color:#7a6770">Action</th>
+        <th style="padding:5px 6px;text-align:left;font-size:11px;color:#7a6770">Target</th>
+        <th style="padding:5px 6px;text-align:left;font-size:11px;color:#7a6770">ID (last 8)</th>
+      </tr>
+    </thead>
+    <tbody>${trs}</tbody>
+  </table>`;
+  return shell(title, `<p>${rows.length} event(s) in this period.</p>${table}`);
+}
+
+/** Send a recent-events audit report to the admin log inbox. */
+export async function sendAdminAuditReport(rows: AuditLogRow[]): Promise<void> {
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.admin_audit_report;
+  if (!r.to?.length) return;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: r.to[0],
+      subject: `Admin audit report — ${new Date().toLocaleDateString("en-IN")} (${rows.length} events)`,
+      html: buildAuditReportHtml(rows, "admin"),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/** Send a recent-events audit report for user activity to the user-log inbox. */
+export async function sendUserAuditReport(rows: AuditLogRow[]): Promise<void> {
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.user_audit_report;
+  if (!r.to?.length) return;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: r.to[0],
+      subject: `User activity report — ${new Date().toLocaleDateString("en-IN")} (${rows.length} events)`,
+      html: buildAuditReportHtml(rows, "user"),
+    });
   } catch { /* non-fatal */ }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendDomainNotify } from "@/lib/transactional";
 import dns from "dns";
 import { promisify } from "util";
 
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
   // ── Tenancy check — the store must belong to this user ───────────
   const { data: store, error: storeErr } = await supabase
     .from("stores")
-    .select("id")
+    .select("id, store_name")
     .eq("id", storeId)
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -189,6 +190,12 @@ export async function POST(request: Request) {
 
   // ── Response ──────────────────────────────────────────────────────
   if (checks.cname && checks.txt) {
+    // Non-blocking admin notify — must not delay or break the response.
+    void sendDomainNotify({
+      domain,
+      storeName: (store as { id: string; store_name?: string | null }).store_name ?? storeId,
+      event: "verified",
+    });
     return NextResponse.json({
       ok: true,
       domain,
@@ -288,7 +295,7 @@ export async function PATCH(request: Request) {
   // Ownership: join through stores
   const { data: row } = await admin
     .from("custom_domains")
-    .select("id, store_id, status")
+    .select("id, store_id, domain, status")
     .eq("id", id)
     .maybeSingle();
 
@@ -297,7 +304,7 @@ export async function PATCH(request: Request) {
   // Verify this store belongs to the calling user
   const { data: store } = await supabase
     .from("stores")
-    .select("id")
+    .select("id, store_name")
     .eq("id", row.store_id)
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -309,6 +316,12 @@ export async function PATCH(request: Request) {
       return err("Domain must pass DNS verification before going live", 422);
     }
     await admin.from("custom_domains").update({ status: "live" }).eq("id", id);
+    // Non-blocking admin notify — must not delay or break the response.
+    void sendDomainNotify({
+      domain: (row as { id: string; store_id: string; domain?: string; status: string }).domain ?? id,
+      storeName: (store as { id: string; store_name?: string | null }).store_name ?? row.store_id,
+      event: "live",
+    });
     return NextResponse.json({ ok: true, status: "live" });
   }
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Card, Switch } from "@/components/dx/ui";
-import { saveEmailConfig, toggleEmailFlag } from "./actions";
+import { saveEmailConfig, toggleEmailFlag, sendAdminAuditReportNow, sendUserAuditReportNow } from "./actions";
 
 type Config = {
   method: "gmail" | "smtp";
@@ -242,7 +242,93 @@ export default function EmailConfigForm({ config }: { config: Config }) {
             </div>
           ))}
         </Card>
+
+        {/* Audit report "Send now" panel */}
+        <AuditReportPanel disabled={!!disabled} />
       </div>
     </>
+  );
+}
+
+/** Standalone sub-component so it can manage its own status messages independently. */
+function AuditReportPanel({ disabled }: { disabled: boolean }) {
+  const [adminMsg, setAdminMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [userMsg, setUserMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [adminPending, startAdminTransition] = useTransition();
+  const [userPending, startUserTransition] = useTransition();
+
+  const showAdminMsg = (ok: boolean, text: string) => {
+    setAdminMsg({ ok, text });
+    setTimeout(() => setAdminMsg(null), 4000);
+  };
+  const showUserMsg = (ok: boolean, text: string) => {
+    setUserMsg({ ok, text });
+    setTimeout(() => setUserMsg(null), 4000);
+  };
+
+  const handleAdminReport = () => {
+    startAdminTransition(async () => {
+      const res = await sendAdminAuditReportNow();
+      showAdminMsg(res.ok, res.ok ? "Admin audit report sent." : res.error ?? "Send failed.");
+    });
+  };
+
+  const handleUserReport = () => {
+    startUserTransition(async () => {
+      const res = await sendUserAuditReportNow();
+      showUserMsg(res.ok, res.ok ? "User activity report sent." : res.error ?? "Send failed.");
+    });
+  };
+
+  return (
+    <Card title="Audit reports">
+      <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
+        Manually send a report covering the last 100 audit events. Automated daily delivery requires a cron scheduler (follow-up).
+      </p>
+
+      {/* Admin audit report row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: "1px solid var(--border)" }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 13.5 }}>Admin audit report</div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>All platform events (last 100) to adminlog@</div>
+        </div>
+        {adminMsg && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: adminMsg.ok ? "var(--green)" : "var(--red)" }}>
+            {adminMsg.text}
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn"
+          style={{ flexShrink: 0 }}
+          onClick={handleAdminReport}
+          disabled={adminPending || disabled}
+        >
+          {adminPending ? "Sending…" : "Send now"}
+        </button>
+      </div>
+
+      {/* User activity report row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: "1px solid var(--border)" }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 13.5 }}>User activity report</div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Non-admin events (last 100) to userlog@</div>
+        </div>
+        {userMsg && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: userMsg.ok ? "var(--green)" : "var(--red)" }}>
+            {userMsg.text}
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn"
+          style={{ flexShrink: 0 }}
+          onClick={handleUserReport}
+          disabled={userPending || disabled}
+        >
+          {userPending ? "Sending…" : "Send now"}
+        </button>
+      </div>
+    </Card>
   );
 }

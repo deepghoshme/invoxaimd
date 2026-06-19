@@ -15,7 +15,7 @@ export type PlatformMailer = {
    * authorised for that alias). `cc` copies admin record addresses; `bcc` fans
    * out to many recipients.
    */
-  send: (opts: { from?: string; to?: string; cc?: string[]; bcc?: string[]; subject: string; html: string }) => Promise<void>;
+  send: (opts: { from?: string; to?: string; cc?: string[]; bcc?: string[]; subject: string; html: string; replyTo?: string }) => Promise<void>;
 };
 
 export async function getPlatformMailer():
@@ -62,9 +62,9 @@ export async function getPlatformMailer():
     ok: true,
     mailer: {
       from,
-      send: ({ from: fromOverride, to, cc, bcc, subject, html }) =>
+      send: ({ from: fromOverride, to, cc, bcc, subject, html, replyTo }) =>
         transport
-          .sendMail({ from: fromOverride || from, to: to ?? fromAddr, cc, bcc, subject, html })
+          .sendMail({ from: fromOverride || from, to: to ?? fromAddr, cc, bcc, subject, html, replyTo })
           .then(() => undefined),
     },
   };

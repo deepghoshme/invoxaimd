@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformMailer } from "@/lib/email";
 import { EMAIL_ALIASES } from "@/lib/emailRoutes";
+import { sendAdminAuditReport, sendUserAuditReport } from "@/lib/transactional";
 
 type Result = { ok: boolean; error?: string };
 
@@ -254,4 +255,71 @@ export async function toggleEmailFlag(
 
   revalidatePath("/admin/emails");
   return { ok: true };
+}
+
+// ─── Audit report "Send now" actions ─────────────────────────────────────────
+// NOTE: There is no cron scheduler in this repo. These actions power the manual
+// "Send now" buttons in the admin UI. Automated daily delivery is a follow-up task.
+
+/**
+ * Send the admin audit report now — fetches the last 100 audit_log rows
+ * (all roles) ordered by created_at desc, then emails via sendAdminAuditReport.
+ * Admin-only.
+ */
+export async function sendAdminAuditReportNow(): Promise<Result> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  const sb = createAdminClient();
+  const { data: rows, error } = await sb
+    .from("audit_log")
+    .select("actor_email, actor_role, action, target_type, target_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    if (error.code === "42P01" || error.message?.includes("does not exist")) {
+      return { ok: false, error: "audit_log table not found. Apply the relevant migration first." };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  try {
+    await sendAdminAuditReport(rows ?? []);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Send failed." };
+  }
+}
+
+/**
+ * Send the user audit report now — fetches the last 100 audit_log rows where
+ * actor_role is not 'admin', ordered by created_at desc.
+ * Admin-only.
+ */
+export async function sendUserAuditReportNow(): Promise<Result> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  const sb = createAdminClient();
+  const { data: rows, error } = await sb
+    .from("audit_log")
+    .select("actor_email, actor_role, action, target_type, target_id, created_at")
+    .neq("actor_role", "admin")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    if (error.code === "42P01" || error.message?.includes("does not exist")) {
+      return { ok: false, error: "audit_log table not found. Apply the relevant migration first." };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  try {
+    await sendUserAuditReport(rows ?? []);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Send failed." };
+  }
 }
