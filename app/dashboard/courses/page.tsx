@@ -117,6 +117,9 @@ export default async function CoursesPage() {
                 const priceLabel = price
                   ? currency === "INR" ? "₹" + Math.round(price).toLocaleString("en-IN") : String(price)
                   : "—";
+                const pUrl = store.subdomain && c.public_id
+                  ? `https://${store.subdomain}.invoxai.io/course/${c.public_id}`
+                  : null;
                 return (
                   <tr key={c.id}>
                     <td style={{ fontWeight: 600 }}>{content.headline || c.title || "Untitled"}</td>
@@ -129,9 +132,21 @@ export default async function CoursesPage() {
                     </td>
                     <td>{c.status === "published" ? <Live /> : <Tag kind="neu">Draft</Tag>}</td>
                     <td>
-                      <a href={`/studio/course/${c.id}`} className="pt-edit-btn" target="_blank" rel="noreferrer">
-                        Edit
-                      </a>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <a href={`/studio/course/${c.id}`} className="pt-edit-btn" target="_blank" rel="noreferrer">
+                          Edit
+                        </a>
+                        {pUrl && c.status === "published" && (
+                          <a
+                            href={pUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", textDecoration: "none", border: "1px solid var(--border)", padding: "4px 10px", borderRadius: 7, background: "var(--surface)" }}
+                          >
+                            View ↗
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

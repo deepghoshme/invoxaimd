@@ -340,6 +340,24 @@ export const getPlatformSettings = cache(async function getPlatformSettings(): P
   }
 });
 
+/**
+ * Fetch the newest published page of ANY type for a store.
+ * Used as the last-resort root-path fallback when no website/store/bio page is published.
+ */
+export async function getNewestPublishedPage(storeId: string): Promise<SitePage | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("pages")
+    .select("id, page_type, title, template_id, content, seo, pixels, status")
+    .eq("store_id", storeId)
+    .eq("status", "published")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as SitePage | null) ?? null;
+}
+
 /** Legal/policy doc slugs (kept in sync with lib/website.ts LEGAL_DOCS). */
 const LEGAL_KEYS = ["privacy", "terms", "refund", "shipping", "disclaimer", "cookies"];
 /** Website sub-pages served by the single `website` page (real deep-link URLs). */

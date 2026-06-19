@@ -12,6 +12,7 @@ import {
   getStoreCatalog,
   getProductById,
   getStoreSeoDefaults,
+  getNewestPublishedPage,
   pageTypeForPath,
   websiteSubPage,
   type SitePage,
@@ -68,7 +69,11 @@ async function resolve(domain: string, path?: string[]) {
   const type = pageTypeForPath(path);
   let page: SitePage | null = type ? await getPublishedPage(store.id, type) : null;
   if (!page && (!path || path.length === 0)) {
-    page = await getPublishedPage(store.id, "bio");
+    // Root-path fallback precedence: website > store > bio > newest-published-of-any-type.
+    // pageTypeForPath already tried "website" above; only fall through if that missed.
+    page = await getPublishedPage(store.id, "store");
+    if (!page) page = await getPublishedPage(store.id, "bio");
+    if (!page) page = await getNewestPublishedPage(store.id);
   }
   // Custom website page: a single unknown segment that matches a page slug.
   if (!page && path && path.length === 1 && !MANY_PREFIXES.has(seg0)) {

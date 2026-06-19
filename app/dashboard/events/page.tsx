@@ -124,6 +124,9 @@ export default async function EventsPage() {
                 const c = (p.content ?? {}) as EventContent;
                 const dateStr = formatEventDate(c.event_date, c.event_time, c.timezone);
                 const sold = ticketCountMap[p.id] ?? 0;
+                const pUrl = store.subdomain && p.public_id
+                  ? `https://${store.subdomain}.invoxai.io/event/${p.public_id}`
+                  : null;
                 return (
                   <tr key={p.id}>
                     <td style={{ fontWeight: 600 }}>{c.title || p.title || "Untitled"}</td>
@@ -133,7 +136,19 @@ export default async function EventsPage() {
                       {p.status === "published" ? <Live /> : <Tag kind="neu">Draft</Tag>}
                     </td>
                     <td>
-                      <a href={`/studio/event/${p.id}`} className="pt-edit-btn" target="_blank" rel="noreferrer">Edit</a>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <a href={`/studio/event/${p.id}`} className="pt-edit-btn" target="_blank" rel="noreferrer">Edit</a>
+                        {pUrl && p.status === "published" && (
+                          <a
+                            href={pUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", textDecoration: "none", border: "1px solid var(--border)", padding: "4px 10px", borderRadius: 7, background: "var(--surface)" }}
+                          >
+                            View ↗
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
