@@ -48,33 +48,16 @@ export default async function UpsellPage() {
     .order("sort", { ascending: true })
     .order("created_at", { ascending: false });
 
-  /* ── opp pages: one-page opportunity products ── */
-  const { data: oppPages } = await sb
-    .from("pages")
-    .select("id, title, content")
-    .eq("store_id", store.id)
-    .eq("page_type", "opp")
-    .order("created_at", { ascending: false });
-
-  /* combine into a unified product list for the offer picker */
-  const products: Product[] = [
-    ...((storeProds ?? []).map((p) => ({
-      id: p.id as string,
-      name: (p.name as string) || "Untitled",
-      price: p.price != null ? Number(p.price) : null,
-      source: "store" as const,
-    }))),
-    ...((oppPages ?? []).map((p) => {
-      const content = (p.content ?? {}) as Record<string, unknown>;
-      const price = content.price != null ? Number(content.price) : null;
-      return {
-        id: p.id as string,
-        name: (p.title as string) || "Untitled",
-        price,
-        source: "opp" as const,
-      };
-    })),
-  ];
+  /* Only the store catalog `products` table is a valid upsell target:
+     upsell_offers.offer_product_id / trigger_product_id have FKs to products.id.
+     One-page opp funnels live in `pages` (not `products`), so offering one as a
+     bump would violate the FK — they're intentionally excluded from the picker. */
+  const products: Product[] = (storeProds ?? []).map((p) => ({
+    id: p.id as string,
+    name: (p.name as string) || "Untitled",
+    price: p.price != null ? Number(p.price) : null,
+    source: "store" as const,
+  }));
 
   /* ── analytics from real paid orders ── */
   const { data: paidOrders } = await sb

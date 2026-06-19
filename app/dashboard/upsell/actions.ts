@@ -30,6 +30,33 @@ export type UpsellOfferInput = {
   discount_value: number;
 };
 
+// Both offer_product_id and trigger_product_id are FK'd to products.id. Validate
+// the referenced products belong to this store before writing, so an invalid id
+// returns a clear message instead of a raw foreign-key constraint error.
+async function validateProductRefs(
+  supabase: Awaited<ReturnType<typeof ownerStore>>["supabase"],
+  storeId: string,
+  input: UpsellOfferInput
+): Promise<string | null> {
+  const ids = [input.offer_product_id];
+  if (input.trigger_type === "product" && input.trigger_product_id) {
+    ids.push(input.trigger_product_id);
+  }
+  const { data } = await supabase
+    .from("products")
+    .select("id")
+    .eq("store_id", storeId)
+    .in("id", ids);
+  const found = new Set((data ?? []).map((r) => r.id as string));
+  if (!found.has(input.offer_product_id)) {
+    return "Pick an offer product from your store catalog (Products). Opp funnel pages can't be offered as a bump.";
+  }
+  if (input.trigger_type === "product" && input.trigger_product_id && !found.has(input.trigger_product_id)) {
+    return "The selected trigger product isn't in your store catalog.";
+  }
+  return null;
+}
+
 export async function createUpsellOffer(
   input: UpsellOfferInput
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
@@ -38,6 +65,9 @@ export async function createUpsellOffer(
 
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
+
+  const refErr = await validateProductRefs(supabase, store.id, input);
+  if (refErr) return { ok: false, error: refErr };
 
   // Compute next sort_order
   const { count } = await supabase
@@ -77,6 +107,9 @@ export async function updateUpsellOffer(
 
   const { supabase, store } = await ownerStore();
   if (!store) return { ok: false, error: "No store found." };
+
+  const refErr = await validateProductRefs(supabase, store.id, input);
+  if (refErr) return { ok: false, error: refErr };
 
   const { error } = await supabase
     .from("upsell_offers")
