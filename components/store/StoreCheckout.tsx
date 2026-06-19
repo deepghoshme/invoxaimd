@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatMoney } from "@/lib/products";
 import type { StoreProduct } from "@/lib/store";
 
@@ -11,6 +11,22 @@ declare global {
 }
 
 const CODES = ["+91", "+1", "+44", "+971", "+61", "+65", "+880", "+92"];
+
+type BumpOfferView = {
+  offer_id: string;
+  name: string;
+  product_name: string;
+  original_paise: number;
+  bump_paise: number;
+  currency: string;
+};
+
+type OrderState = {
+  orderId: string;
+  discountPaise: number;
+  bumpPaise: number;
+  bumpTitle: string | null;
+};
 
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -30,7 +46,9 @@ function firePurchase(valueMajor: number, currency: string, orderId: string) {
 }
 
 /** Storefront inline checkout popup for a single catalog product. Reuses the
- * order → start → verify flow, keyed on product_id (no landing page needed). */
+ * order → start → verify flow, keyed on product_id (no landing page needed).
+ * Coupons and order-bump upsells both re-create the order server-side so the
+ * charged amount is always DB-computed, never client-trusted. */
 export default function StoreCheckout({
   product, storeName, payEnabled, onClose, qty = 1, variantLabel,
 }: { product: StoreProduct; storeName: string; payEnabled: boolean; onClose: () => void; qty?: number; variantLabel?: string }) {
@@ -42,50 +60,99 @@ export default function StoreCheckout({
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  // Coupon: "Apply" creates the order WITH the coupon server-side; buyNow reuses
-  // that order so only one order/usage is created and the discount is the
-  // server-computed value (never trusted from the client).
   const [couponInput, setCouponInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
-  const [couponBusy, setCouponBusy] = useState(false);
-  const [applied, setApplied] = useState<{ orderId: string; discountPaise: number; originalPaise: number } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const [offers, setOffers] = useState<BumpOfferView[]>([]);
+  const [bumpId, setBumpId] = useState<string | null>(null);
+  const [order, setOrder] = useState<OrderState | null>(null);
 
   const currency = product.currency || "INR";
   const q = Math.max(1, Math.min(99, Math.round(qty)));
   const amount = Math.round((product.priceNum ?? 0) * 100) * q; // minor units × qty
-  const finalAmount = applied ? Math.max(1, applied.originalPaise - applied.discountPaise) : amount;
+
+  // Load applicable order-bump offers for this product.
+  useEffect(() => {
+    if (!product.id) return;
+    let alive = true;
+    fetch("/api/checkout/offers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: product.id }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (alive && Array.isArray(d.offers)) setOffers(d.offers); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [product.id]);
+
+  const discountPaise = order?.discountPaise ?? 0;
+  const bumpPaise = order?.bumpPaise ?? 0;
+  const finalAmount = Math.max(1, amount - discountPaise) + bumpPaise;
   const valueMajor = finalAmount / 100;
+
+  async function syncOrder(coupon: string | null, nextBump: string | null): Promise<string | null> {
+    setSyncing(true);
+    setErr(null);
+    try {
+      const body: Record<string, unknown> = { product_id: product.id, qty: q, variant: variantLabel || undefined };
+      if (coupon) body.coupon_code = coupon;
+      if (nextBump) body.bump_offer_id = nextBump;
+      const res = await fetch("/api/checkout/create", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not update your order");
+
+      if (coupon) {
+        if (data.coupon_error || !data.discount_paise) {
+          setCouponErr(data.coupon_error || "This coupon isn’t valid for this purchase.");
+          setAppliedCode(null);
+        } else {
+          setCouponErr(null);
+          setAppliedCode(coupon);
+        }
+      } else {
+        setCouponErr(null);
+        setAppliedCode(null);
+      }
+
+      setBumpId(data.bump_offer_id ?? null);
+      setOrder({
+        orderId: data.order_id,
+        discountPaise: data.discount_paise || 0,
+        bumpPaise: data.bump_paise || 0,
+        bumpTitle: data.bump_title || null,
+      });
+      return data.order_id as string;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Something went wrong");
+      return null;
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function applyCoupon() {
     const codeStr = couponInput.trim();
     if (!codeStr) return;
-    setCouponBusy(true);
-    setCouponErr(null);
-    try {
-      const res = await fetch("/api/checkout/create", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: product.id, qty: q, variant: variantLabel || undefined, coupon_code: codeStr }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not apply coupon");
-      if (data.coupon_error || !data.discount_paise) {
-        setApplied(null);
-        setCouponErr(data.coupon_error || "This coupon isn’t valid for this purchase.");
-      } else {
-        setApplied({ orderId: data.order_id, discountPaise: data.discount_paise, originalPaise: data.original_amount_paise });
-      }
-    } catch (e) {
-      setApplied(null);
-      setCouponErr(e instanceof Error ? e.message : "Could not apply coupon");
-    } finally {
-      setCouponBusy(false);
-    }
+    await syncOrder(codeStr, bumpId);
   }
 
-  function removeCoupon() {
-    setApplied(null);
-    setCouponErr(null);
+  async function removeCoupon() {
     setCouponInput("");
+    setCouponErr(null);
+    if (bumpId) await syncOrder(null, bumpId);
+    else { setAppliedCode(null); setOrder(null); }
+  }
+
+  async function toggleBump(id: string) {
+    const next = bumpId === id ? null : id;
+    if (!next && !appliedCode) { setBumpId(null); setOrder(null); return; }
+    await syncOrder(appliedCode, next);
   }
 
   async function buyNow() {
@@ -98,8 +165,8 @@ export default function StoreCheckout({
       return setLoading(false);
     }
     try {
-      // Reuse the coupon-applied order if present, else create a full-price one.
-      let orderId = applied?.orderId;
+      // Reuse the coupon/bump order if present, else create a full-price one.
+      let orderId = order?.orderId;
       if (!orderId) {
         const cRes = await fetch("/api/checkout/create", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -157,7 +224,10 @@ export default function StoreCheckout({
           <div className="co-card co-success" style={{ boxShadow: "none", border: 0 }}>
             <div style={{ fontSize: "2.2rem" }}>✅</div>
             <h3 style={{ margin: "0.3rem 0" }}>Payment successful</h3>
-            <p className="muted" style={{ margin: 0 }}>Access for <strong>{product.name}</strong> will be sent to {email}.</p>
+            <p className="muted" style={{ margin: 0 }}>
+              Access for <strong>{product.name}</strong>
+              {order?.bumpTitle ? <> and <strong>{order.bumpTitle}</strong></> : null} will be sent to {email}.
+            </p>
           </div>
         ) : (
           <div className="co-card" style={{ boxShadow: "none", border: 0 }}>
@@ -174,8 +244,41 @@ export default function StoreCheckout({
               <select className="select" value={code} onChange={(e) => setCode(e.target.value)}>{CODES.map((c) => <option key={c} value={c}>{c}</option>)}</select>
               <input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))} placeholder="98XXXXXXXX" />
             </div>
+
+            {/* Order-bump offers */}
+            {offers.length > 0 && (
+              <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
+                {offers.map((o) => {
+                  const on = bumpId === o.offer_id;
+                  return (
+                    <label
+                      key={o.offer_id}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                        border: `1.5px solid ${on ? "var(--primary, #FF6A3D)" : "var(--border, #e7ddd3)"}`,
+                        borderRadius: 12, cursor: syncing ? "wait" : "pointer",
+                        background: on ? "color-mix(in srgb, var(--primary, #FF6A3D) 8%, transparent)" : "transparent",
+                      }}
+                    >
+                      <input type="checkbox" checked={on} disabled={syncing} onChange={() => toggleBump(o.offer_id)} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontWeight: 600, fontSize: 13.5 }}>{o.name}</span>
+                        <span style={{ display: "block", fontSize: 12, color: "var(--muted, #7a6770)" }}>Add {o.product_name}</span>
+                      </span>
+                      <span style={{ whiteSpace: "nowrap", fontWeight: 700, fontSize: 13 }}>
+                        + {formatMoney(o.bump_paise, o.currency)}
+                        {o.bump_paise < o.original_paise && (
+                          <s style={{ marginLeft: 6, fontWeight: 400, color: "var(--muted, #7a6770)" }}>{formatMoney(o.original_paise, o.currency)}</s>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="co-coupon">
-              {applied ? (
+              {appliedCode ? (
                 <div className="co-row" style={{ alignItems: "center" }}>
                   <span style={{ color: "var(--ok, #16a34a)", fontWeight: 600 }}>✓ Coupon applied</span>
                   <button type="button" onClick={removeCoupon} style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer", fontSize: 12 }}>Remove</button>
@@ -183,19 +286,20 @@ export default function StoreCheckout({
               ) : (
                 <div className="co-phone" style={{ marginTop: 4 }}>
                   <input className="input" value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponErr(null); }} placeholder="Have a coupon?" />
-                  <button type="button" className="btn" onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()} style={{ whiteSpace: "nowrap" }}>{couponBusy ? "…" : "Apply"}</button>
+                  <button type="button" className="btn" onClick={applyCoupon} disabled={syncing || !couponInput.trim()} style={{ whiteSpace: "nowrap" }}>{syncing ? "…" : "Apply"}</button>
                 </div>
               )}
               {couponErr && <div className="alert alert-error" style={{ marginTop: 8 }}>{couponErr}</div>}
             </div>
             <div className="co-summary">
-              <div className="co-row"><span>Sub Total</span><span>{formatMoney(applied ? applied.originalPaise : amount, currency)}</span></div>
-              {applied && <div className="co-row" style={{ color: "var(--ok, #16a34a)" }}><span>Discount</span><span>− {formatMoney(applied.discountPaise, currency)}</span></div>}
+              <div className="co-row"><span>Sub Total</span><span>{formatMoney(amount, currency)}</span></div>
+              {discountPaise > 0 && <div className="co-row" style={{ color: "var(--ok, #16a34a)" }}><span>Discount</span><span>− {formatMoney(discountPaise, currency)}</span></div>}
+              {bumpPaise > 0 && <div className="co-row"><span>{order?.bumpTitle || "Add-on"}</span><span>+ {formatMoney(bumpPaise, currency)}</span></div>}
               <div className="co-row co-total"><span>Total</span><span>{formatMoney(finalAmount, currency)}</span></div>
             </div>
             {err && <div className="alert alert-error" style={{ marginTop: 10 }}>{err}</div>}
             {!payEnabled && <div className="alert alert-error" style={{ marginTop: 10 }}>This store hasn’t finished setting up payments yet.</div>}
-            <button className="btn co-buy btn-shimmer" onClick={buyNow} disabled={loading || !payEnabled}>
+            <button className="btn co-buy btn-shimmer" onClick={buyNow} disabled={loading || syncing || !payEnabled}>
               <span className="btn-shine" style={{ background: "linear-gradient(90deg, transparent, #ffffff, transparent)" }} />
               {loading ? "Processing…" : "Pay now"} <span aria-hidden>→</span>
             </button>
