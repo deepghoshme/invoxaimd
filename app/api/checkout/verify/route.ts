@@ -3,7 +3,8 @@ import { getOrderById, getStoreGateway, updateOrder } from "@/lib/sites";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { incrementCouponUsageByCode } from "@/lib/coupons";
-import { sendOrderReceipt } from "@/lib/transactional";
+import { sendOrderReceipt, sendTaxInvoiceEmail } from "@/lib/transactional";
+import { createInvoiceForOrder } from "@/lib/invoice";
 
 /**
  * Verify a Razorpay checkout signature and mark the order paid. The signature
@@ -124,6 +125,59 @@ export async function POST(req: Request) {
     orderId: order.id,
     sellerReplyTo,
   });
+
+  // ── GST Tax Invoice ────────────────────────────────────────────────────────
+  // Generate and email a GST tax invoice for the confirmed order.
+  // Additive + non-fatal: wrapped in try/catch so any failure here NEVER
+  // blocks payment confirmation or the buyer receipt above. createInvoiceForOrder
+  // is itself idempotent on order_id (no double-insert on retried verify calls).
+  // The admin client used here is the same service-role client the commission
+  // block above already uses — no new auth surface introduced.
+  try {
+    const adminForInvoice = createAdminClient();
+    // Fetch seller store fields needed for the invoice (gst_rate, gstin,
+    // legal_name, billing jsonb). Narrow select — does not alter any state.
+    const { data: storeForInv } = await adminForInvoice
+      .from("stores")
+      .select("id, gst_rate, gstin, legal_name, billing")
+      .eq("id", order.store_id)
+      .maybeSingle();
+
+    if (storeForInv) {
+      const inv = await createInvoiceForOrder({
+        adminClient: adminForInvoice,
+        order: {
+          id: order.id,
+          store_id: order.store_id,
+          buyer_email: order.buyer_email,
+          buyer_name: order.buyer_name,
+          amount: order.amount,
+          currency: order.currency,
+          product_title: order.product_title,
+        },
+        store: storeForInv as {
+          id: string;
+          gst_rate?: number | null;
+          gstin?: string | null;
+          legal_name?: string | null;
+          billing?: Record<string, unknown> | null;
+        },
+      });
+
+      if (inv) {
+        await sendTaxInvoiceEmail({
+          to: order.buyer_email,
+          invoice: inv,
+          productTitle: order.product_title,
+          sellerName: (storeForInv as { legal_name?: string | null }).legal_name ?? null,
+          replyTo: sellerReplyTo,
+        });
+      }
+    }
+  } catch {
+    // Non-fatal: invoice/email failure must never block payment confirmation.
+    console.error("[verify] tax invoice generation failed for order", order.id);
+  }
 
   // ── Buyer linkage ──────────────────────────────────────────────────────────
   // After a confirmed payment, try to link the order to a known verified auth

@@ -3,16 +3,17 @@ import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Card, Table } from "@/components/dx/ui";
 import { getStoreSubscription } from "@/lib/subscriptions";
 import BillingClient from "./BillingClient";
+import type { InvoiceRow } from "@/lib/invoice";
 
 export const dynamic = "force-dynamic";
 
 const inr = (paise: number) => "₹" + Math.round(paise / 100).toLocaleString("en-IN");
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
-type Invoice = { date: string; kind: string; desc: string; amountPaise: number };
+type LegacyInvoice = { date: string; kind: string; desc: string; amountPaise: number };
 
 /** Plan-subscription payments + wallet recharges, newest first. */
-async function loadInvoices(storeId: string): Promise<Invoice[]> {
+async function loadLegacyInvoices(storeId: string): Promise<LegacyInvoice[]> {
   const admin = createAdminClient();
   const [planRes, walletRes] = await Promise.all([
     admin.from("plan_payments").select("amount, created_at, plan:plan_id(name)").eq("store_id", storeId).order("created_at", { ascending: false }).limit(50),
@@ -30,6 +31,20 @@ async function loadInvoices(storeId: string): Promise<Invoice[]> {
     amountPaise: Number(w.amount),
   }));
   return [...planRows, ...walletRows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+/** Tax invoices from public.invoices (service-role scoped to this store). Newest first. */
+async function loadTaxInvoices(storeId: string): Promise<InvoiceRow[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("invoices")
+    .select(
+      "id, store_id, order_id, invoice_number, buyer_name, buyer_email, currency, subtotal_paise, tax_rate, cgst_paise, sgst_paise, igst_paise, total_paise, gstin, seller_legal_name, seller_address, kind, meta, created_at",
+    )
+    .eq("store_id", storeId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return (data ?? []) as InvoiceRow[];
 }
 
 export default async function BillingPage() {
@@ -82,13 +97,39 @@ export default async function BillingPage() {
       }
     : null;
 
-  const invoices = await loadInvoices(store.id);
-  const invoiceRows = invoices.map((iv) => [
+  const legacyInvoices = await loadLegacyInvoices(store.id);
+  const legacyRows = legacyInvoices.map((iv) => [
     <span key="d" style={{ whiteSpace: "nowrap" }}>{fmtDate(iv.date)}</span>,
-    <span key="k" className={`dx-pill ${iv.kind === "Plan" ? "" : ""}`} style={{ fontSize: 11.5 }}>{iv.kind}</span>,
+    <span key="k" className="dx-pill" style={{ fontSize: 11.5 }}>{iv.kind}</span>,
     iv.desc,
     <span key="a" style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{inr(iv.amountPaise)}</span>,
   ]);
+
+  // Load real GST tax invoices from the invoices table (auto-generated on every confirmed payment)
+  const taxInvoices = await loadTaxInvoices(store.id);
+  const taxInvoiceRows = taxInvoices.map((inv) => {
+    const rate = Number(inv.tax_rate ?? 0);
+    let gstBreakdown = "Nil";
+    if (rate > 0) {
+      const cgst = Number(inv.cgst_paise);
+      const sgst = Number(inv.sgst_paise);
+      const igst = Number(inv.igst_paise);
+      if (cgst > 0 || sgst > 0) {
+        gstBreakdown = `CGST ${inr(cgst)} + SGST ${inr(sgst)} (${rate / 2}+${rate / 2}%)`;
+      } else if (igst > 0) {
+        gstBreakdown = `IGST ${inr(igst)} (${rate}%)`;
+      }
+    }
+    const kindLabel = inv.kind === "order" ? "Order" : inv.kind === "plan" ? "Plan" : "Wallet";
+    return [
+      <span key="n" style={{ fontFamily: "monospace", fontSize: 12 }}>{inv.invoice_number}</span>,
+      <span key="d" style={{ whiteSpace: "nowrap" }}>{fmtDate(inv.created_at)}</span>,
+      <span key="k" style={{ fontSize: 11.5 }}>{kindLabel}</span>,
+      <span key="sub" style={{ whiteSpace: "nowrap" }}>{inr(Number(inv.subtotal_paise))}</span>,
+      <span key="gst" style={{ fontSize: 11.5, color: "#7a6770" }}>{gstBreakdown}</span>,
+      <span key="tot" style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{inr(Number(inv.total_paise))}</span>,
+    ];
+  });
 
   return (
     <>
@@ -102,11 +143,22 @@ export default async function BillingPage() {
         migrationPending={migrationPending}
       />
 
+      {/* Tax Invoices — real sequential GST invoices from public.invoices */}
+      <div style={{ marginTop: 20 }}>
+        <Card title="Tax invoices">
+          <Table
+            cols={["Invoice No.", "Date", "Type", "Taxable Value", "GST Breakdown", "Total"]}
+            rows={taxInvoiceRows}
+            empty="No tax invoices yet. They are auto-generated on each confirmed order and plan payment."
+          />
+        </Card>
+      </div>
+
       <div style={{ marginTop: 20 }}>
         <Card title="Billing history">
           <Table
             cols={["Date", "Type", "Description", "Amount"]}
-            rows={invoiceRows}
+            rows={legacyRows}
             empty="No payments yet. Plan upgrades and wallet recharges will appear here."
           />
         </Card>

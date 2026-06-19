@@ -1,6 +1,7 @@
 import "server-only";
 import { getPlatformMailer } from "@/lib/email";
 import { EMAIL_ROUTES } from "@/lib/emailRoutes";
+import type { InvoiceRow } from "@/lib/invoice";
 
 // All senders are NON-FATAL: a mail hiccup must never block a payment response.
 // Each is called from a verify route AFTER the payment is confirmed, and those
@@ -265,6 +266,144 @@ export async function sendUserAuditReport(rows: AuditLogRow[]): Promise<void> {
       to: r.to[0],
       subject: `User activity report — ${new Date().toLocaleDateString("en-IN")} (${rows.length} events)`,
       html: buildAuditReportHtml(rows, "user"),
+    });
+  } catch { /* non-fatal */ }
+}
+
+// ─── Tax invoice emails ───────────────────────────────────────────────────────
+
+/**
+ * Send a proper GST tax invoice to the buyer (from hello@, copy to admin@).
+ * Mirrors the sendOrderReceipt style but includes full GST line-item breakdown.
+ * Non-fatal: any error is caught and swallowed so invoice email failure
+ * never blocks payment confirmation.
+ */
+export async function sendTaxInvoiceEmail(o: {
+  to: string | null;
+  invoice: InvoiceRow;
+  productTitle: string | null;
+  sellerName: string | null;
+  replyTo?: string | null;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.order_receipt;
+  const cur = o.invoice.currency || "INR";
+  const invDate = new Date(o.invoice.created_at).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  // Build GST breakdown rows
+  const taxRows: string[] = [];
+  const rate = Number(o.invoice.tax_rate ?? 0);
+  if (rate > 0) {
+    if (Number(o.invoice.cgst_paise) > 0 || Number(o.invoice.sgst_paise) > 0) {
+      const halfRate = rate / 2;
+      taxRows.push(row(`CGST @ ${halfRate}%`, money(Number(o.invoice.cgst_paise), cur)));
+      taxRows.push(row(`SGST @ ${halfRate}%`, money(Number(o.invoice.sgst_paise), cur)));
+    } else if (Number(o.invoice.igst_paise) > 0) {
+      taxRows.push(row(`IGST @ ${rate}%`, money(Number(o.invoice.igst_paise), cur)));
+    }
+  }
+
+  const inner = `
+    <p style="font-size:12px;color:#8a8088;margin:0 0 12px">TAX INVOICE</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+      ${row("Invoice No.", esc(o.invoice.invoice_number))}
+      ${row("Invoice Date", invDate)}
+      ${o.sellerName ? row("Seller", esc(o.sellerName)) : ""}
+      ${o.invoice.gstin ? row("Seller GSTIN", esc(o.invoice.gstin)) : ""}
+      ${o.invoice.seller_address ? row("Seller Address", esc(o.invoice.seller_address)) : ""}
+      ${o.invoice.buyer_name ? row("Bill To", esc(o.invoice.buyer_name)) : ""}
+      ${o.to ? row("Buyer Email", esc(o.to)) : ""}
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-top:1px solid #eee;padding-top:10px;margin-top:10px">
+      ${row("Item", esc(o.productTitle || "Your purchase"))}
+      ${row("Taxable Value", money(Number(o.invoice.subtotal_paise), cur))}
+      ${taxRows.join("")}
+      <tr style="border-top:1px solid #eee">
+        <td style="padding:6px 0;color:#1c1320;font-weight:700">Total Paid</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700">${money(Number(o.invoice.total_paise), cur)}</td>
+      </tr>
+    </table>
+    <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>`;
+
+  try {
+    await m.mailer.send({
+      from: r.from,
+      cc: r.cc,
+      to: o.to,
+      subject: `Tax Invoice ${esc(o.invoice.invoice_number)} — ${o.productTitle || "Purchase"}`,
+      html: shell("Tax Invoice", inner),
+      ...(o.replyTo ? { replyTo: o.replyTo } : {}),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/**
+ * Send a GST tax invoice for a platform plan subscription (from billing@, copy to admin@).
+ * Non-fatal.
+ */
+export async function sendPlanInvoiceEmail(o: {
+  to: string | null;
+  invoice: InvoiceRow;
+  planName: string;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.plan_billing;
+  const cur = o.invoice.currency || "INR";
+  const invDate = new Date(o.invoice.created_at).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const taxRows: string[] = [];
+  const rate = Number(o.invoice.tax_rate ?? 0);
+  if (rate > 0) {
+    if (Number(o.invoice.cgst_paise) > 0 || Number(o.invoice.sgst_paise) > 0) {
+      const halfRate = rate / 2;
+      taxRows.push(row(`CGST @ ${halfRate}%`, money(Number(o.invoice.cgst_paise), cur)));
+      taxRows.push(row(`SGST @ ${halfRate}%`, money(Number(o.invoice.sgst_paise), cur)));
+    } else if (Number(o.invoice.igst_paise) > 0) {
+      taxRows.push(row(`IGST @ ${rate}%`, money(Number(o.invoice.igst_paise), cur)));
+    }
+  }
+
+  const inner = `
+    <p style="font-size:12px;color:#8a8088;margin:0 0 12px">TAX INVOICE — PLATFORM SUBSCRIPTION</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+      ${row("Invoice No.", esc(o.invoice.invoice_number))}
+      ${row("Invoice Date", invDate)}
+      ${o.invoice.seller_legal_name ? row("Issuer", esc(o.invoice.seller_legal_name)) : ""}
+      ${o.invoice.gstin ? row("GSTIN", esc(o.invoice.gstin)) : ""}
+      ${o.invoice.seller_address ? row("Address", esc(o.invoice.seller_address)) : ""}
+      ${o.invoice.buyer_name ? row("Bill To", esc(o.invoice.buyer_name)) : ""}
+      ${o.to ? row("Email", esc(o.to)) : ""}
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-top:1px solid #eee;padding-top:10px;margin-top:10px">
+      ${row("Plan", esc(o.planName))}
+      ${row("Taxable Value", money(Number(o.invoice.subtotal_paise), cur))}
+      ${taxRows.join("")}
+      <tr style="border-top:1px solid #eee">
+        <td style="padding:6px 0;color:#1c1320;font-weight:700">Total</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700">${money(Number(o.invoice.total_paise), cur)}</td>
+      </tr>
+    </table>
+    <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>`;
+
+  try {
+    await m.mailer.send({
+      from: r.from,
+      cc: r.cc,
+      to: o.to,
+      subject: `Tax Invoice ${esc(o.invoice.invoice_number)} — ${o.planName} plan`,
+      html: shell("Plan Tax Invoice", inner),
     });
   } catch { /* non-fatal */ }
 }

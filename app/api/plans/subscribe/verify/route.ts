@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
 import { upsertSubscription } from "@/lib/subscriptions";
-import { sendPlanReceipt } from "@/lib/transactional";
+import { sendPlanReceipt, sendPlanInvoiceEmail } from "@/lib/transactional";
+import { createInvoiceForPlan } from "@/lib/invoice";
 
 export const dynamic = "force-dynamic";
 
@@ -106,13 +107,52 @@ export async function POST(req: Request) {
   });
   if (!result.ok) return NextResponse.json({ error: result.error ?? "Could not activate plan." }, { status: 500 });
 
-  // Plan invoice (from billing@, record copy to admin@). Non-fatal.
+  // Plan receipt (from billing@, record copy to admin@). Non-fatal.
   await sendPlanReceipt({
     to: user.email ?? null,
     planName: (plan.name as string) || "Plan",
     amountPaise: expectedPaise,
     periodEnd: periodEnd.toDateString(),
   });
+
+  // ── GST Tax Invoice (plan) ─────────────────────────────────────────────────
+  // Generate a GST tax invoice for the plan payment and email it to the seller.
+  // Additive + non-fatal: wrapped in try/catch so any failure NEVER blocks the
+  // 200 response. createInvoiceForPlan is idempotent on razorpay_order_id stored
+  // in meta. If platform GSTIN is not configured, a zero-rate invoice is issued
+  // (still a valid receipt). Amount/subscription logic above is untouched.
+  try {
+    const planName = (plan.name as string) || "Plan";
+    // Fetch seller display name from profile for the buyer_name field
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    const buyerName = (profileRow as { full_name?: string | null } | null)?.full_name ?? null;
+
+    const inv = await createInvoiceForPlan({
+      adminClient: admin,
+      storeId: store.id as string,
+      buyerEmail: user.email ?? null,
+      buyerName,
+      amountPaise: expectedPaise,
+      currency: "INR",
+      planName,
+      razorpayOrderId: razorpay_order_id,
+    });
+
+    if (inv) {
+      await sendPlanInvoiceEmail({
+        to: user.email ?? null,
+        invoice: inv,
+        planName,
+      });
+    }
+  } catch {
+    // Non-fatal: invoice/email failure must never block plan activation.
+    console.error("[plans/verify] tax invoice generation failed for store", store.id);
+  }
 
   return NextResponse.json({ ok: true });
 }
