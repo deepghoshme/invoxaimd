@@ -10,14 +10,17 @@ export default function SettingsForm({
   subdomain,
   categoryId,
   categories,
+  replyToEmail,
 }: {
   storeName: string;
   subdomain: string | null;
   categoryId: string | null;
   categories: Cat[];
+  replyToEmail: string | null;
 }) {
   const [name, setName] = useState(storeName);
   const [cat, setCat] = useState(categoryId ?? "");
+  const [replyTo, setReplyTo] = useState(replyToEmail ?? "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -26,7 +29,11 @@ export default function SettingsForm({
     setSaving(true);
     setMsg(null);
     setErr(null);
-    const res = await saveStoreSettings({ store_name: name, category_id: cat || null });
+    const res = await saveStoreSettings({
+      store_name: name,
+      category_id: cat || null,
+      reply_to_email: replyTo || null,
+    });
     setSaving(false);
     if (res.ok) {
       setMsg("Saved ✓");
@@ -55,6 +62,18 @@ export default function SettingsForm({
           <label>Subdomain</label>
           <input value={subdomain ? `${subdomain}.invoxai.io` : ""} disabled />
         </div>
+      </div>
+      <div className="dx-field">
+        <label>Reply-to email (optional)</label>
+        <input
+          type="email"
+          value={replyTo}
+          onChange={(e) => setReplyTo(e.target.value)}
+          placeholder="you@yourdomain.com"
+        />
+        <p className="dx-muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Buyer replies to your order emails go here. The sender stays an invoxai address for deliverability.
+        </p>
       </div>
       {err && <div className="dx-empty" style={{ color: "var(--secondary)", textAlign: "left", padding: "4px 0 10px" }}>{err}</div>}
       <button className="btn grad" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</button>

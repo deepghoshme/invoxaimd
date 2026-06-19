@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const { store } = await requireDashboardStore();
   const sb = createAdminClient();
-  const { data: cats } = await sb.from("business_categories").select("id, name").eq("is_active", true).order("sort_order");
+  const [{ data: cats }, { data: storeExtra }] = await Promise.all([
+    sb.from("business_categories").select("id, name").eq("is_active", true).order("sort_order"),
+    sb.from("stores").select("reply_to_email").eq("id", store.id).maybeSingle(),
+  ]);
 
   return (
     <>
@@ -18,6 +21,7 @@ export default async function SettingsPage() {
         subdomain={store.subdomain ?? null}
         categoryId={store.category_id ?? null}
         categories={cats ?? []}
+        replyToEmail={storeExtra?.reply_to_email ?? null}
       />
     </>
   );

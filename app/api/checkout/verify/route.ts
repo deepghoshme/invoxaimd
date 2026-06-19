@@ -102,6 +102,19 @@ export async function POST(req: Request) {
   }
 
   // Buyer order receipt (from hello@, record copy to admin@). Non-fatal.
+  // Fetch the seller's reply_to_email so buyer replies reach the seller.
+  // From stays the platform alias — never the seller's address.
+  let sellerReplyTo: string | null = null;
+  try {
+    const sb2 = createAdminClient();
+    const { data: storeRow2 } = await sb2
+      .from("stores")
+      .select("reply_to_email")
+      .eq("id", order.store_id)
+      .maybeSingle();
+    sellerReplyTo = storeRow2?.reply_to_email ?? null;
+  } catch { /* non-fatal — missing reply_to_email just means no Reply-To header */ }
+
   await sendOrderReceipt({
     to: order.buyer_email,
     buyerName: order.buyer_name,
@@ -109,6 +122,7 @@ export async function POST(req: Request) {
     amountPaise: order.amount,
     currency: order.currency,
     orderId: order.id,
+    sellerReplyTo,
   });
 
   // ── Booking confirmation ───────────────────────────────────────────────────
