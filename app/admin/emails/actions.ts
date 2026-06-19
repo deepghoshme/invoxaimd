@@ -4,8 +4,20 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformMailer } from "@/lib/email";
+import { EMAIL_ALIASES } from "@/lib/emailRoutes";
 
 type Result = { ok: boolean; error?: string };
+
+const ALLOWED_ALIASES = new Set(EMAIL_ALIASES.map((a) => a.address));
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 /**
  * Send a TEST email to verify deliverability and (optionally) that the sending
@@ -21,6 +33,12 @@ export async function sendTestEmail(input: { from?: string; to: string }): Promi
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
     return { ok: false, error: "Enter a valid recipient email." };
   }
+  // Only allow sending AS one of our known aliases — blocks arbitrary/forged
+  // senders and any HTML injection via the from value.
+  if (from && !ALLOWED_ALIASES.has(from)) {
+    return { ok: false, error: "Invalid sender alias." };
+  }
+  const safeFrom = escapeHtml(from);
 
   const mailer = await getPlatformMailer();
   if (!mailer.ok) return { ok: false, error: mailer.error };
@@ -29,10 +47,10 @@ export async function sendTestEmail(input: { from?: string; to: string }): Promi
     await mailer.mailer.send({
       from: from || undefined,
       to,
-      subject: `invoxai test email${from ? ` (from ${from})` : ""}`,
+      subject: `invoxai test email${safeFrom ? ` (from ${safeFrom})` : ""}`,
       html: `<div style="font-family:system-ui,-apple-system,sans-serif;line-height:1.6">
         <h2 style="margin:0 0 8px">✅ Test email delivered</h2>
-        <p>Platform email delivery is working${from ? ` and the sender alias <b>${from}</b> was used` : ""}.</p>
+        <p>Platform email delivery is working${safeFrom ? ` and the sender alias <b>${safeFrom}</b> was used` : ""}.</p>
         <p style="color:#888;font-size:12px;margin-top:14px">Sent from Admin → Emails · test panel.</p>
       </div>`,
     });
