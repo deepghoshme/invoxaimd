@@ -401,14 +401,14 @@ export default function CampaignComposer({
             <button
               className="btn grad"
               onClick={handleSend}
-              disabled={isPending || !subject.trim() || !bodyHtml.trim()}
-              style={{ opacity: (!subject.trim() || !bodyHtml.trim()) ? 0.5 : 1 }}
+              disabled={isPending || !subject.trim() || !bodyHtml.trim() || !platformEmailReady}
+              style={{ opacity: (!subject.trim() || !bodyHtml.trim() || !platformEmailReady) ? 0.5 : 1 }}
             >
               {isPending
                 ? "Sending…"
                 : platformEmailReady
                 ? `Send to ${audienceCount()} recipient${audienceCount() !== 1 ? "s" : ""}`
-                : `Record send (${audienceCount()} recipients)`}
+                : "Set up email to send"}
             </button>
             <div className="ec-reach">
               Reach: <strong>{audienceCount()}</strong> unique email{audienceCount() !== 1 ? "s" : ""}

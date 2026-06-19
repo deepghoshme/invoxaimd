@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertNotImpersonating } from "@/lib/impersonation";
+import { getPlatformMailer, sendBulk } from "@/lib/email";
 
 export type CampaignResult = {
   ok: boolean;
@@ -82,6 +83,33 @@ export async function getAudienceCounts(): Promise<AudienceCounts> {
     subscribers: subscriberEmails.size,
     all: allEmails.size,
   };
+}
+
+/** Resolve the actual recipient email addresses for an audience (store-scoped). */
+async function getAudienceEmails(
+  storeId: string,
+  audience: "all_buyers" | "subscribers" | "all",
+): Promise<string[]> {
+  const sb = createAdminClient();
+  const [{ data: orderRows }, { data: msgRows }] = await Promise.all([
+    sb.from("orders").select("buyer_email").eq("store_id", storeId).eq("status", "paid"),
+    sb.from("site_messages").select("email, kind").eq("store_id", storeId).not("email", "is", null),
+  ]);
+
+  const buyers = new Set<string>();
+  for (const o of orderRows ?? []) {
+    if (o.buyer_email) buyers.add((o.buyer_email as string).toLowerCase());
+  }
+  const subs = new Set<string>();
+  for (const m of msgRows ?? []) {
+    if (m.kind === "newsletter" && m.email) subs.add((m.email as string).toLowerCase());
+  }
+
+  const set =
+    audience === "all_buyers" ? buyers
+    : audience === "subscribers" ? subs
+    : new Set([...buyers, ...subs]);
+  return [...set];
 }
 
 // ── save draft ───────────────────────────────────────────────────────────────
@@ -192,19 +220,13 @@ export async function sendCampaign(input: {
   if (subject.length > 250) return { ok: false, error: "Subject too long (max 250 chars)." };
   if (!body_html) return { ok: false, error: "Email body is required." };
 
-  // Compute recipient count for the chosen audience
-  const counts = await getAudienceCounts();
-  let recipientCount = 0;
-  if (audience === "all_buyers") recipientCount = counts.buyers;
-  else if (audience === "subscribers") recipientCount = counts.subscribers;
-  else recipientCount = counts.all;
-
   const sb = await createClient();
 
   let campaignId = input.id;
 
+  // If updating an existing campaign, verify ownership + not-already-sent BEFORE
+  // sending, so we never double-send or email on someone else's behalf.
   if (campaignId) {
-    // Verify ownership + not already sent
     const { data: existing } = await sb
       .from("email_campaigns")
       .select("id, status")
@@ -215,7 +237,22 @@ export async function sendCampaign(input: {
     if (!existing) return { ok: false, error: "Campaign not found." };
     if (existing.status === "sent")
       return { ok: false, error: "This campaign has already been sent." };
+  }
 
+  // Resolve the real recipients and actually deliver via the platform mailer.
+  // The campaign is only marked "sent" once delivery has been attempted.
+  const recipients = await getAudienceEmails(storeId, audience);
+  if (recipients.length === 0) {
+    return { ok: false, error: "No recipients in this audience yet." };
+  }
+  const mailerResult = await getPlatformMailer();
+  if (!mailerResult.ok) return { ok: false, error: mailerResult.error };
+  const recipientCount = await sendBulk(mailerResult.mailer, recipients, subject, body_html);
+  if (recipientCount === 0) {
+    return { ok: false, error: "Couldn’t deliver to any recipient — check the platform email settings." };
+  }
+
+  if (campaignId) {
     const { error } = await sb
       .from("email_campaigns")
       .update({
@@ -231,7 +268,7 @@ export async function sendCampaign(input: {
 
     if (error) return { ok: false, error: error.message };
   } else {
-    // Insert + immediately mark sent
+    // Insert + mark sent
     const { data, error } = await sb
       .from("email_campaigns")
       .insert({
