@@ -3,8 +3,44 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPlatformMailer } from "@/lib/email";
 
 type Result = { ok: boolean; error?: string };
+
+/**
+ * Send a TEST email to verify deliverability and (optionally) that the sending
+ * account can send AS a given domain alias. Admin-only. Uses the configured
+ * platform mailer; returns a clear error if email isn't set up.
+ */
+export async function sendTestEmail(input: { from?: string; to: string }): Promise<Result> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  const to = t(input.to);
+  const from = t(input.from);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
+    return { ok: false, error: "Enter a valid recipient email." };
+  }
+
+  const mailer = await getPlatformMailer();
+  if (!mailer.ok) return { ok: false, error: mailer.error };
+
+  try {
+    await mailer.mailer.send({
+      from: from || undefined,
+      to,
+      subject: `invoxai test email${from ? ` (from ${from})` : ""}`,
+      html: `<div style="font-family:system-ui,-apple-system,sans-serif;line-height:1.6">
+        <h2 style="margin:0 0 8px">✅ Test email delivered</h2>
+        <p>Platform email delivery is working${from ? ` and the sender alias <b>${from}</b> was used` : ""}.</p>
+        <p style="color:#888;font-size:12px;margin-top:14px">Sent from Admin → Emails · test panel.</p>
+      </div>`,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Send failed." };
+  }
+}
 
 /** Sanitise: strip leading/trailing whitespace. */
 function t(s: unknown): string {

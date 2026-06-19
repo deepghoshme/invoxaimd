@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertNotImpersonating } from "@/lib/impersonation";
 import { getPlatformMailer, sendBulk } from "@/lib/email";
+import { EMAIL_ROUTES } from "@/lib/emailRoutes";
 
 export type CampaignResult = {
   ok: boolean;
@@ -247,7 +248,8 @@ export async function sendCampaign(input: {
   }
   const mailerResult = await getPlatformMailer();
   if (!mailerResult.ok) return { ok: false, error: mailerResult.error };
-  const recipientCount = await sendBulk(mailerResult.mailer, recipients, subject, body_html);
+  // Buyer/seller broadcast → send as the general alias (hello@).
+  const recipientCount = await sendBulk(mailerResult.mailer, recipients, subject, body_html, EMAIL_ROUTES.general.from);
   if (recipientCount === 0) {
     return { ok: false, error: "Couldn’t deliver to any recipient — check the platform email settings." };
   }

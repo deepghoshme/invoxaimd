@@ -1,6 +1,7 @@
 import { Phead, Card, Table } from "@/components/dx/ui";
 import { getEmailConfig } from "./actions";
 import EmailConfigForm from "./EmailConfigForm";
+import TestMailPanel from "./TestMailPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,11 @@ export default async function AdminEmailsPage() {
             empty="No templates found."
           />
         </Card>
+      </div>
+
+      {/* Routing aliases + test-send tools */}
+      <div style={{ marginTop: 18 }}>
+        <TestMailPanel />
       </div>
     </>
   );

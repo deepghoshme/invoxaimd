@@ -9,8 +9,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export type PlatformMailer = {
   from: string;
-  /** Send one message. `bcc` lets a single send fan out to many recipients. */
-  send: (opts: { to?: string; bcc?: string[]; subject: string; html: string }) => Promise<void>;
+  /**
+   * Send one message. `from` overrides the default sender (used to send AS a
+   * domain alias like billing@ / no-reply@ — requires the sending account to be
+   * authorised for that alias). `cc` copies admin record addresses; `bcc` fans
+   * out to many recipients.
+   */
+  send: (opts: { from?: string; to?: string; cc?: string[]; bcc?: string[]; subject: string; html: string }) => Promise<void>;
 };
 
 export async function getPlatformMailer():
@@ -57,8 +62,10 @@ export async function getPlatformMailer():
     ok: true,
     mailer: {
       from,
-      send: ({ to, bcc, subject, html }) =>
-        transport.sendMail({ from, to: to ?? fromAddr, bcc, subject, html }).then(() => undefined),
+      send: ({ from: fromOverride, to, cc, bcc, subject, html }) =>
+        transport
+          .sendMail({ from: fromOverride || from, to: to ?? fromAddr, cc, bcc, subject, html })
+          .then(() => undefined),
     },
   };
 }
@@ -73,13 +80,14 @@ export async function sendBulk(
   recipients: string[],
   subject: string,
   html: string,
+  from?: string,
   chunkSize = 50,
 ): Promise<number> {
   let sent = 0;
   for (let i = 0; i < recipients.length; i += chunkSize) {
     const chunk = recipients.slice(i, i + chunkSize);
     try {
-      await mailer.send({ bcc: chunk, subject, html });
+      await mailer.send({ from, bcc: chunk, subject, html });
       sent += chunk.length;
     } catch {
       // skip this chunk; keep going
