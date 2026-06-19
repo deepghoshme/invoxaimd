@@ -12,11 +12,17 @@ interface Props {
   showBrandBadge: boolean;
   /** True once migration 20260618260000 has been applied and logo_url column exists. */
   newColsExist: boolean;
+  /** Contact / support email shown on invoices (support_email column). */
+  supportEmail: string;
   /** GST / tax identity fields (from platform_settings GST migration). */
   gstin: string;
   legalName: string;
   registeredAddress: string;
   defaultTaxRate: number;
+  /** Indian PAN — shown on tax invoices. */
+  pan: string;
+  /** Contact phone shown on invoices. */
+  contactPhone: string;
 }
 
 type Toast = { msg: string; kind: "ok" | "err" | "warn" };
@@ -48,10 +54,13 @@ export default function BrandingClient({
   invoiceFooter: initFooter,
   showBrandBadge: initBadge,
   newColsExist,
+  supportEmail: initSupportEmail,
   gstin: initGstin,
   legalName: initLegalName,
   registeredAddress: initRegisteredAddress,
   defaultTaxRate: initDefaultTaxRate,
+  pan: initPan,
+  contactPhone: initContactPhone,
 }: Props) {
   const { toast, fire } = useToast();
   const [saving, setSaving] = useState(false);
@@ -63,11 +72,16 @@ export default function BrandingClient({
   const [invoiceFooter, setInvoiceFooter] = useState(initFooter);
   const [showBrandBadge, setShowBrandBadge] = useState(initBadge);
 
+  // Contact details
+  const [supportEmail, setSupportEmail] = useState(initSupportEmail);
+  const [contactPhone, setContactPhone] = useState(initContactPhone);
+
   // GST / tax identity state
   const [gstin, setGstin] = useState(initGstin);
   const [legalName, setLegalName] = useState(initLegalName);
   const [registeredAddress, setRegisteredAddress] = useState(initRegisteredAddress);
   const [defaultTaxRate, setDefaultTaxRate] = useState(String(initDefaultTaxRate));
+  const [pan, setPan] = useState(initPan);
 
   async function handleUpload(kind: "logo" | "favicon", e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -92,10 +106,13 @@ export default function BrandingClient({
     fd.set("logo_url", logoUrl);
     fd.set("favicon_url", faviconUrl);
     fd.set("show_brand_badge", String(showBrandBadge));
+    fd.set("support_email", supportEmail);
+    fd.set("contact_phone", contactPhone);
     fd.set("gstin", gstin);
     fd.set("legal_name", legalName);
     fd.set("registered_address", registeredAddress);
     fd.set("default_tax_rate", defaultTaxRate);
+    fd.set("pan", pan);
     const res = await saveBrandingSettings(fd);
     setSaving(false);
     if (res.ok) {
@@ -312,6 +329,39 @@ export default function BrandingClient({
                   rows={3}
                 />
                 <small>Full registered address including city, state, and PIN — printed on GST invoices.</small>
+              </div>
+              <div className="bc-field">
+                <label>PAN</label>
+                <input
+                  type="text"
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value.toUpperCase())}
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <small>Platform PAN shown on tax invoices. Format: ABCDE1234F (10 characters).</small>
+              </div>
+              <div className="bc-field">
+                <label>Contact email</label>
+                <input
+                  type="email"
+                  value={supportEmail}
+                  onChange={(e) => setSupportEmail(e.target.value)}
+                  placeholder="support@example.com"
+                />
+                <small>Support / contact email shown on invoices (support_email).</small>
+              </div>
+              <div className="bc-field">
+                <label>Contact phone</label>
+                <input
+                  type="text"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
+                />
+                <small>Contact phone shown on invoices.</small>
               </div>
             </div>
           </Card>

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
 import { upsertSubscription } from "@/lib/subscriptions";
-import { sendPlanReceipt, sendPlanInvoiceEmail } from "@/lib/transactional";
+import { sendPlanInvoiceEmail } from "@/lib/transactional";
 import { createInvoiceForPlan } from "@/lib/invoice";
 
 export const dynamic = "force-dynamic";
@@ -107,17 +107,10 @@ export async function POST(req: Request) {
   });
   if (!result.ok) return NextResponse.json({ error: result.error ?? "Could not activate plan." }, { status: 500 });
 
-  // Plan receipt (from billing@, record copy to admin@). Non-fatal.
-  await sendPlanReceipt({
-    to: user.email ?? null,
-    planName: (plan.name as string) || "Plan",
-    amountPaise: expectedPaise,
-    periodEnd: periodEnd.toDateString(),
-  });
-
-  // ── GST Tax Invoice (plan) ─────────────────────────────────────────────────
-  // Generate a GST tax invoice for the plan payment and email it to the seller.
-  // Additive + non-fatal: wrapped in try/catch so any failure NEVER blocks the
+  // ── Single combined plan email: activation confirmation + GST tax invoice ──
+  // One email (sendPlanInvoiceEmail) covers both the plan-activated confirmation
+  // and the attached PDF tax invoice. sendPlanReceipt is no longer called here.
+  // Entirely non-fatal: wrapped in try/catch so any failure NEVER blocks the
   // 200 response. createInvoiceForPlan is idempotent on razorpay_order_id stored
   // in meta. If platform GSTIN is not configured, a zero-rate invoice is issued
   // (still a valid receipt). Amount/subscription logic above is untouched.
@@ -147,6 +140,7 @@ export async function POST(req: Request) {
         to: user.email ?? null,
         invoice: inv,
         planName,
+        periodEnd: periodEnd.toDateString(),
       });
     }
   } catch {

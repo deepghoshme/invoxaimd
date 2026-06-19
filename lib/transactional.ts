@@ -3,6 +3,7 @@ import { getPlatformMailer } from "@/lib/email";
 import { EMAIL_ROUTES } from "@/lib/emailRoutes";
 import type { InvoiceRow } from "@/lib/invoice";
 import { renderInvoicePdf } from "@/lib/invoicePdf";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // All senders are NON-FATAL: a mail hiccup must never block a payment response.
 // Each is called from a verify route AFTER the payment is confirmed, and those
@@ -29,6 +30,49 @@ function shell(heading: string, inner: string): string {
 
 const row = (label: string, value: string) =>
   `<tr><td style="padding:4px 0;color:#7a6770">${esc(label)}</td><td style="padding:4px 0;text-align:right;font-weight:600">${value}</td></tr>`;
+
+type PlatformBranding = {
+  logoUrl: string | null;
+  supportEmail: string | null;
+  contactPhone: string | null;
+  pan: string | null;
+};
+
+/** Fetch logo_url, support_email, contact_phone, pan from platform_settings. Non-fatal. */
+async function fetchPlatformBranding(): Promise<PlatformBranding> {
+  try {
+    const admin = createAdminClient();
+    const { data: ps } = await admin
+      .from("platform_settings")
+      .select("logo_url, support_email, contact_phone, pan")
+      .maybeSingle();
+    if (!ps) return { logoUrl: null, supportEmail: null, contactPhone: null, pan: null };
+    const row = ps as { logo_url?: string | null; support_email?: string | null; contact_phone?: string | null; pan?: string | null };
+    return {
+      logoUrl: row.logo_url ?? null,
+      supportEmail: row.support_email ?? null,
+      contactPhone: row.contact_phone ?? null,
+      pan: row.pan ?? null,
+    };
+  } catch {
+    return { logoUrl: null, supportEmail: null, contactPhone: null, pan: null };
+  }
+}
+
+/** Render the platform logo HTML block (for email body). */
+function platformLogoHtml(logoUrl: string | null): string {
+  if (!logoUrl) return "";
+  return `<div style="text-align:center;margin-bottom:12px"><img src="${esc(logoUrl)}" alt="invoxai" style="max-height:44px;max-width:160px;object-fit:contain" /></div>`;
+}
+
+/** Render a contact line (email · phone) for the email body. */
+function platformContactHtml(supportEmail: string | null, contactPhone: string | null): string {
+  const parts: string[] = [];
+  if (supportEmail) parts.push(`Email: ${esc(supportEmail)}`);
+  if (contactPhone) parts.push(`Phone: ${esc(contactPhone)}`);
+  if (!parts.length) return "";
+  return `<p style="font-size:11px;color:#8a8088;margin-top:8px">${parts.join(" &nbsp;&middot;&nbsp; ")}</p>`;
+}
 
 /** Buyer order receipt (from hello@, record copy to admin@). */
 export async function sendOrderReceipt(o: {
@@ -297,6 +341,9 @@ export async function sendTaxInvoiceEmail(o: {
     year: "numeric",
   });
 
+  // Fetch platform branding (best-effort, non-fatal).
+  const branding = await fetchPlatformBranding();
+
   // Build GST breakdown rows
   const taxRows: string[] = [];
   const rate = Number(o.invoice.tax_rate ?? 0);
@@ -311,12 +358,14 @@ export async function sendTaxInvoiceEmail(o: {
   }
 
   const inner = `
+    ${platformLogoHtml(branding.logoUrl)}
     <p style="font-size:12px;color:#8a8088;margin:0 0 12px">TAX INVOICE</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
       ${row("Invoice No.", esc(o.invoice.invoice_number))}
       ${row("Invoice Date", invDate)}
       ${o.sellerName ? row("Seller", esc(o.sellerName)) : ""}
       ${o.invoice.gstin ? row("Seller GSTIN", esc(o.invoice.gstin)) : ""}
+      ${branding.pan ? row("PAN", esc(branding.pan)) : ""}
       ${o.invoice.seller_address ? row("Seller Address", esc(o.invoice.seller_address)) : ""}
       ${o.invoice.buyer_name ? row("Bill To", esc(o.invoice.buyer_name)) : ""}
       ${o.to ? row("Buyer Email", esc(o.to)) : ""}
@@ -330,7 +379,8 @@ export async function sendTaxInvoiceEmail(o: {
         <td style="padding:6px 0;text-align:right;font-weight:700">${money(Number(o.invoice.total_paise), cur)}</td>
       </tr>
     </table>
-    <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>`;
+    <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>
+    ${platformContactHtml(branding.supportEmail, branding.contactPhone)}`;
 
   // Generate the PDF attachment — non-fatal: if PDF generation fails, the
   // email is still sent without the attachment so the payment is never blocked.
@@ -362,13 +412,18 @@ export async function sendTaxInvoiceEmail(o: {
 }
 
 /**
- * Send a GST tax invoice for a platform plan subscription (from billing@, copy to admin@).
+ * Send a single combined email for a platform plan purchase: plan-activation
+ * confirmation + GST tax invoice details, with the PDF attached.
+ * This is the ONE email sent on plan purchase (sendPlanReceipt is no longer
+ * called separately from the plan verify route).
  * Non-fatal.
  */
 export async function sendPlanInvoiceEmail(o: {
   to: string | null;
   invoice: InvoiceRow;
   planName: string;
+  /** Period/renewal end date string, e.g. "Wed Jul 19 2026". */
+  periodEnd?: string | null;
 }): Promise<void> {
   if (!o.to) return;
   const m = await getPlatformMailer();
@@ -380,6 +435,9 @@ export async function sendPlanInvoiceEmail(o: {
     month: "short",
     year: "numeric",
   });
+
+  // Fetch platform branding (best-effort, non-fatal).
+  const branding = await fetchPlatformBranding();
 
   const taxRows: string[] = [];
   const rate = Number(o.invoice.tax_rate ?? 0);
@@ -394,12 +452,23 @@ export async function sendPlanInvoiceEmail(o: {
   }
 
   const inner = `
+    ${platformLogoHtml(branding.logoUrl)}
+    <!-- Plan activation confirmation block -->
+    <p style="font-size:15px;margin:0 0 6px">Your <b>${esc(o.planName)}</b> plan is now active.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+      ${row("Plan", esc(o.planName))}
+      ${row("Amount paid", money(Number(o.invoice.total_paise), cur))}
+      ${o.periodEnd ? row("Renews / valid until", esc(o.periodEnd)) : ""}
+    </table>
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0" />
+    <!-- GST tax invoice details -->
     <p style="font-size:12px;color:#8a8088;margin:0 0 12px">TAX INVOICE — PLATFORM SUBSCRIPTION</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
       ${row("Invoice No.", esc(o.invoice.invoice_number))}
       ${row("Invoice Date", invDate)}
       ${o.invoice.seller_legal_name ? row("Issuer", esc(o.invoice.seller_legal_name)) : ""}
       ${o.invoice.gstin ? row("GSTIN", esc(o.invoice.gstin)) : ""}
+      ${branding.pan ? row("PAN", esc(branding.pan)) : ""}
       ${o.invoice.seller_address ? row("Address", esc(o.invoice.seller_address)) : ""}
       ${o.invoice.buyer_name ? row("Bill To", esc(o.invoice.buyer_name)) : ""}
       ${o.to ? row("Email", esc(o.to)) : ""}
@@ -413,7 +482,8 @@ export async function sendPlanInvoiceEmail(o: {
         <td style="padding:6px 0;text-align:right;font-weight:700">${money(Number(o.invoice.total_paise), cur)}</td>
       </tr>
     </table>
-    <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>`;
+    <p style="font-size:11px;color:#8a8088;margin-top:10px">This is a computer-generated tax invoice. No signature required.</p>
+    ${platformContactHtml(branding.supportEmail, branding.contactPhone)}`;
 
   // Generate the PDF attachment — non-fatal: if PDF generation fails, the
   // email is still sent without the attachment so the payment is never blocked.
@@ -438,8 +508,8 @@ export async function sendPlanInvoiceEmail(o: {
       from: r.from,
       cc: r.cc,
       to: o.to,
-      subject: `Tax Invoice ${esc(o.invoice.invoice_number)} — ${o.planName} plan`,
-      html: shell("Plan Tax Invoice", inner),
+      subject: `Your ${esc(o.planName)} plan is active — Invoice ${esc(o.invoice.invoice_number)}`,
+      html: shell(`${o.planName} plan activated`, inner),
       ...(pdfAttachments.length ? { attachments: pdfAttachments } : {}),
     });
   } catch { /* non-fatal */ }

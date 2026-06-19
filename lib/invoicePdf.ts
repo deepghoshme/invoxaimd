@@ -39,6 +39,10 @@ function buildInvoiceHtml(
       gstin?: string | null;
       address?: string | null;
       footer?: string | null;
+      logoUrl?: string | null;
+      pan?: string | null;
+      contactEmail?: string | null;
+      contactPhone?: string | null;
     } | null;
     invoiceFooter?: string | null;
   } = {},
@@ -121,6 +125,18 @@ function buildInvoiceHtml(
     opts.invoiceFooter?.trim() ||
     opts.platform?.footer?.trim() ||
     "This is a computer-generated tax invoice. No physical signature is required.";
+
+  const platformLogoUrl = opts.platform?.logoUrl ?? null;
+  const platformPan = opts.platform?.pan ?? null;
+  const platformContactEmail = opts.platform?.contactEmail ?? null;
+  const platformContactPhone = opts.platform?.contactPhone ?? null;
+
+  // Contact line shown in the issuer block for plan/wallet invoices (platform is
+  // the issuer) and as a platform-branding header line on order invoices.
+  const contactParts: string[] = [];
+  if (platformContactEmail) contactParts.push(`Email: ${esc(platformContactEmail)}`);
+  if (platformContactPhone) contactParts.push(`Phone: ${esc(platformContactPhone)}`);
+  const contactLine = contactParts.join(" &nbsp;&middot;&nbsp; ");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -286,11 +302,14 @@ function buildInvoiceHtml(
   <!-- Sunset gradient bar matching email brand -->
   <div class="brand-bar"></div>
 
-  <!-- Header: Invoice title + Invoice No + Date -->
+  <!-- Header: Platform logo (or text brand) + Invoice No + Date -->
   <div class="header-row">
     <div>
-      <div class="invoice-title">invoxai</div>
+      ${platformLogoUrl
+        ? `<img src="${esc(platformLogoUrl)}" alt="invoxai" style="max-height:48px;max-width:180px;object-fit:contain;display:block;margin-bottom:4px" />`
+        : `<div class="invoice-title">invoxai</div>`}
       <div class="invoice-kind">${esc(kindLabel)}</div>
+      ${contactLine ? `<div style="font-size:10.5px;color:#7a6770;margin-top:4px">${contactLine}</div>` : ""}
     </div>
     <div class="invoice-meta">
       <div class="inv-number">${esc(invoice.invoice_number)}</div>
@@ -304,7 +323,9 @@ function buildInvoiceHtml(
       <h4>${invoice.kind === "order" ? "Seller" : "Issuer"}</h4>
       ${issuerName ? `<p><strong>${esc(issuerName)}</strong></p>` : `<p><em>invoxai</em></p>`}
       ${issuerGstin ? `<span class="gstin">GSTIN: ${esc(issuerGstin)}</span>` : ""}
+      ${platformPan ? `<span class="gstin">PAN: ${esc(platformPan)}</span>` : ""}
       ${issuerAddress ? `<p style="font-size:11.5px;color:#7a6770;margin-top:3px">${esc(issuerAddress)}</p>` : ""}
+      ${invoice.kind !== "order" && contactLine ? `<p style="font-size:11px;color:#7a6770;margin-top:4px">${contactLine}</p>` : ""}
     </div>
     <div class="party-block">
       <h4>Bill To</h4>
@@ -371,6 +392,10 @@ export type InvoicePdfOpts = {
     gstin?: string | null;
     address?: string | null;
     footer?: string | null;
+    logoUrl?: string | null;
+    pan?: string | null;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
   } | null;
 };
 
@@ -394,20 +419,47 @@ export async function renderInvoicePdf(
   invoice: InvoiceRow,
   opts: InvoicePdfOpts = {},
 ): Promise<Buffer> {
-  // Fetch invoice_footer from platform_settings (best-effort; never fatal).
+  // Fetch platform_settings (best-effort; never fatal). One query covers all
+  // fields needed: invoice_footer, logo_url, pan, contact_phone, support_email,
+  // gstin, legal_name, registered_address.
+  type PlatformSettingsRow = {
+    logo_url?: string | null;
+    pan?: string | null;
+    contact_phone?: string | null;
+    support_email?: string | null;
+    gstin?: string | null;
+    legal_name?: string | null;
+    registered_address?: string | null;
+    invoice_footer?: string | null;
+  };
   let invoiceFooter: string | null = null;
+  let platformSettings: PlatformSettingsRow | null = null;
   try {
     const admin = createAdminClient();
     const { data: ps } = await admin
       .from("platform_settings")
-      .select("invoice_footer")
+      .select("invoice_footer, logo_url, pan, contact_phone, support_email, gstin, legal_name, registered_address")
       .maybeSingle();
-    invoiceFooter = (ps as { invoice_footer?: string | null } | null)?.invoice_footer ?? null;
+    platformSettings = ps as PlatformSettingsRow | null;
+    invoiceFooter = platformSettings?.invoice_footer ?? null;
   } catch {
     // platform_settings read failure is non-fatal; use default footer.
   }
 
-  const html = buildInvoiceHtml(invoice, { ...opts, invoiceFooter });
+  // Merge fetched platform fields into opts.platform so the HTML builder has
+  // the full picture. Caller-supplied opts.platform values take priority.
+  const mergedPlatform = {
+    legalName: opts.platform?.legalName ?? platformSettings?.legal_name ?? null,
+    gstin: opts.platform?.gstin ?? platformSettings?.gstin ?? null,
+    address: opts.platform?.address ?? platformSettings?.registered_address ?? null,
+    footer: opts.platform?.footer ?? platformSettings?.invoice_footer ?? null,
+    logoUrl: opts.platform?.logoUrl ?? platformSettings?.logo_url ?? null,
+    pan: opts.platform?.pan ?? platformSettings?.pan ?? null,
+    contactEmail: opts.platform?.contactEmail ?? platformSettings?.support_email ?? null,
+    contactPhone: opts.platform?.contactPhone ?? platformSettings?.contact_phone ?? null,
+  };
+
+  const html = buildInvoiceHtml(invoice, { ...opts, platform: mergedPlatform, invoiceFooter });
 
   // Use Playwright Chromium — confirmed launchable on this server.
   const { chromium } = await import("playwright");

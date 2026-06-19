@@ -21,17 +21,19 @@ async function assertAdmin() {
 }
 
 const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 /**
  * Save branding settings: platform_name, logo_url, favicon_url, invoice_footer,
- * plus GST/tax identity: gstin, legal_name, registered_address, default_tax_rate.
+ * plus GST/tax identity: gstin, legal_name, registered_address, default_tax_rate,
+ * plus contact info: support_email, pan, contact_phone.
  * show_brand_badge reuses the existing setBrandBadge action from app/admin/actions.ts
  * via client-side BrandBadgeToggle — we intentionally keep that wiring separate.
  *
  * Columns platform_name, logo_url, favicon_url, invoice_footer are added by migration
  * 20260618260000. GST columns (gstin, legal_name, registered_address, default_tax_rate)
- * are added by the platform_settings GST migration. Until applied, writes to those
- * columns will fail gracefully here.
+ * are added by the platform_settings GST migration. pan and contact_phone are added by
+ * a subsequent migration. Until applied, writes to those columns will fail gracefully here.
  */
 export async function saveBrandingSettings(fd: FormData): Promise<Result> {
   const { supabase, error: authErr } = await assertAdmin();
@@ -43,12 +45,17 @@ export async function saveBrandingSettings(fd: FormData): Promise<Result> {
   const invoiceFooter = (fd.get("invoice_footer") as string | null)?.trim() ?? "";
   const showBrandBadge = fd.get("show_brand_badge") === "true";
 
+  // Contact details
+  const supportEmail = (fd.get("support_email") as string | null)?.trim() ?? "";
+  const contactPhone = (fd.get("contact_phone") as string | null)?.trim() ?? "";
+
   // GST / tax identity fields
   const gstin = (fd.get("gstin") as string | null)?.trim().toUpperCase() ?? "";
   const legalName = (fd.get("legal_name") as string | null)?.trim() ?? "";
   const registeredAddress = (fd.get("registered_address") as string | null)?.trim() ?? "";
   const defaultTaxRateRaw = (fd.get("default_tax_rate") as string | null)?.trim() ?? "0";
   const defaultTaxRate = parseFloat(defaultTaxRateRaw);
+  const pan = (fd.get("pan") as string | null)?.trim().toUpperCase() ?? "";
 
   // --- Validation ---
   if (platformName && platformName.length > 80) {
@@ -63,6 +70,15 @@ export async function saveBrandingSettings(fd: FormData): Promise<Result> {
       error:
         "GSTIN format invalid. Expected 15-character format: 2-digit state code + PAN + entity code + Z + checksum (e.g. 22AAAAA0000A1Z5).",
     };
+  }
+  if (pan && !PAN_RE.test(pan)) {
+    return {
+      ok: false,
+      error: "PAN format invalid. Expected 10-character format: 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F).",
+    };
+  }
+  if (supportEmail && supportEmail.length > 254) {
+    return { ok: false, error: "Contact email must be 254 characters or fewer." };
   }
   if (legalName && legalName.length > 200) {
     return { ok: false, error: "Legal name must be 200 characters or fewer." };
@@ -89,6 +105,10 @@ export async function saveBrandingSettings(fd: FormData): Promise<Result> {
     legal_name: legalName || null,
     registered_address: registeredAddress || null,
     default_tax_rate: defaultTaxRate,
+    // Contact / identity fields — always include so clearing works.
+    support_email: supportEmail || null,
+    pan: pan || null,
+    contact_phone: contactPhone || null,
   };
 
   const { error } = await supabase
