@@ -63,6 +63,7 @@ export default async function SettingsPage() {
         billingState={billing.state ?? ""}
         billingPostalCode={billing.postal_code ?? ""}
         billingPhone={billing.phone ?? ""}
+        mobileNumber={billing.phone ?? ""}
         socialInstagram={socialLinks.instagram ?? ""}
         socialTwitter={socialLinks.twitter ?? ""}
         socialYoutube={socialLinks.youtube ?? ""}

@@ -64,8 +64,8 @@
 .dx-pop-item:hover { background: var(--surface2); }
 .dx-pop-item.danger { color: var(--secondary); }
 .dx-pill { font-size: 10px; font-weight: 700; color: #fff; background: var(--accent); padding: 2px 7px; border-radius: 6px; text-transform: uppercase; letter-spacing: .04em; }
-.dx-navlbl { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 700; padding: 9px 9px 3px; opacity: .75; }
-.dx-nav { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; color: var(--muted); font-weight: 500; cursor: pointer; font-size: 13.5px; text-decoration: none; }
+.dx-navlbl { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 700; padding: 9px 9px 3px; }
+.dx-nav { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; color: var(--text); font-weight: 500; cursor: pointer; font-size: 13.5px; text-decoration: none; }
 .dx-nav svg { width: 16px; height: 16px; flex: none; }
 .dx-nav:hover { background: var(--surface2); color: var(--text); }
 .dx-nav.act { background: var(--surface2); color: var(--primary); font-weight: 600; }

@@ -6,6 +6,7 @@ import BookingBuilder from "@/components/booking/BookingBuilder";
 import type { BookingContent } from "@/lib/booking";
 import "../../../dashboard/dx.css";
 import "../../../website.css";
+import "../../../booking.css";
 
 export const dynamic = "force-dynamic";
 

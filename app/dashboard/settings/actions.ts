@@ -155,6 +155,7 @@ export async function saveStoreSettings(input: {
 export async function saveProfileSettings(input: {
   full_name: string;
   avatar_url: string;
+  mobile_number?: string;
 }): Promise<Result> {
   const guard = await assertNotImpersonating();
   if (!guard.ok) return guard;
@@ -174,6 +175,27 @@ export async function saveProfileSettings(input: {
     .eq("id", user.id);
 
   if (error) return { ok: false, error: error.message };
+
+  // Persist mobile number to billing.phone (merge-safe — never clobbers other billing keys).
+  const rawMobile = (input.mobile_number ?? "").trim();
+  if (rawMobile !== undefined) {
+    const admin = createAdminClient();
+    const { data: storeRow } = await admin
+      .from("stores")
+      .select("billing")
+      .eq("owner_id", user.id)
+      .maybeSingle();
+
+    const existingBilling: Record<string, unknown> =
+      (storeRow?.billing as Record<string, unknown>) ?? {};
+
+    const billingUpdate = { ...existingBilling, phone: rawMobile || null };
+
+    await admin
+      .from("stores")
+      .update({ billing: billingUpdate })
+      .eq("owner_id", user.id);
+  }
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard");

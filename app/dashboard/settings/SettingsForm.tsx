@@ -95,6 +95,7 @@ export default function SettingsForm({
   billingState,
   billingPostalCode,
   billingPhone,
+  mobileNumber,
   socialInstagram,
   socialTwitter,
   socialYoutube,
@@ -125,6 +126,7 @@ export default function SettingsForm({
   billingState: string;
   billingPostalCode: string;
   billingPhone: string;
+  mobileNumber: string;
   socialInstagram: string;
   socialTwitter: string;
   socialYoutube: string;
@@ -142,6 +144,7 @@ export default function SettingsForm({
   // Section 2 state
   const [fullNameVal, setFullName] = useState(fullName);
   const [avatar, setAvatar] = useState(avatarUrl);
+  const [mobile, setMobile] = useState(mobileNumber);
 
   // Section 3 state
   const [replyTo, setReplyTo] = useState(replyToEmail);
@@ -217,7 +220,7 @@ export default function SettingsForm({
   function saveProfile() {
     setActiveSave("profile");
     startTransition(async () => {
-      const res = await saveProfileSettings({ full_name: fullNameVal, avatar_url: avatar });
+      const res = await saveProfileSettings({ full_name: fullNameVal, avatar_url: avatar, mobile_number: mobile });
       setActiveSave(null);
       profileFb.show(res.ok ? "Profile saved." : (res.error ?? "Save failed."), res.ok);
     });
@@ -317,6 +320,18 @@ export default function SettingsForm({
         <div className="dx-field">
           <label>Avatar</label>
           <ImageInput value={avatar} onChange={setAvatar} placeholder="https://…/avatar.jpg" />
+        </div>
+        <div className="dx-field">
+          <label>Mobile number</label>
+          <input
+            type="tel"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="+91 98765 43210"
+          />
+          <p className="dx-muted" style={{ fontSize: 12, marginTop: 4 }}>
+            Your personal contact number. Not shown publicly.
+          </p>
         </div>
         <div className="dx-field">
           <label>Account email</label>
