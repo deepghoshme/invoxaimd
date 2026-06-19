@@ -64,6 +64,7 @@ export default function InlineCheckout({
   ctaLabel,
   payEnabled,
   preview = false,
+  planIndex,
 }: {
   pageId: string;
   amount: number; // smallest unit
@@ -73,6 +74,9 @@ export default function InlineCheckout({
   ctaLabel: string;
   payEnabled: boolean;
   preview?: boolean;
+  // Selected plan index for multi-plan PDP pages. Sent to the server so the
+  // order is priced from the chosen plan (matching the displayed `amount`).
+  planIndex?: number;
 }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -124,6 +128,7 @@ export default function InlineCheckout({
     setErr(null);
     try {
       const body: Record<string, unknown> = { page_id: pageId };
+      if (typeof planIndex === "number") body.plan_index = planIndex;
       if (coupon) body.coupon_code = coupon;
       if (nextBump) body.bump_offer_id = nextBump;
       const res = await fetch("/api/checkout/create", {
@@ -207,7 +212,9 @@ export default function InlineCheckout({
         const cRes = await fetch("/api/checkout/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page_id: pageId }),
+          body: JSON.stringify(
+            typeof planIndex === "number" ? { page_id: pageId, plan_index: planIndex } : { page_id: pageId },
+          ),
         });
         const cData = await cRes.json();
         if (!cRes.ok) throw new Error(cData.error || "Could not start checkout");

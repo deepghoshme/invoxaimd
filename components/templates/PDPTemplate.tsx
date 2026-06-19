@@ -135,7 +135,7 @@ export default function PDPTemplate({
           <div className="pdp-buy" id="pdp-buy">{buyDisabled ? (
             <button className="btn co-buy" disabled>{content.countdown_expire_msg || "This offer has ended."}</button>
           ) : (
-            <InlineCheckout key={plan} pageId={pageId} amount={buyAmount} currency={currency} storeName={storeName} productTitle={selPlan ? `${title} — ${selPlan.label}` : title} ctaLabel={content.cta_label || (ptype === "subscription" ? "Subscribe" : "Buy now")} payEnabled={payEnabled} preview={preview} />
+            <InlineCheckout key={plan} pageId={pageId} amount={buyAmount} currency={currency} storeName={storeName} productTitle={selPlan ? `${title} — ${selPlan.label}` : title} ctaLabel={content.cta_label || (ptype === "subscription" ? "Subscribe" : "Buy now")} payEnabled={payEnabled} preview={preview} planIndex={selPlan ? plan : undefined} />
           )}</div>
           {trust.length > 0 && <div className="pdp-trust">{trust.map((b, i) => <span key={i}>✓ {b}</span>)}</div>}
         </div>

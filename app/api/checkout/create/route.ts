@@ -70,6 +70,10 @@ export async function POST(req: Request) {
     variant?: string;
     coupon_code?: string;
     bump_offer_id?: string;
+    // Index into content.plans for multi-plan PDP pages. The price is re-read
+    // server-side from the plan so the buyer is charged exactly the plan they
+    // selected (the displayed price), never the base content.price.
+    plan_index?: number;
     // Passed by booking flow so the order row carries the buyer's identity,
     // enabling precise booking confirmation at verify time.
     buyer_email?: string;
@@ -189,7 +193,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "This session is free — no checkout needed" }, { status: 400 });
   }
 
-  const originalAmount = toMinorUnit((content.price as number | undefined) ?? 0, currency);
+  // If the page exposes selectable plans (e.g. a subscription PDP), the buyer is
+  // shown and charged the SELECTED plan's price. Re-read it server-side from the
+  // validated index so a tampered amount can never be charged, and so the charged
+  // total always matches what the storefront displayed.
+  const plans = Array.isArray((content as Record<string, unknown>).plans)
+    ? ((content as Record<string, unknown>).plans as Array<{ label?: string; price?: number }>).filter((p) => p && p.label)
+    : [];
+  let basePriceMajor = (content.price as number | undefined) ?? 0;
+  let planTitleSuffix = "";
+  if (plans.length > 0) {
+    const idx = Number.isInteger(body.plan_index) ? (body.plan_index as number) : 0;
+    const plan = plans[idx] ?? plans[0];
+    basePriceMajor = Number(plan?.price ?? 0);
+    if (plan?.label) planTitleSuffix = ` — ${plan.label}`;
+  }
+  const originalAmount = toMinorUnit(basePriceMajor, currency);
   if (originalAmount <= 0) {
     return NextResponse.json({ error: "This product has no price set" }, { status: 400 });
   }
@@ -220,10 +239,10 @@ export async function POST(req: Request) {
   const rate = await getStoreCommissionRate(page.store_id);
   // Derive a human-readable product title across all supported page types.
   const productTitle =
-    (content as Record<string, unknown>).headline as string | undefined
-    || (content as Record<string, unknown>).title as string | undefined
-    || page.title
-    || "Product";
+    ((content as Record<string, unknown>).headline as string | undefined
+      || (content as Record<string, unknown>).title as string | undefined
+      || page.title
+      || "Product") + planTitleSuffix;
 
   // Optional buyer identity (provided by the booking flow; ignored for opp/course).
   const buyerEmail = typeof body.buyer_email === "string" ? body.buyer_email.trim().slice(0, 300) || null : null;
