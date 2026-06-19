@@ -12,6 +12,9 @@ export type RazorpayOrder = {
   amount_paid: number;
   currency: string;
   status: string;
+  // Server-set notes from order creation — authoritative (the client can't alter
+  // them), so safe to bind a verification to notes.plan_id / notes.store_id.
+  notes?: Record<string, string>;
 };
 
 /**
