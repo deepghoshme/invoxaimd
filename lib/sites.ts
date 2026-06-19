@@ -235,6 +235,10 @@ export async function createOrderRecord(input: {
   coupon_code?: string | null;
   discount_paise?: number | null;
   original_amount_paise?: number | null;
+  // Order-bump upsell (optional — only present when a bump was added)
+  bump_offer_id?: string | null;
+  bump_amount?: number | null;
+  bump_title?: string | null;
 }): Promise<Order | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase

@@ -3,6 +3,48 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStoreCommissionRate, createOrderRecord, getProductById } from "@/lib/sites";
 import { type OppContent, toMinorUnit, DEFAULT_CURRENCY } from "@/lib/products";
 import { validateCoupon, incrementCouponUsage } from "@/lib/coupons";
+import { bumpApplies, bumpPricePaise, type BumpOffer } from "@/lib/upsell";
+
+/**
+ * Resolve and price an order-bump SERVER-SIDE. The client only sends an offer id;
+ * the price is recomputed here so a tampered amount can never be charged. Returns
+ * null (silently ignore) if the offer isn't a valid, active bump for this store /
+ * cart, or its product is missing / sold out / unpriced.
+ */
+async function resolveBump(
+  storeId: string,
+  bumpOfferId: string | undefined,
+  cartProductId: string | null,
+  fallbackCurrency: string,
+): Promise<{ offerId: string; bumpPaise: number; bumpTitle: string } | null> {
+  if (!bumpOfferId) return null;
+  const sb = createAdminClient();
+  const { data: offer } = await sb
+    .from("upsell_offers")
+    .select("*")
+    .eq("id", bumpOfferId)
+    .eq("store_id", storeId)
+    .maybeSingle();
+  if (!offer || !bumpApplies(offer as BumpOffer, cartProductId)) return null;
+
+  const { data: p } = await sb
+    .from("products")
+    .select("id, name, price, currency, stock, store_visible")
+    .eq("id", (offer as BumpOffer).offer_product_id)
+    .maybeSingle();
+  if (!p || p.store_visible === false) return null;
+  if (p.stock != null && Number(p.stock) <= 0) return null;
+
+  const cur = (((p.currency as string) || fallbackCurrency)).toUpperCase();
+  const originalPaise = toMinorUnit(Number(p.price ?? 0), cur);
+  if (originalPaise <= 0) return null;
+
+  return {
+    offerId: offer.id as string,
+    bumpPaise: bumpPricePaise(offer as BumpOffer, originalPaise, cur),
+    bumpTitle: (p.name as string) || "Add-on",
+  };
+}
 
 /**
  * Create an internal order for either a published one-page (`opp`) page OR a
@@ -27,6 +69,7 @@ export async function POST(req: Request) {
     qty?: number;
     variant?: string;
     coupon_code?: string;
+    bump_offer_id?: string;
     // Passed by booking flow so the order row carries the buyer's identity,
     // enabling precise booking confirmation at verify time.
     buyer_email?: string;
@@ -82,6 +125,10 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── Order-bump (priced server-side; adds to the charged total) ───────────
+    const bump = await resolveBump(storeId, body.bump_offer_id, product.id as string, currency);
+    if (bump) finalAmount += bump.bumpPaise;
+
     const rate = await getStoreCommissionRate(storeId);
     const order = await createOrderRecord({
       store_id: storeId,
@@ -96,6 +143,9 @@ export async function POST(req: Request) {
       coupon_code: appliedCouponCode,
       discount_paise: discountPaise > 0 ? discountPaise : null,
       original_amount_paise: discountPaise > 0 ? originalAmount : null,
+      bump_offer_id: bump?.offerId ?? null,
+      bump_amount: bump?.bumpPaise ?? null,
+      bump_title: bump?.bumpTitle ?? null,
     });
     if (!order) return NextResponse.json({ error: "Could not create order" }, { status: 500 });
 
@@ -114,6 +164,7 @@ export async function POST(req: Request) {
       page_type: "store",
       ...(couponError ? { coupon_error: couponError } : {}),
       ...(discountPaise > 0 ? { discount_paise: discountPaise, original_amount_paise: originalAmount } : {}),
+      ...(bump ? { bump_offer_id: bump.offerId, bump_paise: bump.bumpPaise, bump_title: bump.bumpTitle } : {}),
     });
   }
 
@@ -171,6 +222,11 @@ export async function POST(req: Request) {
     }
   }
 
+  // ── Order-bump (priced server-side). Pages aren't catalog products, so only
+  // "any"-trigger bumps apply here. ─────────────────────────────────────────
+  const bump = await resolveBump(page.store_id, body.bump_offer_id, null, currency);
+  if (bump) finalAmount += bump.bumpPaise;
+
   const rate = await getStoreCommissionRate(page.store_id);
   // Derive a human-readable product title across all supported page types.
   const productTitle =
@@ -195,6 +251,9 @@ export async function POST(req: Request) {
     coupon_code: appliedCouponCode,
     discount_paise: discountPaise > 0 ? discountPaise : null,
     original_amount_paise: discountPaise > 0 ? originalAmount : null,
+    bump_offer_id: bump?.offerId ?? null,
+    bump_amount: bump?.bumpPaise ?? null,
+    bump_title: bump?.bumpTitle ?? null,
     ...(buyerEmail ? { buyer_email: buyerEmail } : {}),
     ...(buyerName  ? { buyer_name:  buyerName  } : {}),
   });
@@ -210,5 +269,6 @@ export async function POST(req: Request) {
     page_type: page.page_type,
     ...(couponError ? { coupon_error: couponError } : {}),
     ...(discountPaise > 0 ? { discount_paise: discountPaise, original_amount_paise: originalAmount } : {}),
+    ...(bump ? { bump_offer_id: bump.offerId, bump_paise: bump.bumpPaise, bump_title: bump.bumpTitle } : {}),
   });
 }
