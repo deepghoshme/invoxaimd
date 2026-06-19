@@ -28,6 +28,15 @@ export default async function StudioProduct({ params }: { params: Promise<{ id: 
   const payEnabled = !!(gateway?.is_enabled && gateway.key_id && gateway.key_secret);
   const publicUrl = store.subdomain && page.public_id ? `https://${store.subdomain}.invoxai.io/opp/${page.public_id}` : null;
 
+  // Per-product lifetime sales analytics: count + sum of paid orders for this page
+  const { data: salesRows } = await sb
+    .from("orders")
+    .select("amount")
+    .eq("page_id", page.id)
+    .eq("status", "paid");
+  const sold = salesRows?.length ?? 0;
+  const revenuePaise = salesRows?.reduce((sum, o) => sum + (o.amount ?? 0), 0) ?? 0;
+
   return (
     <div className="dx studio" style={{ background: "var(--bg)" }}>
       <div className="studio-bar">
@@ -47,6 +56,8 @@ export default async function StudioProduct({ params }: { params: Promise<{ id: 
           }}
           publicUrl={publicUrl}
           payEnabled={payEnabled}
+          sold={sold}
+          revenuePaise={revenuePaise}
         />
       </div>
     </div>

@@ -54,14 +54,24 @@ type PageData = {
   status: string;
 };
 
+function fmtPaise(paise: number, currency: string): string {
+  const symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : "₹";
+  const amount = Math.round(paise / 100);
+  return symbol + amount.toLocaleString("en-IN");
+}
+
 export default function ProductEditor({
   page,
   publicUrl,
   payEnabled,
+  sold = 0,
+  revenuePaise = 0,
 }: {
   page: PageData;
   publicUrl: string | null;
   payEnabled: boolean;
+  sold?: number;
+  revenuePaise?: number;
 }) {
   const c = page.content as OppContent;
   const s = page.seo as Record<string, string>;
@@ -314,6 +324,31 @@ export default function ProductEditor({
         </div>
       )}
       {err && <div className="alert alert-error" style={{ marginBottom: 14 }}>{err}</div>}
+
+      {/* Analytics KPI row — per-product lifetime sales */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 130px", minWidth: 0, padding: "10px 14px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 4 }}>Sold</div>
+          {sold > 0
+            ? <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{sold.toLocaleString("en-IN")}</div>
+            : <div style={{ fontSize: 13, color: "var(--secondary)", lineHeight: 1.3 }}>No sales yet</div>}
+          <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 3 }}>paid orders (lifetime)</div>
+        </div>
+        <div style={{ flex: "1 1 160px", minWidth: 0, padding: "10px 14px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 4 }}>Revenue</div>
+          {sold > 0
+            ? <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{fmtPaise(revenuePaise, currency)}</div>
+            : <div style={{ fontSize: 13, color: "var(--secondary)", lineHeight: 1.3 }}>No revenue yet</div>}
+          <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 3 }}>gross (lifetime)</div>
+        </div>
+        {sold > 0 && (
+          <div style={{ flex: "1 1 130px", minWidth: 0, padding: "10px 14px", background: "var(--surface2, rgba(255,255,255,0.06))", border: "1px solid var(--border)", borderRadius: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--primary)", marginBottom: 4 }}>Avg. order</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{fmtPaise(Math.round(revenuePaise / sold), currency)}</div>
+            <div style={{ fontSize: 11, color: "var(--secondary)", marginTop: 3 }}>per sale</div>
+          </div>
+        )}
+      </div>
 
       {view === "public" && (
         <div className="web-public-view">
