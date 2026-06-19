@@ -22,6 +22,7 @@ const PLATFORM_HOSTS = new Set([
   `www.${ROOT}`,
   `app.${ROOT}`,
   `admin.${ROOT}`,
+  `live.${ROOT}`,
 ]);
 
 function deny() {

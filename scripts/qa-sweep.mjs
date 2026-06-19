@@ -2,10 +2,16 @@
 // Usage: node scripts/qa-sweep.mjs
 // Prints one JSON line per target: {name,url,status,consoleErrors[],pageErrors[],failedResponses[]}
 import { chromium } from "playwright";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const BASE = "http://localhost:3000";
 const cookieHeader = readFileSync("/tmp/cookie.txt", "utf8").trim();
+
+// Publish screenshots + a results.json into public/_qa so the /qa dashboard
+// (live.invoxai.io/qa) can render the latest run. Served statically at /_qa/*.
+const OUT = "public/_qa";
+mkdirSync(OUT, { recursive: true });
+const results = [];
 
 // Parse "name=value; name2=value2" into Playwright cookie objects for localhost.
 function parseCookies(header, domain = "localhost") {
@@ -59,11 +65,14 @@ async function visit(context, t) {
     rec.status = resp ? resp.status() : null;
     rec.finalUrl = page.url().replace(BASE, "");
     await page.waitForTimeout(800);
-    await page.screenshot({ path: `/tmp/qa-${t.name}.png`, fullPage: true });
+    await page.screenshot({ path: `${OUT}/${t.name}.png`, fullPage: true });
   } catch (e) {
     rec.pageErrors.push("NAV: " + (e.message || String(e)).slice(0, 200));
-    try { await page.screenshot({ path: `/tmp/qa-${t.name}.png`, fullPage: true }); } catch {}
+    try { await page.screenshot({ path: `${OUT}/${t.name}.png`, fullPage: true }); } catch {}
   }
+  rec.screenshot = `/_qa/${t.name}.png`;
+  rec.ok = rec.status === 200 && rec.consoleErrors.length === 0 && rec.pageErrors.length === 0 && rec.failedResponses.length === 0;
+  results.push(rec);
   console.log(JSON.stringify(rec));
   await page.close();
   return rec;
@@ -92,4 +101,13 @@ for (const t of TENANT) await visit(tctx, t);
 await tctx.close();
 await tenantBrowser.close();
 
+// Publish the run for the /qa dashboard.
+const summary = {
+  ranAt: new Date().toISOString(),
+  total: results.length,
+  passed: results.filter((r) => r.ok).length,
+  failed: results.filter((r) => !r.ok).length,
+  targets: results,
+};
+writeFileSync(`${OUT}/results.json`, JSON.stringify(summary, null, 2));
 console.log("SWEEP_DONE");

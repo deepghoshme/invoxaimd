@@ -9,6 +9,7 @@ const PLATFORM_HOSTS = new Set([
   "www.invoxai.io",
   "app.invoxai.io",
   "admin.invoxai.io",
+  "live.invoxai.io", // live agent QA / preview surface
   "localhost",
   "127.0.0.1",
 ]);
@@ -71,8 +72,9 @@ async function getMaintenanceMode(): Promise<{ on: boolean; eta: string | null }
 // /admin to turn maintenance back off.  On other hosts we also allow /login,
 // /auth/*, /api/*, /_next/*, and static assets.
 function isAlwaysAllowed(host: string, pathname: string): boolean {
-  // The entire admin host is always open.
-  if (host === "admin.invoxai.io") return true;
+  // The entire admin + live-QA hosts are always open (QA must run even when the
+  // platform is in maintenance mode).
+  if (host === "admin.invoxai.io" || host === "live.invoxai.io") return true;
 
   // Internal / infra paths are always open regardless of host.
   return (

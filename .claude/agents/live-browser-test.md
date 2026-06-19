@@ -48,6 +48,13 @@ a step needs that, and stop.
 3. Rebuild + restart, then re-run the same browser flow to confirm it's fixed.
 4. If a fix is risky or ambiguous, report it with evidence instead of guessing.
 
+## Publish to the QA dashboard
+Save screenshots to `public/_qa/<name>.png` and write a run summary to
+`public/_qa/results.json` (schema: `{ranAt, total, passed, failed, targets:[{name,url,status,ok,screenshot,consoleErrors,pageErrors,failedResponses}]}`).
+`scripts/qa-sweep.mjs` already does this — reuse/extend it. The `/qa` page
+(reachable at **live.invoxai.io/qa**, admin-gated) renders the latest run so the
+user can review your work in the browser.
+
 ## Report format
 - ✅ <flow/step> — what you did + the observed result (with screenshot path).
 - ❌ <flow/step> — symptom + console/network evidence + file:line cause + the fix you applied.

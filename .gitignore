@@ -16,3 +16,6 @@ lcdesign/uploads/
 lcdesign/.thumbnail
 lcdesign/scraps/
 lcdesign/*.js
+
+# Live QA run artifacts (screenshots + results)
+public/_qa/
