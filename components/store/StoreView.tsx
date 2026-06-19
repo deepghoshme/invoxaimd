@@ -260,6 +260,9 @@ function Footer({ c }: { c: StoreContent }) {
     <div className="sfoot">
       <div className="b">{c.store}</div>
       {links}
+      <a href="https://invoxai.io/account" target="_blank" rel="noreferrer" style={{ fontSize: 12.5 }}>
+        My orders &amp; account ↗
+      </a>
       {c.footerPay !== false && <div className="paywrap">{PAYS.map((p) => <span className="paym" key={p}>{p}</span>)}</div>}
       <div style={{ marginTop: 6 }}>© 2026 {c.store} · Powered by invoxai</div>
     </div>

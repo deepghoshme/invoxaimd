@@ -283,7 +283,9 @@ export default function LoginPage() {
                 </form>
 
                 <div className="lg-fine">
-                  By continuing you agree to the Terms &amp; Privacy Policy.
+                  By continuing you agree to the{" "}
+                  <a href="/terms">Terms of Service</a> &amp;{" "}
+                  <a href="/privacy">Privacy Policy</a>.
                 </div>
               </div>
             )}

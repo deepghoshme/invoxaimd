@@ -431,6 +431,7 @@ export default function WebsiteView({
         <div><div className="fb">Legal</div>{legalLinks.length ? legalLinks : <a>—</a>}</div>
         <div><div className="fb">Contact</div><a>{c.email}</a><a>{c.phone}</a><a>{c.city}</a></div>
         <div className="cop"><span>© 2026 {c.site}</span><span>{showBrand ? <>Powered by <a href="https://invoxai.io" target="_blank" rel="noreferrer">invoxai</a></> : null}</span></div>
+        <div className="cop" style={{ justifyContent: "center", paddingTop: 0 }}><a href="https://invoxai.io/account" target="_blank" rel="noreferrer" style={{ fontSize: 12, opacity: .6 }}>My orders &amp; account ↗</a></div>
       </div>
     );
   };

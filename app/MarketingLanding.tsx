@@ -824,8 +824,9 @@ export default function MarketingLanding() {
               <span className="mk-foot-nolink">About</span>
               <span className="mk-foot-nolink">Help center</span>
               <span className="mk-foot-nolink">Status</span>
-              <span className="mk-foot-nolink">Privacy</span>
-              <span className="mk-foot-nolink">Terms</span>
+              <a href="/privacy">Privacy</a>
+              <a href="/terms">Terms</a>
+              <a href="/refund">Refund policy</a>
             </div>
           </div>
           <div className="mk-foot-bot">
