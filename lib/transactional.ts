@@ -615,3 +615,37 @@ export async function sendTeamInviteEmail(o: {
     });
   } catch { /* non-fatal */ }
 }
+
+/**
+ * Notify a store owner that their subscription has expired (past_due).
+ */
+export async function sendSubscriptionExpiredEmail(o: {
+  to: string;
+  planName: string;
+  periodEnd: string;
+  renewUrl: string;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.general;
+  const plan = esc(o.planName);
+  const inner = `<p>Hi,</p>
+    <p>Your <b>${plan}</b> subscription on invoxai ended on <b>${esc(o.periodEnd)}</b> and has been marked as past due.</p>
+    <p>To keep your store active and continue accessing paid features, please renew your subscription.</p>
+    <div style="text-align:center;margin:22px 0">
+      <a href="${esc(o.renewUrl)}"
+         style="display:inline-block;background:linear-gradient(135deg,#ff6a3d,#ff4d7d);color:#fff;font-weight:700;font-size:15px;padding:13px 32px;border-radius:10px;text-decoration:none">
+        Renew your plan
+      </a>
+    </div>
+    <p style="font-size:12.5px;color:#8a8088">If you have already renewed or believe this is an error, please contact support.</p>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: o.to,
+      subject: `Your ${o.planName} subscription has expired — action needed`,
+      html: shell(`Subscription expired: ${plan}`, inner),
+    });
+  } catch { /* non-fatal */ }
+}
