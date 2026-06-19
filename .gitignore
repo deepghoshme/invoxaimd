@@ -18,4 +18,4 @@ lcdesign/scraps/
 lcdesign/*.js
 
 # Live QA run artifacts (screenshots + results)
-public/_qa/
+.qa-out/

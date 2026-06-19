@@ -21,7 +21,7 @@ type Summary = { ranAt: string; total: number; passed: number; failed: number; t
 
 async function loadResults(): Promise<Summary | null> {
   try {
-    const raw = await readFile(path.join(process.cwd(), "public/_qa/results.json"), "utf8");
+    const raw = await readFile(path.join(process.cwd(), ".qa-out/results.json"), "utf8");
     return JSON.parse(raw) as Summary;
   } catch {
     return null;

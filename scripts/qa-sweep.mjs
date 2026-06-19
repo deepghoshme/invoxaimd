@@ -7,9 +7,10 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 const BASE = "http://localhost:3000";
 const cookieHeader = readFileSync("/tmp/cookie.txt", "utf8").trim();
 
-// Publish screenshots + a results.json into public/_qa so the /qa dashboard
-// (live.invoxai.io/qa) can render the latest run. Served statically at /_qa/*.
-const OUT = "public/_qa";
+// Publish screenshots + a results.json into a NON-served dir. The /qa dashboard
+// serves them exclusively through its admin-gated route handler — never put QA
+// captures (they contain real account data) under public/.
+const OUT = ".qa-out";
 mkdirSync(OUT, { recursive: true });
 const results = [];
 
@@ -70,7 +71,7 @@ async function visit(context, t) {
     rec.pageErrors.push("NAV: " + (e.message || String(e)).slice(0, 200));
     try { await page.screenshot({ path: `${OUT}/${t.name}.png`, fullPage: true }); } catch {}
   }
-  rec.screenshot = `/_qa/${t.name}.png`;
+  rec.screenshot = `/qa/shot/${t.name}`;
   rec.ok = rec.status === 200 && rec.consoleErrors.length === 0 && rec.pageErrors.length === 0 && rec.failedResponses.length === 0;
   results.push(rec);
   console.log(JSON.stringify(rec));

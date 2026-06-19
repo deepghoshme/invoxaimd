@@ -6,10 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /**
- * Serve a QA screenshot from public/_qa/<name>.png via a route handler (rather
- * than static public serving) so screenshots written by a sweep AFTER the server
- * started are served immediately — no restart needed. Admin-gated; name is
- * sanitised to block path traversal.
+ * Serve a QA screenshot from the non-served .qa-out/<name>.png via this
+ * admin-gated handler (QA captures contain real account data, so they must NOT
+ * live under public/). name is sanitised to block path traversal.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ name: string }> }) {
   const sb = await createClient();
@@ -23,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ name: s
   if (!safe) return new NextResponse("Not found", { status: 404 });
 
   try {
-    const buf = await readFile(path.join(process.cwd(), "public/_qa", `${safe}.png`));
+    const buf = await readFile(path.join(process.cwd(), ".qa-out", `${safe}.png`));
     return new NextResponse(buf, {
       headers: { "Content-Type": "image/png", "Cache-Control": "no-store" },
     });
