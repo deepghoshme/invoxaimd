@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Phead, Kpis, Card, Table, Tag } from "@/components/dx/ui";
+import ExportButton from "@/components/dx/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,12 @@ const fmt = (iso: string) =>
     year: "numeric",
   });
 
-export default async function BuyersAdminPage() {
+export default async function BuyersAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter = "all" } = await searchParams;
   const sb = createAdminClient();
 
   // ── paid orders: buyer email + name + amount + store + date ──────────────
@@ -62,14 +68,33 @@ export default async function BuyersAdminPage() {
     ([, a], [, b]) => b.spent - a.spent
   );
 
-  // ── KPIs ──────────────────────────────────────────────────────────────────
+  // ── KPIs (computed on the full set, not the filtered view) ─────────────────
   const totalBuyers = entries.length;
   const totalSpent = entries.reduce((s, [, v]) => s + v.spent, 0);
   const repeatBuyers = entries.filter(([, v]) => v.orders > 1).length;
   const topBuyer = entries[0];
 
+  // ── filter tab ────────────────────────────────────────────────────────────
+  const filteredEntries =
+    filter === "repeat"
+      ? entries.filter(([, v]) => v.orders > 1)
+      : filter === "single"
+      ? entries.filter(([, v]) => v.orders === 1)
+      : entries;
+
+  // ── CSV export data (reflects the current filter) ──────────────────────────
+  const exportRows = filteredEntries.map(([email, v]) => [
+    v.name || "—",
+    email,
+    v.orders,
+    Math.round(v.spent / 100),
+    v.storeIds.size,
+    fmt(v.firstSeen),
+    v.orders > 1 ? "Repeat" : "New",
+  ] as (string | number | null)[]);
+
   // ── table rows ────────────────────────────────────────────────────────────
-  const rows = entries.map(([email, v]) => {
+  const rows = filteredEntries.map(([email, v]) => {
     const displayName = v.name || email;
     const initial = displayName[0]?.toUpperCase() ?? "?";
 
@@ -145,14 +170,11 @@ export default async function BuyersAdminPage() {
         title="Buyers"
         sub="All distinct buyers from paid orders, grouped by email."
         action={
-          <button
-            className="btn ghost"
-            disabled
-            title="Export not yet implemented"
-            style={{ opacity: 0.6, cursor: "not-allowed" }}
-          >
-            Export
-          </button>
+          <ExportButton
+            headers={["Name", "Email", "Orders", "Total spent (₹)", "Stores", "First purchase", "Type"]}
+            rows={exportRows}
+            filename="invoxai-buyers.csv"
+          />
         }
       />
 
@@ -186,21 +208,9 @@ export default async function BuyersAdminPage() {
       />
 
       <div className="dx-toolbar" style={{ marginBottom: 12 }}>
-        <span className="dx-fchip on">All</span>
-        <span
-          className="dx-fchip"
-          title="Filter not yet implemented"
-          style={{ opacity: 0.5 }}
-        >
-          Repeat
-        </span>
-        <span
-          className="dx-fchip"
-          title="Filter not yet implemented"
-          style={{ opacity: 0.5 }}
-        >
-          Single purchase
-        </span>
+        <a href="/admin/buyers" className={`dx-fchip${filter === "all" ? " on" : ""}`} style={{ textDecoration: "none" }}>All</a>
+        <a href="/admin/buyers?filter=repeat" className={`dx-fchip${filter === "repeat" ? " on" : ""}`} style={{ textDecoration: "none" }}>Repeat</a>
+        <a href="/admin/buyers?filter=single" className={`dx-fchip${filter === "single" ? " on" : ""}`} style={{ textDecoration: "none" }}>Single purchase</a>
       </div>
 
       <Card>

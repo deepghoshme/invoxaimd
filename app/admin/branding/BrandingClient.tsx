@@ -130,7 +130,7 @@ export default function BrandingClient({
         title="Branding"
         sub="Logo, favicon, platform name, and invoice footer — applied across every seller surface."
         action={
-          <button className="bc-btn" type="submit" form="brand-form" disabled={saving || uploading !== null}>
+          <button className="btn grad" type="submit" form="brand-form" disabled={saving || uploading !== null}>
             {saving ? "Saving…" : "Save branding"}
           </button>
         }

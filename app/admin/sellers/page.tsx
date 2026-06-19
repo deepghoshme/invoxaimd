@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Phead, Kpis, Card, Table, Tag, Live } from "@/components/dx/ui";
+import ExportButton from "@/components/dx/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,12 @@ function ActionBtn({
   );
 }
 
-export default async function SellersAdminPage() {
+export default async function SellersAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter = "all" } = await searchParams;
   const sb = createAdminClient();
 
   // ── data fetch ────────────────────────────────────────────────────────────
@@ -141,8 +147,33 @@ export default async function SellersAdminPage() {
     (a, b) => (storeGmv[b.id] ?? 0) - (storeGmv[a.id] ?? 0)
   );
 
+  // ── filter tab ────────────────────────────────────────────────────────────
+  const filtered =
+    filter === "sales"
+      ? sorted.filter((s) => (storeGmv[s.id] ?? 0) > 0)
+      : filter === "nosub"
+      ? sorted.filter((s) => !s.subdomain)
+      : sorted;
+
+  // ── CSV export data (plain values, reflects the current filter) ────────────
+  const exportRows = filtered.map((s) => {
+    const profile = profileMap[s.owner_id];
+    const billing = s.billing as Record<string, unknown> | null;
+    const planName =
+      (billing?.plan_name as string) ?? (billing?.plan as string) ?? "Free";
+    return [
+      s.store_name || profile?.email || s.subdomain || "—",
+      profile?.email ?? "—",
+      s.subdomain ? `${s.subdomain}.invoxai.io` : "",
+      (s.business_categories as { name?: string } | null)?.name ?? "",
+      planName,
+      Math.round((storeGmv[s.id] ?? 0) / 100),
+      s.subdomain ? "Active" : "Setup",
+    ] as (string | number | null)[];
+  });
+
   // ── table rows ────────────────────────────────────────────────────────────
-  const rows = sorted.map((s) => {
+  const rows = filtered.map((s) => {
     const profile = profileMap[s.owner_id];
     const displayName = s.store_name || profile?.email || s.subdomain || "—";
     const ownerEmail = profile?.email ?? "—";
@@ -253,14 +284,11 @@ export default async function SellersAdminPage() {
         title="Sellers"
         sub="All stores on the platform, with GMV from paid orders."
         action={
-          <button
-            className="btn ghost"
-            disabled
-            title="Export not yet implemented"
-            style={{ opacity: 0.6, cursor: "not-allowed" }}
-          >
-            Export
-          </button>
+          <ExportButton
+            headers={["Seller", "Owner email", "Subdomain", "Category", "Plan", "GMV (₹)", "Status"]}
+            rows={exportRows}
+            filename="invoxai-sellers.csv"
+          />
         }
       />
 
@@ -297,21 +325,9 @@ export default async function SellersAdminPage() {
         className="dx-toolbar"
         style={{ marginBottom: 12 }}
       >
-        <span className="dx-fchip on">All</span>
-        <span
-          className="dx-fchip"
-          title="Filter not yet implemented"
-          style={{ opacity: 0.5 }}
-        >
-          With sales
-        </span>
-        <span
-          className="dx-fchip"
-          title="Filter not yet implemented"
-          style={{ opacity: 0.5 }}
-        >
-          No subdomain
-        </span>
+        <a href="/admin/sellers" className={`dx-fchip${filter === "all" ? " on" : ""}`} style={{ textDecoration: "none" }}>All</a>
+        <a href="/admin/sellers?filter=sales" className={`dx-fchip${filter === "sales" ? " on" : ""}`} style={{ textDecoration: "none" }}>With sales</a>
+        <a href="/admin/sellers?filter=nosub" className={`dx-fchip${filter === "nosub" ? " on" : ""}`} style={{ textDecoration: "none" }}>No subdomain</a>
       </div>
 
       <Card>

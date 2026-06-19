@@ -92,7 +92,7 @@ export default function MaintenanceClient({
         title="Maintenance & controls"
         sub="Platform-wide switches — changes take effect immediately."
         action={
-          <button className="mc-btn" type="submit" form="maint-form" disabled={saving}>
+          <button className="btn grad" type="submit" form="maint-form" disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </button>
         }

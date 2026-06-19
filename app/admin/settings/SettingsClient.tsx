@@ -130,7 +130,7 @@ export default function SettingsClient({ platformName, supportEmail, reserved }:
                 <input name="support_email" type="email" defaultValue={supportEmail} placeholder="support@invoxai.io" />
                 <small>Displayed in automated emails and seller help pages.</small>
               </div>
-              <button className="pc-btn grad" type="submit" disabled={saving}>
+              <button className="btn grad" type="submit" disabled={saving}>
                 {saving ? "Saving…" : "Save settings"}
               </button>
             </form>
