@@ -41,7 +41,11 @@ export async function addCustomerNote({
 }: {
   buyerEmail: string;
   body: string;
-}): Promise<Result & { noteId?: string }> {
+}): Promise<
+  Result & {
+    note?: { id: string; body: string; created_at: string; updated_at: string | null };
+  }
+> {
   const guard = await assertNotImpersonating();
   if (!guard.ok) return guard;
 
@@ -67,7 +71,7 @@ export async function addCustomerNote({
       body: trimmedBody,
       created_by: ctx.userId,
     })
-    .select("id")
+    .select("id, body, created_at, updated_at")
     .single();
 
   if (error) {
@@ -75,7 +79,17 @@ export async function addCustomerNote({
     return { ok: false, error: "Failed to save note. Please try again." };
   }
 
-  return { ok: true, noteId: data.id };
+  // Return the full row so the client can prepend it to local state — router
+  // .refresh() alone does NOT update the already-initialised useState(notes).
+  return {
+    ok: true,
+    note: {
+      id: data.id as string,
+      body: data.body as string,
+      created_at: data.created_at as string,
+      updated_at: (data.updated_at as string | null) ?? null,
+    },
+  };
 }
 
 /**

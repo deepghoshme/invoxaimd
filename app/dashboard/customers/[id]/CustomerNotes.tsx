@@ -54,7 +54,12 @@ export default function CustomerNotes({ notes: initialNotes, buyerEmail }: Props
         setAddError(res.error ?? "Failed to add note.");
         return;
       }
-      // Optimistically prepend — then refresh server state
+      // Prepend the returned row to local state. router.refresh() alone won't
+      // update the already-initialised useState(notes), so the new note would
+      // not appear until a full reload — update state explicitly here.
+      if (res.note) {
+        setNotes((prev) => [res.note!, ...prev]);
+      }
       if (textareaRef.current) textareaRef.current.value = "";
       router.refresh();
     });

@@ -94,7 +94,7 @@ export default function BioView({
               <div className="biofoot">Powered by <a href="https://invoxai.io" target="_blank" rel="noreferrer"><b>invoxai</b></a></div>
             )}
             <div className="bioacct">
-              <a href="https://invoxai.io/account" target="_blank" rel="noreferrer">My account ↗</a>
+              <a href="https://app.invoxai.io/account" target="_blank" rel="noreferrer">My account ↗</a>
             </div>
           </div>
         </div>

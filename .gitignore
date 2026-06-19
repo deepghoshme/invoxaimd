@@ -23,3 +23,5 @@ lcdesign/*.js
 scripts/qa-six-features.mjs
 scripts/qa-six-part2.mjs
 scripts/qa-six-settings.mjs
+scripts/qa-verify-8.mjs
+scripts/qa-notes.mjs
