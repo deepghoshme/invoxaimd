@@ -468,7 +468,30 @@ export async function renderInvoicePdf(
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "domcontentloaded" });
+    // Wait for the network to settle so the remote platform logo <img> actually
+    // loads before we snapshot — with "domcontentloaded" the logo is still
+    // fetching when page.pdf() runs, leaving a blank logo. networkidle waits for
+    // the image; the timeout caps total wait so PDF generation never hangs.
+    await page.setContent(html, { waitUntil: "networkidle", timeout: 15000 }).catch(() => {});
+    // Belt-and-suspenders: explicitly wait for every <img> to finish decoding
+    // (best-effort, capped) in case networkidle settled before the image painted.
+    await page
+      .evaluate(async () => {
+        const imgs = Array.from(document.images);
+        await Promise.all(
+          imgs.map((img) =>
+            img.complete && img.naturalWidth > 0
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  const done = () => resolve();
+                  img.addEventListener("load", done, { once: true });
+                  img.addEventListener("error", done, { once: true });
+                  setTimeout(done, 8000);
+                }),
+          ),
+        );
+      })
+      .catch(() => {});
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
