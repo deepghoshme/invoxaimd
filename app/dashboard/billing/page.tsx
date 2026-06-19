@@ -51,10 +51,10 @@ export default async function BillingPage() {
   const { store } = await requireDashboardStore();
   const admin = createAdminClient();
 
-  // Load all active plans (server-side, for display)
+  // Load all active plans (server-side, for display), including interval + is_recommended
   const { data: plans } = await admin
     .from("plans")
-    .select("id, name, price, contact_limit, features, is_popular, is_active")
+    .select("id, name, price, contact_limit, features, is_popular, is_active, interval, is_recommended")
     .eq("is_active", true)
     .order("sort_order");
 
@@ -84,7 +84,7 @@ export default async function BillingPage() {
     status: string;
     amount_paise: number;
     current_period_end: string;
-    plan: { name: string; price: number };
+    plan: { name: string; price: number; interval: string };
   } | null;
 
   const subForClient: SubForClient = currentSub
@@ -93,7 +93,11 @@ export default async function BillingPage() {
         status: currentSub.status,
         amount_paise: currentSub.amount_paise,
         current_period_end: currentSub.current_period_end,
-        plan: { name: currentSub.plan.name, price: currentSub.plan.price },
+        plan: {
+          name: currentSub.plan.name,
+          price: currentSub.plan.price,
+          interval: (currentSub.plan as { interval?: string }).interval ?? "monthly",
+        },
       }
     : null;
 

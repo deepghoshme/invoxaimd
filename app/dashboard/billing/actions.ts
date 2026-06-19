@@ -12,7 +12,8 @@ type Result = { ok: boolean; error?: string };
  * Select or change a plan for the signed-in seller.
  *
  * Money-safety:
- *  1. We fetch the plan price from the DB server-side — never trust the client.
+ *  1. We fetch the plan price AND interval from the DB server-side — never
+ *     trust the client.
  *  2. amount_paise is derived exclusively from plans.price (INR) * 100.
  *  3. The upsert goes through the service-role client (RLS bypassed but
  *     constrained by our own code-level auth check: must be signed-in seller
@@ -21,6 +22,8 @@ type Result = { ok: boolean; error?: string };
  *     Paid plans are handled entirely by the Razorpay subscribe/verify flow
  *     (BillingClient → /api/plans/subscribe/start → /api/plans/subscribe/verify)
  *     and never reach this function.
+ *  5. Period end is interval-aware: monthly → +1 month, annual → +1 year.
+ *     For free plans interval is always "monthly" but we branch defensively.
  */
 export async function selectPlan(planId: string): Promise<Result> {
   const guard = await assertNotImpersonating();
@@ -33,11 +36,11 @@ export async function selectPlan(planId: string): Promise<Result> {
   } = await sb.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in." };
 
-  // 2. Fetch the plan price server-side (never trust client-sent price)
+  // 2. Fetch the plan price and interval server-side (never trust client-sent price)
   const admin = createAdminClient();
   const { data: plan, error: planErr } = await admin
     .from("plans")
-    .select("id, name, price, is_active")
+    .select("id, name, price, interval, is_active")
     .eq("id", planId)
     .eq("is_active", true)
     .maybeSingle();
@@ -57,9 +60,16 @@ export async function selectPlan(planId: string): Promise<Result> {
   // 4. Derive amount_paise from server-side plan price (price is INR)
   const amountPaise = plan.price * 100;
 
-  // 5. current_period_end = +1 calendar month from now
+  // 5. current_period_end: branch on plan interval.
+  //    Monthly → +1 calendar month. Annual → +1 calendar year.
+  //    Free plans are always monthly but we branch defensively.
+  const planInterval: "monthly" | "annual" = plan.interval === "annual" ? "annual" : "monthly";
   const periodEnd = new Date();
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+  if (planInterval === "annual") {
+    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+  } else {
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+  }
 
   // 6. Upsert the subscription (creates or updates the store's single sub row)
   const result = await upsertSubscription({

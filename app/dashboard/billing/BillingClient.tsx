@@ -28,6 +28,8 @@ type Plan = {
   contact_limit: number | null;
   features: string[];
   is_popular: boolean;
+  interval: "monthly" | "annual";
+  is_recommended: boolean;
 };
 
 type CurrentSub = {
@@ -35,7 +37,7 @@ type CurrentSub = {
   status: string;
   amount_paise: number;
   current_period_end: string;
-  plan: { name: string; price: number };
+  plan: { name: string; price: number; interval: string };
 } | null;
 
 function fmtDate(iso: string) {
@@ -57,9 +59,15 @@ function PlanCard({
   onSelect: (id: string) => void;
   busy: boolean;
 }) {
+  const perLabel = plan.interval === "annual" ? "/yr" : "/mo";
   return (
-    <div className={`bl-plan${plan.is_popular ? " feat" : ""}${isCurrent ? " current" : ""}`}>
+    <div
+      className={`bl-plan${plan.is_popular ? " feat" : ""}${plan.is_recommended ? " recommended" : ""}${isCurrent ? " current" : ""}`}
+    >
       {plan.is_popular && <span className="dx-ribbon">Popular</span>}
+      {plan.is_recommended && !plan.is_popular && (
+        <span className="dx-ribbon bl-ribbon-rec">Recommended</span>
+      )}
       {isCurrent && <span className="bl-cur-badge">Current plan</span>}
       <div className="bl-plan-name">{plan.name}</div>
       <div className="bl-plan-price">
@@ -68,17 +76,14 @@ function PlanCard({
         ) : (
           <>
             <span className="bl-amount">
-              ₹{plan.price.toLocaleString("en-IN")}
+              {"₹"}{plan.price.toLocaleString("en-IN")}
             </span>
-            <span className="bl-per"> /mo</span>
+            <span className="bl-per"> {perLabel}</span>
           </>
         )}
       </div>
       <ul className="bl-flist">
         {plan.features
-          // Drop any feature that just restates the contact count — it's
-          // rendered once as the dedicated line below (avoids the duplicate
-          // "N contacts" bullet on every plan card).
           .filter((f) => !/^[\d,]+\s+contacts$/i.test(f.trim()))
           .map((f, i) => (
             <li key={i}>{f}</li>
@@ -93,11 +98,19 @@ function PlanCard({
         disabled={isCurrent || busy}
         onClick={() => !isCurrent && onSelect(plan.id)}
       >
-        {isCurrent ? "Current plan" : busy ? "Switching…" : plan.price === 0 ? "Downgrade to Free" : "Select plan"}
+        {isCurrent
+          ? "Current plan"
+          : busy
+          ? "Switching..."
+          : plan.price === 0
+          ? "Downgrade to Free"
+          : "Select plan"}
       </button>
     </div>
   );
 }
+
+type IntervalToggle = "monthly" | "annual";
 
 export default function BillingClient({
   plans,
@@ -111,6 +124,40 @@ export default function BillingClient({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  // Determine whether to show the toggle based on whether there are any annual plans
+  const hasAnnual = plans.some((p) => p.interval === "annual");
+  const hasMonthly = plans.some((p) => p.interval === "monthly");
+  const showToggle = hasAnnual && hasMonthly;
+
+  // Default to the interval of the current subscription if available, else monthly
+  const defaultInterval: IntervalToggle =
+    currentSub?.plan?.interval === "annual" ? "annual" : "monthly";
+  const [selectedInterval, setSelectedInterval] = useState<IntervalToggle>(defaultInterval);
+
+  // Filter plans by selected interval (free plans show under monthly)
+  const filteredPlans = plans.filter((p) => {
+    if (p.price === 0) return selectedInterval === "monthly";
+    return p.interval === selectedInterval;
+  });
+
+  // Annual savings hint: if any monthly plan has a corresponding annual plan,
+  // we can show a savings percentage. We derive this by comparing the cheapest
+  // paid monthly vs. annual per-month equivalent price.
+  const cheapestMonthlyPaid = plans.filter((p) => p.interval === "monthly" && p.price > 0)
+    .reduce<Plan | null>((acc, p) => (!acc || p.price < acc.price ? p : acc), null);
+  const cheapestAnnualPaid = plans.filter((p) => p.interval === "annual" && p.price > 0)
+    .reduce<Plan | null>((acc, p) => (!acc || p.price < acc.price ? p : acc), null);
+
+  let annualSavingsHint: string | null = null;
+  if (cheapestMonthlyPaid && cheapestAnnualPaid) {
+    const monthlyPerYear = cheapestMonthlyPaid.price * 12;
+    const annualCost = cheapestAnnualPaid.price;
+    if (annualCost < monthlyPerYear) {
+      const savePct = Math.round(((monthlyPerYear - annualCost) / monthlyPerYear) * 100);
+      if (savePct > 0) annualSavingsHint = `Save up to ${savePct}% with annual billing`;
+    }
+  }
 
   async function handleSelect(planId: string) {
     const plan = plans.find((p) => p.id === planId);
@@ -135,7 +182,7 @@ export default function BillingClient({
     // Paid plan → charge via the platform Razorpay gateway, then activate.
     if (!(await loadRazorpay())) {
       setBusy(false);
-      return setMsg({ text: "Couldn’t load the payment library. Check your connection.", ok: false });
+      return setMsg({ text: "Couldn't load the payment library. Check your connection.", ok: false });
     }
     try {
       const sRes = await fetch("/api/plans/subscribe/start", {
@@ -144,7 +191,17 @@ export default function BillingClient({
         body: JSON.stringify({ plan_id: planId }),
       });
       const start = await sRes.json();
-      if (!sRes.ok) throw new Error(start.error || "Couldn’t start payment.");
+      if (!sRes.ok) throw new Error(start.error || "Couldn't start payment.");
+
+      // Zero-charge path: the upgrade credit fully covers the new plan price.
+      // /start has already activated the plan — skip the payment modal.
+      if (start.zero_charge) {
+        setMsg({ text: "Plan upgraded (credit applied — no charge).", ok: true });
+        router.refresh();
+        setTimeout(() => setMsg(null), 4000);
+        setBusy(false);
+        return;
+      }
 
       const rzp = new window.Razorpay!({
         key: start.key_id,
@@ -169,7 +226,7 @@ export default function BillingClient({
             });
             const v = await vRes.json();
             if (!vRes.ok || !v.ok) throw new Error(v.error || "Verification failed");
-            setMsg({ text: "Plan activated ✓", ok: true });
+            setMsg({ text: "Plan activated", ok: true });
             router.refresh();
             setTimeout(() => setMsg(null), 3000);
           } catch (e) {
@@ -219,6 +276,30 @@ export default function BillingClient({
           border-radius: 14px; padding: 20px 22px; margin-bottom: 20px;
           font-size: 13.5px; color: var(--muted); text-align: center;
         }
+        /* Interval toggle */
+        .bl-toggle-wrap {
+          display: flex; align-items: center; gap: 12px;
+          margin-bottom: 18px; flex-wrap: wrap;
+        }
+        .bl-toggle {
+          display: inline-flex; background: var(--surface2);
+          border: 1px solid var(--border); border-radius: 10px; padding: 3px;
+        }
+        .bl-toggle button {
+          padding: 6px 18px; border-radius: 8px; border: none; cursor: pointer;
+          font-size: 13px; font-weight: 600; background: transparent;
+          color: var(--muted); transition: background .15s, color .15s;
+        }
+        .bl-toggle button.active {
+          background: var(--surface); color: var(--text);
+          box-shadow: 0 1px 4px rgba(0,0,0,.1);
+        }
+        .bl-savings-hint {
+          font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+          background: color-mix(in srgb, var(--green, #22c55e) 15%, transparent);
+          color: var(--green, #16a34a);
+        }
+        /* Plan grid */
         .bl-plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
         .bl-plan {
           background: var(--surface); border: 1.5px solid var(--border);
@@ -227,7 +308,12 @@ export default function BillingClient({
           box-shadow: var(--shadow);
         }
         .bl-plan.feat { border-color: var(--primary); }
+        .bl-plan.recommended { border-color: #22c55e; }
         .bl-plan.current { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+        /* Recommended ribbon — distinct from Popular (orange) */
+        .bl-ribbon-rec {
+          background: #22c55e !important; color: #fff !important;
+        }
         .bl-cur-badge {
           position: absolute; top: 10px; right: 12px;
           font-size: 11px; font-weight: 700; color: var(--accent);
@@ -265,7 +351,7 @@ export default function BillingClient({
           <div className="cc-sub">
             {currentSub.plan.price === 0
               ? "Free plan"
-              : `₹${currentSub.plan.price.toLocaleString("en-IN")} / month`}
+              : `₹${currentSub.plan.price.toLocaleString("en-IN")} / ${currentSub.plan.interval === "annual" ? "year" : "month"}`}
             {" · "}
             <span style={{ textTransform: "capitalize" }}>{currentSub.status}</span>
           </div>
@@ -281,17 +367,49 @@ export default function BillingClient({
         </div>
       ) : null}
 
-      {/* Plan cards */}
+      {/* Monthly / Annual toggle */}
+      {showToggle && (
+        <div className="bl-toggle-wrap">
+          <div className="bl-toggle">
+            <button
+              className={selectedInterval === "monthly" ? "active" : ""}
+              onClick={() => setSelectedInterval("monthly")}
+            >
+              Monthly
+            </button>
+            <button
+              className={selectedInterval === "annual" ? "active" : ""}
+              onClick={() => setSelectedInterval("annual")}
+            >
+              Annual
+            </button>
+          </div>
+          {selectedInterval === "annual" && annualSavingsHint && (
+            <span className="bl-savings-hint">{annualSavingsHint}</span>
+          )}
+        </div>
+      )}
+
+      {/* Plan cards filtered by selected interval */}
       <div className="bl-plans-grid">
-        {plans.map((plan) => (
+        {filteredPlans.map((plan) => (
           <PlanCard
             key={plan.id}
             plan={plan}
-            isCurrent={!migrationPending && currentSub?.plan_id === plan.id && currentSub?.status === "active"}
+            isCurrent={
+              !migrationPending &&
+              currentSub?.plan_id === plan.id &&
+              currentSub?.status === "active"
+            }
             onSelect={handleSelect}
             busy={busy}
           />
         ))}
+        {filteredPlans.length === 0 && (
+          <div style={{ gridColumn: "1/-1", textAlign: "center", color: "var(--muted)", fontSize: 13, padding: "24px 0" }}>
+            No {selectedInterval} plans available yet.
+          </div>
+        )}
       </div>
 
       {/* Feedback message */}
@@ -302,7 +420,8 @@ export default function BillingClient({
       {!migrationPending && (
         <p className="bl-note">
           Free plans switch instantly. Paid plans are charged securely via
-          Razorpay and activate as soon as payment succeeds.
+          Razorpay and activate as soon as payment succeeds. Upgrading mid-cycle
+          credits your unused balance toward the new plan price.
         </p>
       )}
     </>

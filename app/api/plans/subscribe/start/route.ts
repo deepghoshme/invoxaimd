@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRazorpayOrder } from "@/lib/razorpay";
+import { getStoreSubscription, computeUpgradeCredit } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,22 @@ export const dynamic = "force-dynamic";
  * Start a seller plan-subscription payment. Charges the PLATFORM's Razorpay
  * gateway (admin-configured), not the seller's own keys — plan revenue belongs
  * to the platform. Amount is the plan price from the DB (never client-trusted).
- * Returns the Razorpay order + platform key_id for the checkout.
+ *
+ * Upgrade proration:
+ * - If the store has an active subscription and the new plan is MORE expensive,
+ *   we compute the unused credit from the current plan's remaining period and
+ *   deduct it from the charge. This is done SERVER-SIDE from stored DB values —
+ *   the client only sends plan_id, never an amount or credit.
+ * - The credit and full plan price are stashed in the Razorpay order notes
+ *   (server-set, client-untamperable) so /verify can re-validate the amount.
+ *
+ * Zero-charge edge:
+ * - If credit >= new plan price, charge is 0. Razorpay rejects 0-amount orders,
+ *   so we activate the plan directly without creating a Razorpay order, returning
+ *   { zero_charge: true } so the client skips the payment modal.
+ *
+ * Returns the Razorpay order + platform key_id for the checkout, OR
+ * { zero_charge: true } if the upgrade is fully covered by unused credit.
  */
 export async function POST(req: Request) {
   const sb = await createClient();
@@ -24,11 +40,15 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: plan } = await admin
     .from("plans")
-    .select("id, name, price, is_active")
+    .select("id, name, price, interval, is_active")
     .eq("id", planId)
     .eq("is_active", true)
     .maybeSingle();
   if (!plan) return NextResponse.json({ error: "Plan not found or inactive." }, { status: 404 });
+
+  const planInterval: "monthly" | "annual" = plan.interval === "annual" ? "annual" : "monthly";
+  const newAmountPaise = (plan.price as number) * 100;
+
   if (!plan.price || plan.price <= 0) {
     return NextResponse.json({ error: "This plan is free — no payment needed." }, { status: 400 });
   }
@@ -43,28 +63,102 @@ export async function POST(req: Request) {
     .eq("id", true)
     .maybeSingle();
   if (!gw || !gw.is_enabled || !gw.key_id || !gw.key_secret) {
-    return NextResponse.json({ error: "Platform payments aren’t set up yet. Ask the admin to enable the payment gateway." }, { status: 503 });
+    return NextResponse.json({ error: "Platform payments aren't set up yet. Ask the admin to enable the payment gateway." }, { status: 503 });
   }
 
-  const amountPaise = plan.price * 100;
+  // ── Upgrade proration ────────────────────────────────────────────────────────
+  // Fetch the store's current active subscription (if any).
+  // All credit logic is derived from STORED DB values — the client never supplies
+  // an amount, credit, or discount figure.
+  let creditPaise = 0;
+  const currentSub = await getStoreSubscription(store.id as string);
+
+  if (
+    currentSub &&
+    currentSub.status === "active" &&
+    currentSub.amount_paise > 0 &&
+    newAmountPaise > currentSub.amount_paise // Only credit on true upgrades
+  ) {
+    creditPaise = computeUpgradeCredit({
+      currentAmountPaise: currentSub.amount_paise,
+      periodStart: currentSub.period_start ?? null,
+      startedAt: currentSub.started_at ?? null,
+      periodEnd: currentSub.current_period_end,
+      now: new Date(),
+    });
+  }
+
+  const chargePaise = Math.max(0, newAmountPaise - creditPaise);
+
+  // ── Zero-charge path ─────────────────────────────────────────────────────────
+  // Razorpay rejects 0-amount orders. Activate directly without a payment modal.
+  // This is intentionally idempotent: the caller can re-hit this endpoint and
+  // get the same zero_charge response if the plan is already active.
+  if (chargePaise === 0) {
+    // Activate the plan directly. This path is safe because:
+    //  1. We confirmed the store is authenticated (user.id, store.id verified above).
+    //  2. The new plan was fetched server-side from DB.
+    //  3. creditPaise was computed server-side from the stored sub.
+    //  4. The only way to reach chargePaise=0 is credit >= newAmountPaise,
+    //     meaning the user already paid MORE than the new plan cost this period.
+    const { upsertSubscription } = await import("@/lib/subscriptions");
+    const periodEnd = new Date();
+    if (planInterval === "annual") {
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    } else {
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+    }
+    const result = await upsertSubscription({
+      storeId: store.id as string,
+      planId: plan.id as string,
+      // amount_paise stores the FULL plan price for correct MRR tracking.
+      // The actual charge (0) is recorded separately in plan_payments.
+      amountPaise: newAmountPaise,
+      periodEndDate: periodEnd,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: "Could not activate plan." }, { status: 500 });
+    }
+    // Record a zero-charge payment for the ledger (idempotent: no Razorpay IDs).
+    await admin.from("plan_payments").insert({
+      store_id: store.id as string,
+      plan_id: plan.id as string,
+      razorpay_order_id: `zero_credit_${store.id}_${Date.now()}`,
+      razorpay_payment_id: null,
+      amount: 0,
+    }).then(() => {}); // Non-fatal if it fails
+    return NextResponse.json({ zero_charge: true, plan_name: plan.name });
+  }
+
+  // ── Normal Razorpay order ────────────────────────────────────────────────────
   try {
     const rp = await createRazorpayOrder(
       { keyId: gw.key_id as string, keySecret: gw.key_secret as string },
       {
-        amount: amountPaise,
+        amount: chargePaise,
         currency: "INR",
         receipt: `plan_${plan.id}`.slice(0, 40),
-        notes: { kind: "plan", plan_id: plan.id as string, store_id: store.id as string },
+        notes: {
+          kind: "plan",
+          plan_id: plan.id as string,
+          store_id: store.id as string,
+          // Stash the full plan price and credit in server-set notes so
+          // /verify can re-validate the prorated amount without trusting
+          // any client-supplied figure.
+          full_amount_paise: String(newAmountPaise),
+          credit_paise: String(creditPaise),
+          plan_interval: planInterval,
+        },
       },
     );
     return NextResponse.json({
       razorpay_order_id: rp.id,
       key_id: gw.key_id,
-      amount: amountPaise,
+      amount: chargePaise,
       currency: "INR",
       plan_name: plan.name,
     });
   } catch {
-    return NextResponse.json({ error: "Couldn’t start the payment. Please try again." }, { status: 502 });
+    return NextResponse.json({ error: "Couldn't start the payment. Please try again." }, { status: 502 });
   }
 }

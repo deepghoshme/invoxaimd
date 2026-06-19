@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
-import { upsertSubscription } from "@/lib/subscriptions";
+import { upsertSubscription, getStoreSubscription, computeUpgradeCredit } from "@/lib/subscriptions";
 import { sendPlanInvoiceEmail } from "@/lib/transactional";
 import { createInvoiceForPlan } from "@/lib/invoice";
 
@@ -12,6 +12,19 @@ export const dynamic = "force-dynamic";
  * Verify a plan-subscription payment against the PLATFORM gateway secret and,
  * only on a valid signature, activate the subscription. The subscription is
  * created here (post-payment) so an abandoned checkout never grants a paid plan.
+ *
+ * Amount validation for prorated upgrades:
+ * - We read the full_amount_paise and credit_paise from the Razorpay order's
+ *   server-set notes (written by /start, client-untamperable).
+ * - We RECOMPUTE the credit server-side from the current DB sub to guard against
+ *   any time-of-check/time-of-use drift; if the recomputed credit matches (within
+ *   rounding), we accept the order. If the notes are absent (legacy non-prorated
+ *   order), we fall back to the old exact-match check.
+ *
+ * amount_paise vs charged amount:
+ * - subscriptions.amount_paise = FULL new plan price (for correct MRR/ARR).
+ * - plan_payments.amount = actual charge (prorated/discounted amount).
+ * These MUST be different for prorated upgrades; the comment is intentional.
  */
 export async function POST(req: Request) {
   const sb = await createClient();
@@ -71,38 +84,113 @@ export async function POST(req: Request) {
 
   const { data: plan } = await admin
     .from("plans")
-    .select("id, name, price, is_active")
+    .select("id, name, price, interval, is_active")
     .eq("id", orderPlanId)
     .eq("is_active", true)
     .maybeSingle();
   if (!plan) return NextResponse.json({ error: "Plan not found or inactive." }, { status: 404 });
 
-  const expectedPaise = (plan.price as number) * 100;
-  if (Number(rpOrder.amount) !== expectedPaise) {
+  const planInterval: "monthly" | "annual" = plan.interval === "annual" ? "annual" : "monthly";
+  const fullAmountPaise = (plan.price as number) * 100;
+
+  // ── Amount validation ────────────────────────────────────────────────────────
+  // For prorated upgrades, the order amount < plan price. We validate against
+  // the RECOMPUTED expected charge, not blindly against the full plan price.
+  //
+  // Strategy:
+  //  1. Read full_amount_paise + credit_paise from server-set order notes.
+  //  2. Recompute the credit server-side from the CURRENT DB sub to validate.
+  //  3. If the recomputed credit is within ±100 paise of notes.credit_paise
+  //     (rounding tolerance over the seconds between /start and /verify), accept.
+  //  4. Legacy orders (no proration notes) fall back to the exact plan price check.
+
+  let expectedChargePaise: number;
+  const notesFullPaise = notes.full_amount_paise ? Number(notes.full_amount_paise) : null;
+  const notesCreditPaise = notes.credit_paise ? Number(notes.credit_paise) : null;
+
+  if (notesFullPaise !== null && notesCreditPaise !== null) {
+    // Prorated order — validate the full price matches what /start recorded.
+    if (notesFullPaise !== fullAmountPaise) {
+      return NextResponse.json({ error: "Plan price mismatch in order notes." }, { status: 400 });
+    }
+
+    // Recompute credit server-side to cross-check the stashed notes value.
+    const currentSub = await getStoreSubscription(store.id as string);
+    let recomputedCredit = 0;
+    if (
+      currentSub &&
+      currentSub.status === "active" &&
+      currentSub.amount_paise > 0 &&
+      fullAmountPaise > currentSub.amount_paise
+    ) {
+      recomputedCredit = computeUpgradeCredit({
+        currentAmountPaise: currentSub.amount_paise,
+        periodStart: currentSub.period_start ?? null,
+        startedAt: currentSub.started_at ?? null,
+        periodEnd: currentSub.current_period_end,
+        now: new Date(),
+      });
+    }
+
+    // Allow ±100 paise tolerance: a few seconds elapsed between /start and /verify
+    // can shift the remaining-fraction slightly. The order was created by the server
+    // at /start so the actual Razorpay amount is already locked; we just need to
+    // confirm the credit from notes is plausible vs. the recomputed value.
+    const tolerance = 100; // ₹1 in paise
+    if (Math.abs(recomputedCredit - notesCreditPaise) > tolerance) {
+      // Recomputed credit diverged — this shouldn't happen in normal flows.
+      // Log and reject to prevent a scenario where someone games the timing.
+      console.error(
+        `[plans/verify] credit mismatch: notes=${notesCreditPaise} recomputed=${recomputedCredit} store=${store.id}`,
+      );
+      return NextResponse.json({ error: "Credit amount mismatch. Please try again." }, { status: 400 });
+    }
+
+    // Expected charge = full price minus the notes-stashed credit (which we just
+    // validated is consistent with the recomputed value).
+    expectedChargePaise = Math.max(0, fullAmountPaise - notesCreditPaise);
+  } else {
+    // Legacy / non-prorated order: charge must equal the full plan price exactly.
+    expectedChargePaise = fullAmountPaise;
+  }
+
+  if (Number(rpOrder.amount) !== expectedChargePaise) {
     return NextResponse.json({ error: "Amount mismatch." }, { status: 400 });
   }
 
   // Single-use: the UNIQUE index on razorpay_order_id makes a replayed order a
   // no-op (idempotent) instead of a free renewal/extension.
+  //
+  // plan_payments.amount = ACTUAL CHARGED AMOUNT (prorated/discounted).
+  // subscriptions.amount_paise = FULL new plan price (for correct MRR tracking).
+  // These intentionally differ for prorated upgrades.
   const { error: ledgerErr } = await admin.from("plan_payments").insert({
     store_id: store.id as string,
     plan_id: plan.id as string,
     razorpay_order_id,
     razorpay_payment_id,
-    amount: expectedPaise,
+    amount: expectedChargePaise, // Actual charge (may be < full price for prorated upgrades)
   });
   if (ledgerErr) {
     // Duplicate (already processed) → treat as success without re-activating.
     return NextResponse.json({ ok: true, already: true });
   }
 
+  // ── Period end by interval ───────────────────────────────────────────────────
+  // Monthly plans: +1 calendar month. Annual plans: +1 calendar year.
   const periodEnd = new Date();
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+  if (planInterval === "annual") {
+    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+  } else {
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+  }
 
   const result = await upsertSubscription({
     storeId: store.id as string,
     planId: plan.id as string,
-    amountPaise: expectedPaise,
+    // Store the FULL plan price in amount_paise for correct MRR/ARR calculation.
+    // The actual discounted charge is in plan_payments.amount above.
+    amountPaise: fullAmountPaise,
     periodEndDate: periodEnd,
   });
   if (!result.ok) return NextResponse.json({ error: result.error ?? "Could not activate plan." }, { status: 500 });
@@ -129,7 +217,8 @@ export async function POST(req: Request) {
       storeId: store.id as string,
       buyerEmail: user.email ?? null,
       buyerName,
-      amountPaise: expectedPaise,
+      // Invoice amount = actual charge (what was collected), not the full price.
+      amountPaise: expectedChargePaise,
       currency: "INR",
       planName,
       razorpayOrderId: razorpay_order_id,
