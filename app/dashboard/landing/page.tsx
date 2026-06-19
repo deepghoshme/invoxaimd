@@ -111,7 +111,7 @@ export default async function LandingPage() {
                 const c = (p.content ?? {}) as { headline?: string };
                 const views = viewsByPage[p.id] ?? 0;
                 const clicks = clicksByPage[p.id] ?? 0;
-                const ctr = views > 0 ? `${((clicks / views) * 100).toFixed(1)}%` : "—";
+                const ctr = views > 0 ? `${Math.min(100, (clicks / views) * 100).toFixed(1)}%` : "—";
                 return (
                   <tr key={p.id}>
                     <td>

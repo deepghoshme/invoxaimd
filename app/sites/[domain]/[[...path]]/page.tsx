@@ -380,7 +380,10 @@ async function Checkout({
   const order = await getOrderById(orderId);
 
   // Order must exist, belong to THIS store, and match the page type in the URL.
-  if (!store || !order || order.store_id !== store.id || order.page_type !== pageType) {
+  // URL prefixes may differ from stored page_type (e.g. "book" → page_type "booking"),
+  // so resolve the URL prefix back to the canonical page_type before comparing.
+  const resolvedPageType = PREFIX_TO_TYPE[pageType] ?? pageType;
+  if (!store || !order || order.store_id !== store.id || order.page_type !== resolvedPageType) {
     return <Notice title="Order not found" body="This checkout link is invalid or expired." />;
   }
 

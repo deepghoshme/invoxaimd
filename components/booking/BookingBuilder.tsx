@@ -123,9 +123,6 @@ export default function BookingBuilder({
     const res = publish === undefined
       ? await saveBookingPage(page.id, payload)
       : await setBookingPageStatus(page.id, publish ? "published" : "draft");
-    if (publish === undefined && res.ok) {
-      await saveBookingPage(page.id, payload); // ensure content is saved before status flip
-    }
     setBusy(false);
     if (!res.ok) { setMsg(res.error ?? "Failed"); return; }
     if (publish !== undefined) setStatus(publish ? "published" : "draft");

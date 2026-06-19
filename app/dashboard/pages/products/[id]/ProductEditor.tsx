@@ -132,6 +132,8 @@ export default function ProductEditor({
   const [highlights, setHighlights] = useState<string[]>(c.highlights ?? []);
   const [offers, setOffers] = useState<string[]>(c.offers ?? []);
   const [related, setRelated] = useState<{ name: string; price?: number; compareAt?: number; img?: string; url?: string }[]>(c.related ?? []);
+  const [rating, setRating] = useState(c.rating ?? "");
+  const [reviewsCount, setReviewsCount] = useState(c.reviews_count ?? "");
 
   function toggleBadge(b: string) {
     setBadges((prev) => (prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]));
@@ -203,6 +205,8 @@ export default function ProductEditor({
     highlights: highlights.filter((h) => h.trim()),
     offers: offers.filter((o) => o.trim()),
     related: related.filter((r) => r.name.trim()),
+    rating: rating.trim(),
+    reviews_count: reviewsCount.trim(),
   };
 
   function payload() {
@@ -352,6 +356,12 @@ export default function ProductEditor({
               <label>Page layout</label>
               <div className="chips">{([["landing", "Landing page"], ["pdp", "Catalog (PDP)"]] as const).map(([k, l]) => <div key={k} className={`chip${layout === k ? " on" : ""}`} onClick={() => setLayout(k)}>{l}</div>)}</div>
             </div>
+            {layout === "pdp" && (
+              <div className="ff">
+                <div className="field" style={{ flex: "0 0 110px" }}><label>Rating</label><input value={rating} onChange={(e) => setRating(e.target.value)} placeholder="4.9" /></div>
+                <div className="field"><label>Reviews count</label><input value={reviewsCount} onChange={(e) => setReviewsCount(e.target.value)} placeholder="1,240" /></div>
+              </div>
+            )}
             <div className="field"><label>Headline</label><input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Product name" /></div>
             <div className="field"><label>Category (store filter / PDP)</label><input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Courses" /></div>
             <div className="field">

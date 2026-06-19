@@ -58,9 +58,14 @@ function PlanCard({
         )}
       </div>
       <ul className="bl-flist">
-        {plan.features.map((f, i) => (
-          <li key={i}>{f}</li>
-        ))}
+        {plan.features
+          // Drop any feature that just restates the contact count — it's
+          // rendered once as the dedicated line below (avoids the duplicate
+          // "N contacts" bullet on every plan card).
+          .filter((f) => !/^[\d,]+\s+contacts$/i.test(f.trim()))
+          .map((f, i) => (
+            <li key={i}>{f}</li>
+          ))}
         {plan.contact_limit != null && (
           <li>{plan.contact_limit.toLocaleString("en-IN")} contacts</li>
         )}

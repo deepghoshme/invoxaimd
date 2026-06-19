@@ -223,11 +223,16 @@ export default function BookingView({
         return;
       }
       if (j.needs_payment && j.page_id) {
-        // Paid: create an order and redirect to Razorpay checkout.
+        // Paid booking: create an order (price read from DB server-side — never
+        // trusted from client) and redirect to the standard checkout URL.
+        // The booking row is already in "pending" status; /api/checkout/verify
+        // will flip it to "confirmed" after successful payment.
+        // Pass buyer_email so the order row stores it — verify uses it to match
+        // the exact pending booking row (avoids ambiguity across concurrent bookings).
         const orderRes = await fetch("/api/checkout/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page_id: j.page_id }),
+          body: JSON.stringify({ page_id: j.page_id, buyer_email: buyerEmail.trim(), buyer_name: buyerName.trim() }),
         });
         const orderJ = await orderRes.json();
         if (!orderRes.ok) {
@@ -235,9 +240,8 @@ export default function BookingView({
           setBooking(false);
           return;
         }
-        // Redirect to the page-type checkout URL.
-        const baseUrl = publicUrl ? publicUrl.replace(/\/+$/, "") : window.location.origin;
-        window.location.href = `${baseUrl}/book/checkout/${orderJ.order_id}`;
+        // /book/checkout/{orderId} is dispatched by the sites router to <CheckoutForm>.
+        window.location.href = `/book/checkout/${orderJ.order_id}`;
         return;
       }
       const slotLabel = selectedDate

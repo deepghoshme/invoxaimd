@@ -570,10 +570,11 @@ function SuccessCard({
         </>
       ) : (
         <p style={{ marginTop: 16, fontSize: 13 }}>
-          Your invite link will be emailed to <b>{email}</b> shortly.
+          Your access is confirmed. The seller hasn&apos;t set an invite link yet —
+          please reach out to them to get added.
         </p>
       )}
-      <div className="vp-pixel">● Access granted · receipt emailed</div>
+      <div className="vp-pixel">● Access granted · invite link revealed</div>
     </div>
   );
 }

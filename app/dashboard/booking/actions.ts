@@ -76,12 +76,15 @@ export async function saveBookingPage(
   const guard = await assertNotImpersonating();
   if (!guard.ok) return guard;
 
-  const supabase = await createClient();
+  const { supabase, store } = await ownerStore();
+  if (!store) return { ok: false, error: "No store found." };
+
   const { error } = await supabase
     .from("pages")
     .update({ content: payload.content, seo: payload.seo })
     .eq("id", pageId)
-    .eq("page_type", "booking");
+    .eq("page_type", "booking")
+    .eq("store_id", store.id);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/studio/booking/${pageId}`);
@@ -99,7 +102,9 @@ export async function setBookingPageStatus(
   const guard = await assertNotImpersonating();
   if (!guard.ok) return guard;
 
-  const supabase = await createClient();
+  const { supabase, store } = await ownerStore();
+  if (!store) return { ok: false, error: "No store found." };
+
   const { error } = await supabase
     .from("pages")
     .update({
@@ -107,7 +112,8 @@ export async function setBookingPageStatus(
       published_at: status === "published" ? new Date().toISOString() : null,
     })
     .eq("id", pageId)
-    .eq("page_type", "booking");
+    .eq("page_type", "booking")
+    .eq("store_id", store.id);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/studio/booking/${pageId}`);
@@ -122,12 +128,15 @@ export async function deleteBookingPage(pageId: string): Promise<Result> {
   const guard = await assertNotImpersonating();
   if (!guard.ok) return guard;
 
-  const supabase = await createClient();
+  const { supabase, store } = await ownerStore();
+  if (!store) return { ok: false, error: "No store found." };
+
   const { error } = await supabase
     .from("pages")
     .delete()
     .eq("id", pageId)
-    .eq("page_type", "booking");
+    .eq("page_type", "booking")
+    .eq("store_id", store.id);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/dashboard/booking");

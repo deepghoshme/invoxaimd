@@ -240,7 +240,7 @@ export default async function OrdersPage({
                       {o.status === "paid" ? (
                         <Tag kind="paid">Paid</Tag>
                       ) : (
-                        <Tag kind="pend">{o.status}</Tag>
+                        <Tag kind="pend">{o.status === "created" ? "Pending" : o.status === "failed" ? "Failed" : o.status}</Tag>
                       )}
                     </td>
                   </tr>

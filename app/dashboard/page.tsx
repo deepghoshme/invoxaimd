@@ -183,15 +183,20 @@ export default async function DashboardPage() {
     isToday: d.isToday,
   }));
 
-  const tableOrders = (recentOrders ?? []).map((o) => ({
-    id: o.id as string,
-    buyerName: (o.buyer_name as string | null) ?? "—",
-    buyerEmail: (o.buyer_email as string | null) ?? "",
-    productTitle: (o.product_title as string | null) ?? "—",
-    pageType: (o.page_type as string | null) ?? "",
-    amount: (o.amount as number | null) ?? 0,
-    status: o.status as "paid" | "created" | "failed",
-  }));
+  const tableOrders = (recentOrders ?? [])
+    // Drop placeholder/abandoned orders: a "created" order with no buyer info
+    // is an unpaid/abandoned (or coupon-preview) row and would render as a blank
+    // "?" record. Keep paid orders and pending orders that have a real buyer.
+    .filter((o) => o.status === "paid" || !!o.buyer_email)
+    .map((o) => ({
+      id: o.id as string,
+      buyerName: (o.buyer_name as string | null) ?? "—",
+      buyerEmail: (o.buyer_email as string | null) ?? "",
+      productTitle: (o.product_title as string | null) ?? "—",
+      pageType: (o.page_type as string | null) ?? "",
+      amount: (o.amount as number | null) ?? 0,
+      status: o.status as "paid" | "created" | "failed",
+    }));
 
   return (
     <>

@@ -31,7 +31,7 @@ export default async function WebsitePage() {
   const leadCount = (messages ?? []).length;
   const msgRows = (messages ?? []).map((m) => [m.name || m.email || "—", m.kind === "newsletter" ? "Newsletter" : "Contact", new Date(m.created_at).toLocaleDateString("en-IN")]);
 
-  const ctr = views ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
+  const ctr = views ? `${Math.min(100, (clicks / views) * 100).toFixed(1)}%` : "0%";
   const devTotal = dev.mobile + dev.desktop + dev.tablet;
   const pct = (n: number) => (devTotal ? Math.round((n / devTotal) * 100) : 0);
   const linkRows = Object.entries(topLinks).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([label, n]) => [label, String(n)]);

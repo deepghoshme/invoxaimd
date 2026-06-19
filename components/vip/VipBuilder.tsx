@@ -154,8 +154,8 @@ export default function VipBuilder({
         </div>
         <div className="scr">
           {device === "web"
-            ? <ScaledFrame width={920}><VipView content={c} pageId={pageId} storeName={storeName} memberCount={memberCount} payEnabled={false} stage /></ScaledFrame>
-            : <VipView content={c} pageId={pageId} storeName={storeName} memberCount={memberCount} payEnabled={false} stage />}
+            ? <ScaledFrame width={920}><VipView content={c} pageId={pageId} storeName={storeName} memberCount={memberCount} payEnabled={payEnabled} stage /></ScaledFrame>
+            : <VipView content={c} pageId={pageId} storeName={storeName} memberCount={memberCount} payEnabled={payEnabled} stage />}
         </div>
       </div>
     </div>

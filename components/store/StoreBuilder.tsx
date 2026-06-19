@@ -37,7 +37,7 @@ function ScaledFrame({ width, children }: { width: number; children: React.React
   return <div ref={ref} style={{ width: "100%", overflow: "hidden" }}><div style={{ width: dims.w, zoom: dims.z, transformOrigin: "top left" } as React.CSSProperties}>{children}</div></div>;
 }
 
-export default function StoreBuilder({ initial, publicUrl, initialStatus }: { initial: StoreContent; publicUrl: string | null; initialStatus: string }) {
+export default function StoreBuilder({ initial, publicUrl, initialStatus, initialProducts = [] }: { initial: StoreContent; publicUrl: string | null; initialStatus: string; initialProducts?: import("@/lib/store").StoreProduct[] }) {
   const [c, setC] = useState<StoreContent>(initial);
   const [status, setStatus] = useState(initialStatus);
   const [busy, setBusy] = useState(false);
@@ -71,8 +71,8 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus }: { in
           <div className="seg pvseg"><button className={device === "web" ? "on" : ""} onClick={() => setDevice("web")}>🖥</button><button className={device === "mobile" ? "on" : ""} onClick={() => setDevice("mobile")}>📱</button></div>
         </div>
         <div className="scr">{device === "web"
-          ? <ScaledFrame width={1280}><StoreView key={`${c.accent}-${c.btshape}`} content={c} device="web" /></ScaledFrame>
-          : <StoreView key={`${c.accent}-${c.btshape}-m`} content={c} device="mobile" />}</div>
+          ? <ScaledFrame width={1280}><StoreView key={`${c.accent}-${c.btshape}`} content={c} device="web" products={initialProducts} /></ScaledFrame>
+          : <StoreView key={`${c.accent}-${c.btshape}-m`} content={c} device="mobile" products={initialProducts} />}</div>
       </div>
     </div>
   );
@@ -92,7 +92,7 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus }: { in
         </div>
       </div>
 
-      {view === "public" && <div className="web-public-view"><StoreView content={c} stage /></div>}
+      {view === "public" && <div className="web-public-view"><StoreView content={c} products={initialProducts} stage /></div>}
 
       <div className="webbuild" style={view === "public" ? { display: "none" } : undefined}>
         <div className="webacc">
@@ -156,7 +156,7 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus }: { in
             <div className="field"><label>Layout</label><div className="chips">{DISPLAYS.map((d) => <div key={d[0]} className={`chip${(c.display ?? "grid") === d[0] ? " on" : ""}`} onClick={() => set({ display: d[0] as StoreContent["display"] })}>{d[1]}</div>)}</div></div>
             <div className="field"><label>Grid columns</label><div className="chips">{STORE_COLS.map((n) => <div key={n} className={`chip${(c.cols ?? 3) === n ? " on" : ""}`} onClick={() => set({ cols: n })}>{n}</div>)}</div></div>
             <div className="field" style={{ marginBottom: 0 }}><label>Featured product position</label><input type="number" min={1} value={(c.featuredIdx ?? 0) + 1} onChange={(e) => set({ featuredIdx: Math.max(0, (parseInt(e.target.value) || 1) - 1) })} /></div>
-            <p className="dx-muted" style={{ fontSize: 11, marginTop: 6 }}>Products are pulled from your published one-page products automatically.</p>
+            <p className="dx-muted" style={{ fontSize: 11, marginTop: 6 }}>Products you add in your Store catalog appear here automatically.</p>
           </div>
 
           {/* Add-ons */}

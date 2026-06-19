@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ImageInput from "@/components/ImageInput";
 import { type CatalogProduct, type CatalogInput, EMPTY_PRODUCT, PRODUCT_TYPES, PLAN_PERIODS, formatPrice } from "@/lib/catalog";
-import { createCatalogProduct, updateCatalogProduct, deleteCatalogProduct, setProductVisible } from "@/app/dashboard/store/products-actions";
+import { createCatalogProduct, updateCatalogProduct, deleteCatalogProduct, setProductVisible, reorderCatalogProducts } from "@/app/dashboard/store/products-actions";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return <button type="button" className={`switch${on ? " on" : ""}`} onClick={onClick}><span className="switch-knob" /></button>;
@@ -180,12 +180,22 @@ export default function ProductCatalog({ initial }: { initial: CatalogProduct[] 
   const router = useRouter();
   const [editing, setEditing] = useState<CatalogProduct | null>(null);
   const [open, setOpen] = useState(false);
-  const [list] = useState(initial);
+  const [list, setList] = useState(initial);
 
   const refresh = () => { setOpen(false); setEditing(null); router.refresh(); };
 
   async function toggle(p: CatalogProduct) { await setProductVisible(p.id, !p.store_visible); router.refresh(); }
   async function remove(p: CatalogProduct) { if (!confirm(`Delete “${p.name}”?`)) return; await deleteCatalogProduct(p.id); router.refresh(); }
+  // Move a product up/down and persist the new order (sort = position).
+  async function move(idx: number, dir: -1 | 1) {
+    const j = idx + dir;
+    if (j < 0 || j >= list.length) return;
+    const next = [...list];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setList(next);
+    await reorderCatalogProducts(next.map((p) => p.id));
+    router.refresh();
+  }
 
   return (
     <>
@@ -197,8 +207,12 @@ export default function ProductCatalog({ initial }: { initial: CatalogProduct[] 
       {list.length === 0 && <div className="dx-empty">No store products yet. Click “+ Add product” to add one in a quick popup — set price, image, type and whether it shows in your store.</div>}
 
       <div className="dx-prodlist">
-        {list.map((p) => (
+        {list.map((p, idx) => (
           <div className="dx-prow" key={p.id} style={{ cursor: "default" }}>
+            <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <button className="dx-editbtn" style={{ padding: "0 6px", lineHeight: 1.2, opacity: idx === 0 ? 0.3 : 1 }} disabled={idx === 0} onClick={() => move(idx, -1)} title="Move up">▲</button>
+              <button className="dx-editbtn" style={{ padding: "0 6px", lineHeight: 1.2, opacity: idx === list.length - 1 ? 0.3 : 1 }} disabled={idx === list.length - 1} onClick={() => move(idx, 1)} title="Move down">▼</button>
+            </span>
             <span className="dx-pthumb" style={p.image ? { backgroundImage: `url('${p.image}')` } : undefined}>{!p.image && "📦"}</span>
             <span className="dx-pname">{p.name}</span>
             <span className="dx-pcat">{p.category || p.product_type}</span>

@@ -190,7 +190,7 @@ export default function BioBuilder({
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {[
                 { icon: "📧", label: "Add a newsletter signup link", hint: "Link to a Beehiiv / ConvertKit / Mailchimp form to capture emails.", action: () => set({ links: [...(c.links ?? []), { ic: "📧", t: "Subscribe to my newsletter", u: "https://", type: "link" as const }] }) },
-                { icon: "🛒", label: "Sell a product from your Bio", hint: "Feature a paid product or course right on your link page.", action: () => {} },
+                { icon: "🛒", label: "Sell a product from your Bio", hint: "Feature a paid product or course right on your link page.", action: () => set({ links: [...(c.links ?? []), { ic: "🛒", t: "Shop my products", u: "/store", type: "link" as const }] }) },
                 { icon: "💬", label: "Add a WhatsApp / Telegram link", hint: "Let visitors reach you on chat in one tap.", action: () => set({ links: [...(c.links ?? []), { ic: "💬", t: "Chat on WhatsApp", u: "https://wa.me/", type: "link" as const }] }) },
                 { icon: "📅", label: "Add a booking / calendar link", hint: "Let fans book a call or session directly (Cal.com, Calendly…).", action: () => set({ links: [...(c.links ?? []), { ic: "📅", t: "Book a call", u: "https://cal.com/", type: "link" as const }] }) },
                 { icon: "🎁", label: "Add a freebie / lead magnet link", hint: "Offer a free PDF, checklist, or mini-course to grow your list.", action: () => set({ links: [...(c.links ?? []), { ic: "🎁", t: "Free download", u: "https://", type: "link" as const }] }) },

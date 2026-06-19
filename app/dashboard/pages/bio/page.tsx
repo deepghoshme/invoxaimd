@@ -25,7 +25,9 @@ export default async function BioPage() {
       else { clicks++; if (e.link_label) topLinks[e.link_label] = (topLinks[e.link_label] ?? 0) + 1; }
     });
   }
-  const ctr = views ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
+  // Cap at 100%: a single visitor can click several links, which would push a
+  // raw clicks/views ratio above 100% and read as an invalid percentage.
+  const ctr = views ? `${Math.min(100, (clicks / views) * 100).toFixed(1)}%` : "0%";
   const devTotal = dev.mobile + dev.desktop + dev.tablet;
   const pct = (n: number) => (devTotal ? Math.round((n / devTotal) * 100) : 0);
   const linkRows = Object.entries(topLinks).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([label, n]) => [label, String(n)]);

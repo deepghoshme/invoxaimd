@@ -192,13 +192,29 @@ export default function CourseView({
     setView("player");
   }
 
-  function handleEnroll() {
+  async function handleEnroll() {
     if (!payEnabled) {
       alert("Payment is not configured for this store yet.");
       return;
     }
-    // Navigate to checkout — page_type=course, uses the same orders+checkout flow as opp
-    window.location.href = `/course/${page.public_id ?? pageId}/checkout`;
+    // Create an order server-side first (price is read from DB — never trusted from
+    // client), then redirect to the standard /{prefix}/checkout/{orderId} URL that
+    // the sites router dispatches to <CheckoutForm>.
+    try {
+      const res = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        alert(j.error ?? "Could not start checkout. Please try again.");
+        return;
+      }
+      window.location.href = `/course/checkout/${j.order_id}`;
+    } catch {
+      alert("Network error. Please try again.");
+    }
   }
 
   const price = c.price ?? 0;

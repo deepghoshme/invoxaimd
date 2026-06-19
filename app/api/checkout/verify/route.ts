@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOrderById, getStoreGateway, updateOrder } from "@/lib/sites";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Verify a Razorpay checkout signature and mark the order paid. The signature
@@ -56,6 +57,46 @@ export async function POST(req: Request) {
     gateway_signature: razorpay_signature,
     paid_at: new Date().toISOString(),
   });
+
+  // ── Booking confirmation ───────────────────────────────────────────────────
+  // If this order was for a paid booking session, flip the SPECIFIC matching
+  // pending booking row to "confirmed" and record the order_id on it.
+  //
+  // Security: we NEVER run a page-wide update. buyer_email is required (the
+  // booking flow always stores it on the order); without it we refuse to
+  // confirm rather than risk confirming every pending booking on the page.
+  // We resolve a single row id (most recent pending booking for this buyer on
+  // this page) and update strictly by id.
+  //
+  // TODO: persist bookings.id on the order at booking-creation time and match
+  // on order.booking_id directly, plus a TTL cleanup job for abandoned holds.
+  if (order.page_type === "booking" && order.page_id) {
+    if (!order.buyer_email) {
+      console.error("[verify] booking order missing buyer_email; refusing page-wide confirmation", order.id);
+    } else {
+      try {
+        const sb = createAdminClient();
+        const { data: bk } = await sb
+          .from("bookings")
+          .select("id")
+          .eq("page_id", order.page_id)
+          .eq("buyer_email", order.buyer_email)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (bk?.id) {
+          await sb.from("bookings").update({ status: "confirmed", order_id: order.id }).eq("id", bk.id);
+        } else {
+          console.error("[verify] no matching pending booking for order", order.id);
+        }
+      } catch {
+        // Non-fatal: payment is already recorded; booking confirmation can be
+        // retried manually or via a webhook. Log the miss for ops visibility.
+        console.error("[verify] Failed to confirm booking for order", order.id);
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true, amount: order.amount, currency: order.currency });
 }

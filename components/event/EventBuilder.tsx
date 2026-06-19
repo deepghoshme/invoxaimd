@@ -128,12 +128,14 @@ export default function EventBuilder({
   initialStatus,
   publicUrl,
   readOnly,
+  payEnabled,
 }: {
   pageId: string;
   initial: EventContent;
   initialStatus: string;
   publicUrl: string | null;
   readOnly?: boolean;
+  payEnabled?: boolean;
 }) {
   const [c, setC] = useState<EventContent>({ ...DEFAULT_EVENT, ...initial });
   const [status, setStatus] = useState(initialStatus);
@@ -204,10 +206,10 @@ export default function EventBuilder({
         <div className="scr">
           {device === "web" ? (
             <ScaledFrame>
-              <EventView content={c} pageId={pageId} preview />
+              <EventView content={c} pageId={pageId} payEnabled={payEnabled} preview />
             </ScaledFrame>
           ) : (
-            <EventView content={c} pageId={pageId} preview />
+            <EventView content={c} pageId={pageId} payEnabled={payEnabled} preview />
           )}
         </div>
       </div>
@@ -283,7 +285,7 @@ export default function EventBuilder({
       {/* Full preview mode */}
       {view === "preview" && (
         <div className="web-public-view">
-          <EventView content={c} pageId={pageId} preview />
+          <EventView content={c} pageId={pageId} payEnabled={payEnabled} preview />
         </div>
       )}
 

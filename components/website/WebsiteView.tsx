@@ -69,9 +69,12 @@ export default function WebsiteView({
   // cookie banner: remember dismissal so it shows only once (live site)
   useEffect(() => {
     if (!live) return;
-    try { if (localStorage.getItem("inv_cookie_ok")) setCookieGone(true); } catch {}
+    try { if (localStorage.getItem("inv_cookie_ok") || localStorage.getItem("inv_cookie_declined")) setCookieGone(true); } catch {}
   }, [live]);
   const dismissCookie = () => { setCookieGone(true); if (live) { try { localStorage.setItem("inv_cookie_ok", "1"); } catch {} } };
+  // Decline: record a distinct "declined" choice (consent NOT given) rather than
+  // writing the acceptance key — a meaningful difference from Accept.
+  const declineCookie = () => { setCookieGone(true); if (live) { try { localStorage.setItem("inv_cookie_declined", "1"); } catch {} } };
 
   const head = (k: string, dt: string, ds = "") => ({ title: c.heads?.[k]?.title ?? dt, sub: c.heads?.[k]?.sub ?? ds });
   const grad = c.accentColor
@@ -91,8 +94,23 @@ export default function WebsiteView({
   const legal = c.legal ?? ({} as NonNullable<WebsiteContent["legal"]>);
 
   // CTA href → through the click tracker when published, else the raw url.
+  // Reject dangerous URL schemes (javascript:, data:, vbscript:, …) so a
+  // seller-entered link can't inject script into their storefront. Allow only
+  // same-origin relative paths/anchors and absolute http(s)/mailto/tel URLs.
+  const safeUrl = (v: string | undefined) => {
+    const raw = (v || "").trim();
+    if (!raw) return "#";
+    if (raw.startsWith("/") || raw.startsWith("#")) return raw;
+    try {
+      const parsed = new URL(raw);
+      const ok = ["http:", "https:", "mailto:", "tel:"].includes(parsed.protocol);
+      return ok ? parsed.toString() : "#";
+    } catch {
+      return "#";
+    }
+  };
   const cta = (url: string | undefined, label: string) => {
-    const u = url || "#";
+    const u = safeUrl(url);
     if (track && u !== "#") {
       return `/api/bio/go?p=${track.pageId}${track.storeId ? `&s=${track.storeId}` : ""}&u=${encodeURIComponent(u)}&t=${encodeURIComponent(label)}`;
     }
@@ -392,7 +410,7 @@ export default function WebsiteView({
     cta: () => (
       <div className="ctaband" key="cta">
         <h2>{c.ctaBand?.title}</h2><p>{c.ctaBand?.sub}</p>
-        <button>{c.cta || "Get started"}</button>
+        <a className="b1" href={cta(c.ctaBand?.url ?? c.ctaurl, c.cta || "Get started")}>{c.cta || "Get started"}</a>
       </div>
     ),
   };
@@ -449,7 +467,7 @@ export default function WebsiteView({
       const L = legal[k];
       if (!L) return null;
       return (
-        <div className="legalpage"><h1>{L.title}</h1><div className="upd">Last updated June 2026</div>
+        <div className="legalpage"><h1>{L.title}</h1><div className="upd">Last updated {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
           {L.text.split("\n").map((p, i) => <p key={i}>{p}</p>)}</div>
       );
     }
@@ -509,13 +527,13 @@ export default function WebsiteView({
           <span className="o o4" /><span className="o o5" /><span className="o o6" />
         </div>
         <div className="sitewrap">
-          {c.announce?.on && <div className="annbar">{c.announce.text} {c.announce.cta && <u>{c.announce.cta} ›</u>}</div>}
+          {c.announce?.on && <div className="annbar">{c.announce.text} {c.announce.cta && <a href={cta(c.announce.url, c.announce.cta)}>{c.announce.cta} ›</a>}</div>}
           {Nav()}
           {Content()}
           {Foot()}
           {c.whatsapp?.on && (
             <div className="wa-wrap">
-              <a className="wa" title={c.whatsapp.label || "Chat with us"} href={c.whatsapp.link || `https://wa.me/${(c.whatsapp.number || "").replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer">
+              <a className="wa" title={c.whatsapp.label || "Chat with us"} href={safeUrl(c.whatsapp.link || `https://wa.me/${(c.whatsapp.number || "").replace(/[^0-9]/g, "")}`)} target="_blank" rel="noreferrer">
                 <span className="wa-ic">{c.whatsapp.icon || "💬"}</span>
                 {c.whatsapp.label && <span className="wa-label">{c.whatsapp.label}</span>}
               </a>
@@ -524,7 +542,7 @@ export default function WebsiteView({
           {(c.scrollProgress || c.backTop) && <ScrollFx progress={!!c.scrollProgress} backTop={!!c.backTop} />}
           {c.cookie?.on && !cookieGone && (
             <div className="cookie">We use cookies to improve your experience.
-              <div className="cbtns"><button className="acc" onClick={dismissCookie}>Accept</button><button className="dec" onClick={dismissCookie}>Decline</button></div>
+              <div className="cbtns"><button className="acc" onClick={dismissCookie}>Accept</button><button className="dec" onClick={declineCookie}>Decline</button></div>
             </div>
           )}
         </div>

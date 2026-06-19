@@ -521,12 +521,9 @@ function TestList({
   return (
     <div>
       <div className="ab-phead">
-        <div>
-          <h1 className="ab-h1">A/B Tests</h1>
-          <p className="ab-sub">
-            Split-test headlines and page variants — see which converts better.
-          </p>
-        </div>
+        {/* Title/subtitle come from the page-level header (Phead); this bar
+            only carries the primary action to avoid a duplicate heading. */}
+        <div />
         <button className="ab-btn-primary" onClick={onNew}>
           + New test
         </button>

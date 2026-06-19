@@ -102,6 +102,7 @@ export default async function StudioEvent({
           initial={content}
           initialStatus={page.status}
           publicUrl={publicUrl}
+          payEnabled={payEnabled}
         />
       </div>
     </div>

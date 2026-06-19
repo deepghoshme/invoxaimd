@@ -442,6 +442,7 @@ export default function WebsiteBuilder({
             <div className="swrow"><span className="nm">Announcement bar</span><Switch on={!!c.announce?.on} onClick={() => set({ announce: { ...c.announce!, on: !c.announce?.on } })} /></div>
             <div className="field"><label>Announcement text</label><input value={c.announce?.text ?? ""} onChange={(e) => set({ announce: { ...c.announce!, text: e.target.value } })} /></div>
             <div className="field"><label>Announcement link text</label><input value={c.announce?.cta ?? ""} onChange={(e) => set({ announce: { ...c.announce!, cta: e.target.value } })} /></div>
+            <div className="field"><label>Announcement link URL</label><input value={c.announce?.url ?? ""} onChange={(e) => set({ announce: { ...c.announce!, url: e.target.value } })} placeholder="https://… (where the link goes)" /></div>
             <div className="swrow"><span className="nm">Floating chat button</span><Switch on={!!c.whatsapp?.on} onClick={() => set({ whatsapp: { ...c.whatsapp!, on: !c.whatsapp?.on } })} /></div>
             <div className="ff"><div className="field" style={{ flex: ".4" }}><label>Icon</label><input value={c.whatsapp?.icon ?? ""} onChange={(e) => set({ whatsapp: { ...c.whatsapp!, icon: e.target.value } })} placeholder="💬" /></div><div className="field"><label>WhatsApp number</label><input value={c.whatsapp?.number ?? ""} onChange={(e) => set({ whatsapp: { ...c.whatsapp!, number: e.target.value } })} placeholder="+91…" /></div></div>
             <div className="field"><label>Button label (optional)</label><input value={c.whatsapp?.label ?? ""} onChange={(e) => set({ whatsapp: { ...c.whatsapp!, label: e.target.value } })} placeholder="Chat with us" /></div>
@@ -694,7 +695,8 @@ export default function WebsiteBuilder({
           <div className="sec">
             <h3>CTA band</h3>
             <div className="field"><label>Title</label><input value={c.ctaBand?.title ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, title: e.target.value } })} /></div>
-            <div className="field" style={{ marginBottom: 0 }}><label>Subtitle</label><input value={c.ctaBand?.sub ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, sub: e.target.value } })} /></div>
+            <div className="field"><label>Subtitle</label><input value={c.ctaBand?.sub ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, sub: e.target.value } })} /></div>
+            <div className="field" style={{ marginBottom: 0 }}><label>Button URL</label><input value={c.ctaBand?.url ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, url: e.target.value } })} placeholder="https://… (defaults to your main CTA link)" /></div>
           </div>
 
           {/* Contact */}

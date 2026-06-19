@@ -46,15 +46,16 @@ export async function POST(req: Request) {
 
   // Check seat availability if qty > 0 (unlimited = 0)
   if (tier.qty > 0) {
-    // Count existing issued tickets for this tier on this page
-    const { count } = await sb
+    // Sum qty across all non-cancelled ticket rows for this tier on this page.
+    // A single order can claim multiple seats (qty > 1), so row count would undercount.
+    const { data: sumRows } = await sb
       .from("event_tickets")
-      .select("*", { count: "exact", head: true })
+      .select("qty")
       .eq("page_id", page_id)
       .eq("tier_name", tier.name)
       .neq("status", "cancelled");
 
-    const taken = count ?? 0;
+    const taken = (sumRows ?? []).reduce((acc, r) => acc + (Number(r.qty) || 0), 0);
     if (taken + safeQty > tier.qty) {
       return NextResponse.json({ error: `Only ${tier.qty - taken} seat(s) left for ${tier.name}` }, { status: 409 });
     }

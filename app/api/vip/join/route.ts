@@ -89,9 +89,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, invite_link: inviteLink });
   }
 
-  // Insert member row
+  // Insert member row. supabase-js returns the error in the result rather than
+  // throwing, so we must inspect `error` explicitly — previously a CHECK
+  // violation (custom plan id) was silently ignored and the member was lost.
   try {
-    await admin.from("vip_members").insert({
+    const { error: insertErr } = await admin.from("vip_members").insert({
       page_id,
       store_id: page.store_id,
       buyer_email: buyer_email.toLowerCase().trim(),
@@ -102,8 +104,15 @@ export async function POST(req: Request) {
       order_id,
       expires_at: expiresAt,
     });
-  } catch {
+    if (insertErr) {
+      // Log so lost members are visible in server logs instead of vanishing.
+      // The buyer still gets their invite link (payment already succeeded),
+      // but we surface the failure for the operator to act on.
+      console.error("[vip/join] failed to record vip_members row:", insertErr.message);
+    }
+  } catch (e) {
     // Table may not exist yet — still return invite link so the buyer isn't stuck
+    console.error("[vip/join] vip_members insert threw:", e);
     return NextResponse.json({ ok: true, invite_link: inviteLink });
   }
 

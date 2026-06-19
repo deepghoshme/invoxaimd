@@ -33,11 +33,25 @@ export default async function EventsPage() {
         .eq("status", "paid");
       for (const o of orderRows ?? []) {
         revenue += o.amount ?? 0;
-        ticketsSold++;
-        if (o.page_id) ticketCountMap[o.page_id] = (ticketCountMap[o.page_id] ?? 0) + 1;
       }
     } catch {
       // graceful if orders table has issues
+    }
+
+    try {
+      // Sum qty per page from event_tickets so multi-ticket orders count correctly
+      const { data: ticketRows } = await sb
+        .from("event_tickets")
+        .select("page_id, qty")
+        .in("page_id", pageIds)
+        .neq("status", "cancelled");
+      for (const t of ticketRows ?? []) {
+        const n = Number(t.qty) || 0;
+        ticketsSold += n;
+        if (t.page_id) ticketCountMap[t.page_id] = (ticketCountMap[t.page_id] ?? 0) + n;
+      }
+    } catch {
+      // graceful if event_tickets table isn't present
     }
   }
 
@@ -119,7 +133,7 @@ export default async function EventsPage() {
                       {p.status === "published" ? <Live /> : <Tag kind="neu">Draft</Tag>}
                     </td>
                     <td>
-                      <a href={`/studio/event/${p.id}`}>Edit →</a>
+                      <a href={`/studio/event/${p.id}`} className="pt-edit-btn" target="_blank" rel="noreferrer">Edit</a>
                     </td>
                   </tr>
                 );

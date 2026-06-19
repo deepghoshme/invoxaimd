@@ -38,7 +38,11 @@ async function ctx() {
   return { sb, store };
 }
 
-const TPL = [{ name: "Aurora", sub: "Bio template" }, { name: "Sunset", sub: "Store template" }, { name: "Bloom", sub: "Landing template" }];
+const TPL = [
+  { name: "Aurora", sub: "Bio template", grad: "linear-gradient(135deg,#5eead4,#6366f1,#a855f7)" },
+  { name: "Sunset", sub: "Store template", grad: "linear-gradient(135deg,#ff8a4c,#ff5a7a,#ffd56b)" },
+  { name: "Bloom", sub: "Landing template", grad: "linear-gradient(135deg,#fb7185,#f472b6,#a3e635)" },
+];
 
 // ── Analytics page handler (also exported for the dedicated route) ────────────
 export async function analyticsPage(pgFilter?: string): Promise<React.ReactNode> {

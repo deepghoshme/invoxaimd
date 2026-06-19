@@ -81,6 +81,22 @@ export async function setProductVisible(id: string, visible: boolean): Promise<R
   return { ok: true };
 }
 
+/** Persist catalog display order. Writes sort = position for each id, scoped to
+ * the caller's own store (IDOR-safe). Kept separate from clean() because the
+ * edit modal doesn't carry a sort value and would otherwise reset it. */
+export async function reorderCatalogProducts(ids: string[]): Promise<Result> {
+  const guard = await assertNotImpersonating();
+  if (!guard.ok) return guard;
+  const { supabase, store } = await ownerStore();
+  if (!store) return { ok: false, error: "No store found." };
+  for (let i = 0; i < ids.length; i++) {
+    const { error } = await supabase.from("products").update({ sort: i }).eq("id", ids[i]).eq("store_id", store.id);
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath("/dashboard/store");
+  return { ok: true };
+}
+
 export async function deleteCatalogProduct(id: string): Promise<Result> {
   const guard = await assertNotImpersonating();
   if (!guard.ok) return guard;

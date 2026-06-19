@@ -88,6 +88,10 @@ export default function ProductTemplate({
   const seatsLeft = Math.max(0, seatsTotal - sold);
   const soldOut = content.seats_enabled && seatsTotal > 0 && seatsLeft <= 0;
   const cdAlign = content.countdown_align ?? "left";
+  // When the seller chose to lock purchases after the countdown ends, disable
+  // the buy action once the deadline has passed (server-rendered, same time
+  // source as the expired-countdown message below — no hydration mismatch).
+  const buyDisabled = !!content.countdown_disable_buy && cdEnd > 0 && cdEnd < Date.now();
 
   // Sold-out → contact button (custom URL/label/icon, else WhatsApp, else email)
   const waNum = (content.contact_whatsapp || "").replace(/[^0-9]/g, "");
@@ -115,6 +119,10 @@ export default function ProductTemplate({
     ) : (
       <button className="btn co-buy" disabled>Sold Out</button>
     )
+  ) : buyDisabled ? (
+    <button className="btn co-buy" disabled>
+      {content.countdown_expire_msg || "This offer has ended."}
+    </button>
   ) : (
     /* Web only: embedded checkout form (hidden on mobile via .co-web) */
     <div className="co-web">
@@ -322,7 +330,7 @@ export default function ProductTemplate({
 
       {/* Fixed bottom buy bar — same design web + mobile, shows price + offer + % off.
           Web scrolls to the inline form; mobile creates the order (form is hidden). */}
-      {!preview && !soldOut && hasPrice && (
+      {!preview && !soldOut && !buyDisabled && hasPrice && content.sticky_buy !== false && (
         <>
           <div className="float-web">
             <BuyBar label={ctaLabel} priceText={formatPrice(price, currency)} compareText={hasDiscount ? formatPrice(compareAt, currency) : undefined} off={pctOff} mode="scroll" targetId="prod-checkout" reveal />

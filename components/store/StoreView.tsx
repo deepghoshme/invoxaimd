@@ -16,6 +16,8 @@ export default function StoreView({
   const [cart, setCart] = useState<Record<string, number>>({});
   const [wish, setWish] = useState<Record<string, boolean>>({});
   const [drawer, setDrawer] = useState<"none" | "cart" | "acct">("none");
+  const [buyQty, setBuyQty] = useState(1);
+  const [cartMsg, setCartMsg] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // auto-advance the banner + top-selling carousels
@@ -162,7 +164,7 @@ export default function StoreView({
         {c.announce?.on && <div className="annbar">{c.announce.text}</div>}
         <div className="stopbar">
           <div className="slogo">{logo}</div>
-          <div className="smenu">{(c.menu ?? []).map((mm, i) => <a key={i}>{mm}</a>)}</div>
+          <div className="smenu">{(c.menu ?? []).map((mm, i) => <a key={i} href={`#${String(mm).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}>{mm}</a>)}</div>
           <button className="acctbtn" onClick={() => setDrawer("acct")}>👤 Login</button>
           <button className="carticon" onClick={() => setDrawer("cart")}>🛒{cartCount > 0 && <span className="cbadge">{cartCount}</span>}</button>
         </div>
@@ -202,7 +204,20 @@ export default function StoreView({
                   }) : <div className="cdempty"><div className="e">🛒</div><p>Your cart is empty</p></div>}</div>
                   <div className="cdfoot">
                     <div className="sub"><span>Subtotal</span><b>{inr(subtotal)}</b></div>
-                    <button className="checkout" onClick={() => { const first = Object.keys(cart).find((id) => cart[id] > 0); const p = first ? items.find((x) => x.id === first) : null; if (p?.buyable) go(p); else if (p?.url) window.location.href = p.url; }}>Checkout · {inr(subtotal)}</button>
+                    {cartMsg && <div className="alert alert-error" style={{ margin: "0 0 8px" }}>{cartMsg}</div>}
+                    {/* Checkout is single-product (one order = one product). If the
+                        cart has multiple distinct products we ask the buyer to
+                        check out one at a time rather than silently charging only
+                        the first. The selected product's quantity is passed through. */}
+                    <button className="checkout" onClick={() => {
+                      const ids = Object.keys(cart).filter((id) => cart[id] > 0);
+                      if (!ids.length) return;
+                      if (ids.length > 1) { setCartMsg("You can check out one product at a time — please remove the extra items."); return; }
+                      const p = items.find((x) => x.id === ids[0]);
+                      setCartMsg(null);
+                      if (p?.buyable) { if (stage) { setBuyQty(cart[ids[0]]); setDrawer("none"); setBuyP(p); } }
+                      else if (p?.url && p.url !== "#") window.location.href = p.url;
+                    }}>Checkout · {inr(subtotal)}</button>
                   </div>
                 </>
               ) : (
@@ -222,7 +237,7 @@ export default function StoreView({
             </div>
           </div>
         )}
-        {buyP && <StoreCheckout product={buyP} storeName={c.store || "Store"} payEnabled={payEnabled} onClose={() => setBuyP(null)} />}
+        {buyP && <StoreCheckout product={buyP} storeName={c.store || "Store"} payEnabled={payEnabled} qty={buyQty} onClose={() => setBuyP(null)} />}
       </div>
     </div>
   );

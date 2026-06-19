@@ -32,7 +32,7 @@ export default async function StorePage() {
       <Kpis items={[
         { icon: "eye", color: "var(--primary)", label: "Total views", value: views.toLocaleString("en-IN") },
         { icon: "bag", color: "var(--secondary)", label: "In store", value: String(visibleCount) },
-        { icon: "link", color: "var(--green)", label: "Card clicks", value: clicks.toLocaleString("en-IN") },
+        { icon: "link", color: "var(--green)", label: "Cart clicks", value: clicks.toLocaleString("en-IN") },
         { icon: "chart", color: "var(--accent)", label: "Status", value: published ? "Live" : "Draft" },
       ]} />
       <div className="dx-grid dx-cols">

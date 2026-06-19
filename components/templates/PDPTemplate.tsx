@@ -66,6 +66,8 @@ export default function PDPTemplate({
   const seatsLeft = Math.max(0, seatsTotal - sold);
   const soldOut = content.seats_enabled && seatsTotal > 0 && seatsLeft <= 0;
   const lowStock = seatsTotal > 0 && seatsLeft > 0 && seatsLeft <= 5;
+  // Lock purchases after the countdown ends, when the seller opted in.
+  const buyDisabled = !!content.countdown_disable_buy && cdEnd > 0 && cdEnd < Date.now();
   const trust = (content.badges ?? []).filter(Boolean);
 
   const th = resolveOppTheme(content.theme);
@@ -130,7 +132,11 @@ export default function PDPTemplate({
             </div>
           )}
           {ptype === "digital" && (content.digital?.file || content.digital?.url) && <div className="pdp-deliv" style={{ marginBottom: 0 }}><div className="dl">⚡ Instant digital delivery — access {content.digital?.kind === "url" ? "link" : "file"} after purchase</div></div>}
-          <div className="pdp-buy" id="pdp-buy"><InlineCheckout key={plan} pageId={pageId} amount={buyAmount} currency={currency} storeName={storeName} productTitle={selPlan ? `${title} — ${selPlan.label}` : title} ctaLabel={content.cta_label || (ptype === "subscription" ? "Subscribe" : "Buy now")} payEnabled={payEnabled} preview={preview} /></div>
+          <div className="pdp-buy" id="pdp-buy">{buyDisabled ? (
+            <button className="btn co-buy" disabled>{content.countdown_expire_msg || "This offer has ended."}</button>
+          ) : (
+            <InlineCheckout key={plan} pageId={pageId} amount={buyAmount} currency={currency} storeName={storeName} productTitle={selPlan ? `${title} — ${selPlan.label}` : title} ctaLabel={content.cta_label || (ptype === "subscription" ? "Subscribe" : "Buy now")} payEnabled={payEnabled} preview={preview} />
+          )}</div>
           {trust.length > 0 && <div className="pdp-trust">{trust.map((b, i) => <span key={i}>✓ {b}</span>)}</div>}
         </div>
       </div>
@@ -200,7 +206,7 @@ export default function PDPTemplate({
         )}
       </footer>
 
-      {!preview && !soldOut && price > 0 && (
+      {!preview && !soldOut && !buyDisabled && price > 0 && content.sticky_buy !== false && (
         <BuyBar
           label={content.cta_label || (ptype === "subscription" ? "Subscribe" : "Buy now")}
           priceText={formatPrice(buyPrice, currency)}

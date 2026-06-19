@@ -97,13 +97,13 @@ export type WebsiteContent = {
   vidW?: number; // video max width (px)
   contactStyle?: string; // contact page layout (see CONTACT_STYLES)
   about?: { img?: string; title: string; text: string };
-  ctaBand?: { title: string; sub: string };
+  ctaBand?: { title: string; sub: string; url?: string };
   news?: { title: string; sub: string; btn: string };
   // contact + add-ons
   email?: string;
   phone?: string;
   city?: string;
-  announce?: { on: boolean; text: string; cta: string };
+  announce?: { on: boolean; text: string; cta: string; url?: string };
   whatsapp?: { on: boolean; number: string; label?: string; link?: string; icon?: string };
   cookie?: { on: boolean };
   backTop?: boolean; // floating back-to-top button

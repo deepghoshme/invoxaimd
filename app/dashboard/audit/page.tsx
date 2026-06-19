@@ -110,7 +110,7 @@ export default async function SellerAuditPage() {
   return (
     <>
       <Phead
-        title="Activity Log"
+        title="Audit log"
         sub="Admin actions on your store — newest first"
       />
 

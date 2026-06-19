@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getStoreCatalog } from "@/lib/sites";
+import { formatPrice } from "@/lib/products";
 import StoreBuilder from "@/components/store/StoreBuilder";
-import { DEFAULT_STORE, STORE_SECTIONS, type StoreContent } from "@/lib/store";
+import { DEFAULT_STORE, STORE_SECTIONS, type StoreContent, type StoreProduct } from "@/lib/store";
 import "../../dashboard/dx.css";
 import "../../website.css";
 import "../../store.css";
@@ -29,6 +31,28 @@ export default async function StudioStore() {
 
   const publicUrl = store.subdomain ? `https://${store.subdomain}.invoxai.io` : null;
 
+  // The seller's real catalog products, so the builder preview shows the actual
+  // store instead of placeholder samples. buyable:false → preview won't open a
+  // live checkout from inside the builder.
+  const catalog = await getStoreCatalog(store.id);
+  const initialProducts: StoreProduct[] = catalog.map((r) => {
+    const price = r.price != null ? Number(r.price) : undefined;
+    const currency = (r.currency as string) || "INR";
+    return {
+      id: String(r.id),
+      name: (r.name as string) || "Product",
+      cat: (r.category as string) || "Shop",
+      price: price != null ? formatPrice(price, currency) : "",
+      compareAt: r.compare_at_price != null ? formatPrice(Number(r.compare_at_price), currency) : "",
+      img: (r.image as string) || (Array.isArray(r.gallery) ? (r.gallery as string[])[0] : "") || "",
+      badge: (r.badge as string) || undefined,
+      url: `/p/${r.id}`,
+      priceNum: price,
+      currency,
+      buyable: false,
+    };
+  });
+
   return (
     <div className="dx studio" style={{ background: "var(--bg)" }}>
       <div className="studio-bar">
@@ -36,7 +60,7 @@ export default async function StudioStore() {
         <a className="studio-exit" href="/dashboard/store">Exit ✕</a>
       </div>
       <div className="studio-wrap">
-        <StoreBuilder initial={content} publicUrl={publicUrl} initialStatus={page?.status ?? "draft"} />
+        <StoreBuilder initial={content} publicUrl={publicUrl} initialStatus={page?.status ?? "draft"} initialProducts={initialProducts} />
       </div>
     </div>
   );

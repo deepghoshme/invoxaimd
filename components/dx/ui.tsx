@@ -156,12 +156,12 @@ export function Buyer({ emoji, name }: { emoji: string; name: string }) {
   );
 }
 
-export function Templates({ items }: { items: { name: string; sub: string }[] }) {
+export function Templates({ items }: { items: { name: string; sub: string; grad?: string }[] }) {
   return (
     <div className="dx-grid dx-g3" style={{ gap: 12, marginTop: 4 }}>
       {items.map((t) => (
         <div className="dx-tmpl" key={t.name}>
-          <div className="thumb" />
+          <div className="thumb" style={t.grad ? { backgroundImage: t.grad } : undefined} />
           <div className="mt">
             <b>{t.name}</b>
             <div className="u">{t.sub}</div>
@@ -205,7 +205,7 @@ export function LineChart() {
 export function PageType({
   title, sub, kpis, cols, rows, templates = [{ name: "Aurora", sub: "Premium template" }, { name: "Sunset", sub: "Premium template" }, { name: "Bloom", sub: "Premium template" }],
 }: {
-  title: string; sub: string; kpis: Kpi[]; cols: string[]; rows: React.ReactNode[][]; templates?: { name: string; sub: string }[];
+  title: string; sub: string; kpis: Kpi[]; cols: string[]; rows: React.ReactNode[][]; templates?: { name: string; sub: string; grad?: string }[];
 }) {
   return (
     <>

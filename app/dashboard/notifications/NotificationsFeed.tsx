@@ -41,6 +41,17 @@ function iconStyle(cat: NotifItem["cat"], warn?: boolean): { bg: string; color: 
   }
 }
 
+/** Fallback emoji when a notification row has no icon, so the thumbnail badge
+ * is never blank (e.g. the "New message" notif). */
+function fallbackIcon(cat: NotifItem["cat"]): string {
+  switch (cat) {
+    case "money":   return "💰";
+    case "reviews": return "⭐";
+    case "system":  return "⚙️";
+    default:        return "💬";
+  }
+}
+
 const LS_KEY = "invox_notif_read";
 
 function loadRead(): Set<string> {
@@ -162,7 +173,7 @@ export default function NotificationsFeed({
               >
                 {isUnread && <span className="nt-dot" />}
                 <span className="nt-ic" style={{ background: bg, color }}>
-                  {n.icon}
+                  {n.icon || fallbackIcon(n.cat)}
                 </span>
                 <div className="nt-bd">
                   <div className="nt-title">{n.title}</div>
@@ -188,8 +199,10 @@ export default function NotificationsFeed({
 
       <style>{`
         .nt-page {
-          max-width: 720px;
-          margin: 0 auto;
+          /* Full width to match every other dashboard page (was capped at 720px
+             and centered, which read as inconsistent). */
+          max-width: none;
+          margin: 0;
           padding-bottom: 60px;
         }
         .nt-phead {

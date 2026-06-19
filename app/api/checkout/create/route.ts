@@ -27,6 +27,10 @@ export async function POST(req: Request) {
     qty?: number;
     variant?: string;
     coupon_code?: string;
+    // Passed by booking flow so the order row carries the buyer's identity,
+    // enabling precise booking confirmation at verify time.
+    buyer_email?: string;
+    buyer_name?: string;
   };
   try {
     body = await req.json();
@@ -127,13 +131,22 @@ export async function POST(req: Request) {
   if (!page || page.status !== "published") {
     return NextResponse.json({ error: "Product not available" }, { status: 404 });
   }
-  if (page.page_type !== "opp") {
+  if (page.page_type !== "opp" && page.page_type !== "course" && page.page_type !== "booking") {
     return NextResponse.json({ error: "Unsupported page type" }, { status: 400 });
   }
 
-  const content = (page.content ?? {}) as OppContent;
-  const currency = (content.currency || DEFAULT_CURRENCY).toUpperCase();
-  const originalAmount = toMinorUnit(content.price ?? 0, currency);
+  // ── Read price from DB (never trust client-sent amounts) ───────────────────
+  // All three supported page types store their price in content.price (major
+  // currency units, e.g. rupees). BookingContent also has is_free; honour it.
+  const content = (page.content ?? {}) as OppContent & { is_free?: boolean };
+  const currency = ((content.currency as string | undefined) || DEFAULT_CURRENCY).toUpperCase();
+
+  // Booking-specific: is_free flag overrides the price field.
+  if (page.page_type === "booking" && content.is_free === true) {
+    return NextResponse.json({ error: "This session is free — no checkout needed" }, { status: 400 });
+  }
+
+  const originalAmount = toMinorUnit((content.price as number | undefined) ?? 0, currency);
   if (originalAmount <= 0) {
     return NextResponse.json({ error: "This product has no price set" }, { status: 400 });
   }
@@ -159,11 +172,22 @@ export async function POST(req: Request) {
   }
 
   const rate = await getStoreCommissionRate(page.store_id);
+  // Derive a human-readable product title across all supported page types.
+  const productTitle =
+    (content as Record<string, unknown>).headline as string | undefined
+    || (content as Record<string, unknown>).title as string | undefined
+    || page.title
+    || "Product";
+
+  // Optional buyer identity (provided by the booking flow; ignored for opp/course).
+  const buyerEmail = typeof body.buyer_email === "string" ? body.buyer_email.trim().slice(0, 300) || null : null;
+  const buyerName  = typeof body.buyer_name  === "string" ? body.buyer_name.trim().slice(0, 200)  || null : null;
+
   const order = await createOrderRecord({
     store_id: page.store_id,
     page_id: page.id,
     page_type: page.page_type,
-    product_title: content.headline || page.title || "Product",
+    product_title: productTitle,
     amount: finalAmount,
     currency,
     commission_rate: rate,
@@ -171,6 +195,8 @@ export async function POST(req: Request) {
     coupon_code: appliedCouponCode,
     discount_paise: discountPaise > 0 ? discountPaise : null,
     original_amount_paise: discountPaise > 0 ? originalAmount : null,
+    ...(buyerEmail ? { buyer_email: buyerEmail } : {}),
+    ...(buyerName  ? { buyer_name:  buyerName  } : {}),
   });
 
   if (!order) return NextResponse.json({ error: "Could not create order" }, { status: 500 });
