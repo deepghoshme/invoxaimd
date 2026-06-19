@@ -37,6 +37,8 @@ import EventView from "@/components/event/EventView";
 import { type EventContent } from "@/lib/event";
 import VipView from "@/components/vip/VipView";
 import { type VipContent } from "@/lib/vip";
+import LeadFormView from "@/components/leadform/LeadFormView";
+import { type LeadFormContent } from "@/lib/leadform";
 import "../../../bio.css";
 import "../../../website.css";
 import "../../../store.css";
@@ -309,6 +311,19 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
       <>
         <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
         <VipView content={page.content as VipContent} pageId={page.id} storeName={store.store_name ?? "Store"} memberCount={memberCount} payEnabled={payEnabled} stage={false} />
+      </>
+    );
+  }
+
+  if (page.page_type === "ldf") {
+    return (
+      <>
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
+        <LeadFormView
+          content={page.content as LeadFormContent}
+          pageId={page.id}
+          storeId={store.id}
+        />
       </>
     );
   }
