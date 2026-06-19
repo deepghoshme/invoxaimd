@@ -131,8 +131,10 @@ export async function analyticsPage(pgFilter?: string): Promise<React.ReactNode>
     .filter((o) => o.status === "paid")
     .reduce((s, o) => s + (o.amount ?? 0), 0);
 
-  const ctr = views ? `${((clicks / views) * 100).toFixed(1)}%` : "0%";
-  const convRate = views ? `${((ordersPaid / views) * 100).toFixed(1)}%` : "0%";
+  // A view can generate several link clicks, so clicks/views can exceed 1 — but a
+  // click-through *rate* can't exceed 100%, so cap it to stay a valid percentage.
+  const ctr = views ? `${Math.min(100, (clicks / views) * 100).toFixed(1)}%` : "0%";
+  const convRate = views ? `${Math.min(100, (ordersPaid / views) * 100).toFixed(1)}%` : "0%";
 
   // 5. 14-day daily bar chart
   const chartPoints14: number[] = [];
