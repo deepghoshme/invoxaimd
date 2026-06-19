@@ -1,6 +1,7 @@
 import { requireDashboardStore } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Phead } from "@/components/dx/ui";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,17 @@ function ActionPill({ action }: { action: string }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function SellerAuditPage() {
+const PAGE_SIZE = 50;
+
+export default async function SellerAuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   // requireDashboardStore honors impersonation — returns the active store.
   const { store } = await requireDashboardStore();
   const storeId = store.id;
@@ -78,17 +89,19 @@ export default async function SellerAuditPage() {
   const sb = createAdminClient();
 
   let rows: AuditRow[] = [];
+  let total = 0;
   let tableMissing = false;
 
   try {
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from("audit_log")
       .select(
         "id, actor_email, actor_role, action, target_type, target_id, metadata, created_at",
+        { count: "exact" },
       )
       .eq("store_id", storeId)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
       if (
@@ -102,6 +115,7 @@ export default async function SellerAuditPage() {
       }
     } else {
       rows = (data ?? []) as AuditRow[];
+      total = count ?? 0;
     }
   } catch {
     tableMissing = true;
@@ -234,16 +248,7 @@ export default async function SellerAuditPage() {
             </table>
           </div>
 
-          <div
-            style={{
-              padding: "8px 16px",
-              fontSize: 12,
-              color: "var(--muted)",
-              borderTop: "1px solid var(--border)",
-            }}
-          >
-            Showing {rows.length} most recent entries for your store
-          </div>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} baseParams={sp} />
         </div>
       )}
     </>

@@ -2,10 +2,21 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import TeamClient, { type AdminMember } from "./TeamClient";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminTeamPage() {
+const PAGE_SIZE = 50;
+
+export default async function AdminTeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   // ── Auth: verify caller is admin ─────────────────────────────────────────
   // The layout already guards this route, but we re-check here so this page
   // is safe even if accessed via a direct server fetch (belt + suspenders).
@@ -27,17 +38,19 @@ export default async function AdminTeamPage() {
   // regardless of whose profile they belong to.
   const sb = createAdminClient();
 
-  const { data: adminRoles, error: rolesErr } = await sb
+  const { data: adminRoles, error: rolesErr, count: adminCount } = await sb
     .from("user_roles")
-    .select("user_id, created_at")
+    .select("user_id, created_at", { count: "exact" })
     .eq("role", "admin")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .range(offset, offset + PAGE_SIZE - 1);
 
   if (rolesErr) {
     console.error("[admin/team] Failed to load admin roles:", rolesErr.message);
   }
 
   const rows = adminRoles ?? [];
+  const memberTotal = adminCount ?? 0;
 
   // Fetch profiles for all admin user_ids in one query.
   const adminIds = rows.map((r) => r.user_id as string);
@@ -69,5 +82,12 @@ export default async function AdminTeamPage() {
     };
   });
 
-  return <TeamClient members={members} currentUserId={user.id} />;
+  return (
+    <>
+      <TeamClient members={members} currentUserId={user.id} />
+      {memberTotal > PAGE_SIZE && (
+        <Pagination page={page} pageSize={PAGE_SIZE} total={memberTotal} baseParams={sp} />
+      )}
+    </>
+  );
 }

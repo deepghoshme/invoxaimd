@@ -2,6 +2,7 @@ import { Phead, Card, Table, Tag, Live } from "@/components/dx/ui";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDomainPricing } from "./actions";
 import DomainPricingForm from "./DomainPricingForm";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,17 @@ type DomainRow = {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function AdminDomainsPage() {
+const PAGE_SIZE = 50;
+
+export default async function AdminDomainsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   // Use admin client so the admin can see ALL custom_domains (owner-only RLS
   // would otherwise restrict to the admin's own stores).
   const sb = createAdminClient();
@@ -25,12 +36,14 @@ export default async function AdminDomainsPage() {
   const [domainsRes, pricing] = await Promise.all([
     sb
       .from("custom_domains")
-      .select("id, domain, status, created_at, stores(store_name, subdomain)")
-      .order("created_at", { ascending: false }),
+      .select("id, domain, status, created_at, stores(store_name, subdomain)", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1),
     getDomainPricing(),
   ]);
 
   const domains = (domainsRes.data ?? []) as unknown as DomainRow[];
+  const domainTotal = domainsRes.count ?? 0;
 
   // Status badge
   const statusBadge = (status: string) => {
@@ -54,7 +67,7 @@ export default async function AdminDomainsPage() {
     ];
   });
 
-  // Status summary counts
+  // Status summary counts (current page only — for display convenience)
   const statusCounts = domains.reduce<Record<string, number>>((acc, d) => {
     acc[d.status] = (acc[d.status] ?? 0) + 1;
     return acc;
@@ -67,7 +80,7 @@ export default async function AdminDomainsPage() {
     <>
       <Phead
         title="Domains & subdomains"
-        sub={`${domains.length} custom domain${domains.length !== 1 ? "s" : ""} connected across all stores.`}
+        sub={`${domainTotal} custom domain${domainTotal !== 1 ? "s" : ""} connected across all stores.`}
       />
 
       <div className="dx-grid dx-cols" style={{ alignItems: "start" }}>
@@ -95,6 +108,7 @@ export default async function AdminDomainsPage() {
             rows={rows}
             empty="No custom domains connected yet."
           />
+          <Pagination page={page} pageSize={PAGE_SIZE} total={domainTotal} baseParams={sp} />
         </Card>
 
         {/* Right: pricing editor */}

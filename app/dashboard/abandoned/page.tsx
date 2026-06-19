@@ -1,42 +1,53 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card } from "@/components/dx/ui";
+import Pagination from "@/components/dx/Pagination";
+import AbandonedClient, { type AbandonedOrder } from "./AbandonedClient";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
 
 function inr(paise: number) {
   return "₹" + Math.round(paise / 100).toLocaleString("en-IN");
 }
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" });
-}
 
-export default async function AbandonedCartPage() {
+export default async function AbandonedCartPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   const { store } = await requireDashboardStore();
   const sb = createAdminClient();
 
   // "Abandoned" = orders with status = 'created' (started but not paid)
   // These ARE in the DB right now — no separate table needed.
-  const { data: abandonedRows } = await sb
+  const { data: abandonedRows, count: abandonedCount } = await sb
     .from("orders")
-    .select("id, buyer_name, buyer_email, buyer_phone, product_title, amount, status, created_at")
+    .select(
+      "id, buyer_name, buyer_email, buyer_phone, product_title, amount, status, created_at",
+      { count: "exact" },
+    )
     .eq("store_id", store.id)
     .eq("status", "created")
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(offset, offset + PAGE_SIZE - 1);
 
-  const abandoned = (abandonedRows ?? []) as {
-    id: string;
-    buyer_name: string | null;
-    buyer_email: string | null;
-    buyer_phone: string | null;
-    product_title: string | null;
-    amount: number;
-    status: string;
-    created_at: string;
-  }[];
+  const abandoned = (abandonedRows ?? []) as AbandonedOrder[];
+  const totalAbandoned = abandonedCount ?? 0;
 
-  const totalValue = abandoned.reduce((s, o) => s + (o.amount ?? 0), 0);
+  // For KPIs: total lost value requires sum of all abandoned (not just current page).
+  // Fetch lightweight amount-only for the full set.
+  const { data: allAmounts } = await sb
+    .from("orders")
+    .select("amount")
+    .eq("store_id", store.id)
+    .eq("status", "created");
+  const totalValue = (allAmounts ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
 
   // For recovery rate: compare abandoned vs paid
   const { data: paidRows } = await sb
@@ -45,7 +56,7 @@ export default async function AbandonedCartPage() {
     .eq("store_id", store.id)
     .eq("status", "paid");
   const paidCount = (paidRows ?? []).length;
-  const totalStarted = abandoned.length + paidCount;
+  const totalStarted = totalAbandoned + paidCount;
   const recoveryRate = totalStarted > 0
     ? `${((paidCount / totalStarted) * 100).toFixed(1)}%`
     : "0%";
@@ -63,7 +74,7 @@ export default async function AbandonedCartPage() {
             icon: "cart",
             color: "var(--primary)",
             label: "Abandoned",
-            value: abandoned.length.toLocaleString("en-IN"),
+            value: totalAbandoned.toLocaleString("en-IN"),
           },
           {
             icon: "rupee",
@@ -110,51 +121,20 @@ export default async function AbandonedCartPage() {
         .ab-coming b { display: block; color: var(--text); margin-bottom: 4px; }
       `}</style>
 
-      {abandoned.length > 0 && (
+      {totalAbandoned > 0 && (
         <div className="ab-recovery-note">
           <b>Recovery opportunity: {inr(totalValue)}</b>
-          {abandoned.length} checkout{abandoned.length !== 1 ? "s" : ""} started but not completed.
+          {totalAbandoned} checkout{totalAbandoned !== 1 ? "s" : ""} started but not completed.
           Follow up via email or WhatsApp to recover these sales.
         </div>
       )}
 
       <div className="dx-grid dx-cols">
         <div>
-          <Card title={`Abandoned checkouts (${abandoned.length})`}>
-            {abandoned.length === 0 ? (
-              <div className="ab-empty">
-                No abandoned checkouts — all started orders were completed.
-              </div>
-            ) : (
-              <table className="ab-table">
-                <thead>
-                  <tr>
-                    <th>Buyer</th>
-                    <th>Product</th>
-                    <th>Amount</th>
-                    <th>Started</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {abandoned.map((o) => (
-                    <tr key={o.id}>
-                      <td>
-                        <b style={{ display: "block", fontWeight: 600 }}>
-                          {o.buyer_name || "Guest"}
-                        </b>
-                        <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
-                          {o.buyer_email || o.buyer_phone || "—"}
-                        </span>
-                      </td>
-                      <td>{o.product_title || "—"}</td>
-                      <td style={{ fontWeight: 700 }}>{inr(o.amount)}</td>
-                      <td style={{ fontSize: 12, color: "var(--muted)" }}>
-                        {fmtDate(o.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <Card title={`Abandoned checkouts (${totalAbandoned})`}>
+            <AbandonedClient abandoned={abandoned} />
+            {totalAbandoned > PAGE_SIZE && (
+              <Pagination page={page} pageSize={PAGE_SIZE} total={totalAbandoned} baseParams={sp} />
             )}
           </Card>
         </div>

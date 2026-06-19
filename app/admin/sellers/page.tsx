@@ -1,11 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Phead, Kpis, Card, Table, Tag, Live } from "@/components/dx/ui";
 import ExportButton from "@/components/dx/ExportButton";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
 const inr = (paise: number) =>
   "₹" + Math.round(paise / 100).toLocaleString("en-IN");
+
+const PAGE_SIZE = 50;
 
 /** Small avatar with gradient background showing first initial. */
 function SellerAvatar({ name }: { name: string }) {
@@ -72,15 +75,21 @@ function ActionBtn({
 export default async function SellersAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { filter = "all" } = await searchParams;
+  const sp = await searchParams;
+  const { filter = "all" } = sp;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   const sb = createAdminClient();
 
   // ── data fetch ────────────────────────────────────────────────────────────
   // Join stores → profiles (owner) → business_categories for plan/category.
   // Orders per store for GMV — one round-trip using .select() then grouping
   // in JS (no DB aggregation on this Supabase tier).
+  // NOTE: stores are fetched unbounded (limit 200) because GMV sort requires
+  // all rows in memory. Pagination is applied to the filtered array output.
   const [
     { data: stores },
     { data: paidOrders },
@@ -155,7 +164,11 @@ export default async function SellersAdminPage({
       ? sorted.filter((s) => !s.subdomain)
       : sorted;
 
-  // ── CSV export data (plain values, reflects the current filter) ────────────
+  const filteredTotal = filtered.length;
+  // Paginate the filtered array (GMV sort requires all data in memory)
+  const paginated = filtered.slice(offset, offset + PAGE_SIZE);
+
+  // ── CSV export data (plain values, reflects the current filter, all pages) ─
   const exportRows = filtered.map((s) => {
     const profile = profileMap[s.owner_id];
     const billing = s.billing as Record<string, unknown> | null;
@@ -172,8 +185,8 @@ export default async function SellersAdminPage({
     ] as (string | number | null)[];
   });
 
-  // ── table rows ────────────────────────────────────────────────────────────
-  const rows = filtered.map((s) => {
+  // ── table rows (current page only) ───────────────────────────────────────
+  const rows = paginated.map((s) => {
     const profile = profileMap[s.owner_id];
     const displayName = s.store_name || profile?.email || s.subdomain || "—";
     const ownerEmail = profile?.email ?? "—";
@@ -344,6 +357,7 @@ export default async function SellersAdminPage({
           rows={rows}
           empty="No sellers yet."
         />
+        <Pagination page={page} pageSize={PAGE_SIZE} total={filteredTotal} baseParams={sp} />
       </Card>
 
       <p

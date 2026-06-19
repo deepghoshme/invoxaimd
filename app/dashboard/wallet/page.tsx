@@ -2,8 +2,11 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead } from "@/components/dx/ui";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
 
 /** Format paise → ₹X,XX,XXX display string */
 function inrFromPaise(paise: number): string {
@@ -15,7 +18,15 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
-export default async function WalletPage() {
+export default async function WalletPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   // requireDashboardStore resolves the correct store under impersonation.
   const { store: baseStore } = await requireDashboardStore();
 
@@ -37,7 +48,7 @@ export default async function WalletPage() {
   const balance = migrationPending ? 0 : Number((store as Record<string, unknown> | null)?.wallet_balance ?? 0);
   const isLow = balance < 50000; // below ₹500
 
-  // Load recent ledger (last 20 entries)
+  // Load recent ledger (paginated, 50/page)
   type LedgerRow = {
     id: string;
     type: string;
@@ -49,15 +60,19 @@ export default async function WalletPage() {
   };
 
   let ledger: LedgerRow[] = [];
+  let ledgerTotal = 0;
   if (!migrationPending && store) {
-    const { data: rows, error: ledgerError } = await admin
+    const { data: rows, error: ledgerError, count } = await admin
       .from("wallet_ledger")
-      .select("id, type, amount, reason, gateway_payment_id, created_at, balance_after")
+      .select("id, type, amount, reason, gateway_payment_id, created_at, balance_after", { count: "exact" })
       .eq("store_id", store.id)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .range(offset, offset + PAGE_SIZE - 1);
 
-    if (!ledgerError) ledger = (rows ?? []) as LedgerRow[];
+    if (!ledgerError) {
+      ledger = (rows ?? []) as LedgerRow[];
+      ledgerTotal = count ?? 0;
+    }
   }
 
   return (
@@ -185,32 +200,35 @@ export default async function WalletPage() {
               : "No transactions yet. Recharge to get started."}
           </div>
         ) : (
-          ledger.map((row) => {
-            const label =
-              row.reason === "recharge"
-                ? "Recharge"
-                : row.reason === "recharge_bonus"
-                  ? "Recharge bonus"
-                  : row.reason === "commission"
-                    ? "Commission"
-                    : row.reason;
-            const sub = row.gateway_payment_id
-              ? `${fmtDate(row.created_at)} · Razorpay`
-              : fmtDate(row.created_at);
-            const sign = row.type === "credit" ? "+" : "−";
-            return (
-              <div key={row.id} className="wr-ledrow-ov">
-                <span className={`ov-ic ${row.type}`}>{row.type === "credit" ? "↑" : "↓"}</span>
-                <div className="ov-meta">
-                  <b>{label}</b>
-                  <p>{sub}</p>
+          <>
+            {ledger.map((row) => {
+              const label =
+                row.reason === "recharge"
+                  ? "Recharge"
+                  : row.reason === "recharge_bonus"
+                    ? "Recharge bonus"
+                    : row.reason === "commission"
+                      ? "Commission"
+                      : row.reason;
+              const sub = row.gateway_payment_id
+                ? `${fmtDate(row.created_at)} · Razorpay`
+                : fmtDate(row.created_at);
+              const sign = row.type === "credit" ? "+" : "−";
+              return (
+                <div key={row.id} className="wr-ledrow-ov">
+                  <span className={`ov-ic ${row.type}`}>{row.type === "credit" ? "↑" : "↓"}</span>
+                  <div className="ov-meta">
+                    <b>{label}</b>
+                    <p>{sub}</p>
+                  </div>
+                  <span className={`ov-amt ${row.type}`}>
+                    {sign}₹{Math.round(row.amount / 100).toLocaleString("en-IN")}
+                  </span>
                 </div>
-                <span className={`ov-amt ${row.type}`}>
-                  {sign}₹{Math.round(row.amount / 100).toLocaleString("en-IN")}
-                </span>
-              </div>
-            );
-          })
+              );
+            })}
+            <Pagination page={page} pageSize={PAGE_SIZE} total={ledgerTotal} baseParams={sp} />
+          </>
         )}
       </div>
     </>

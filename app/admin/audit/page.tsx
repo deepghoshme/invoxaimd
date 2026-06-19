@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Phead } from "@/components/dx/ui";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -62,17 +63,24 @@ function ActionPill({ action }: { action: string }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 50;
+
 export default async function AdminAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ action?: string; type?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { action: filterAction, type: filterType } = await searchParams;
+  const sp = await searchParams;
+  const filterAction = sp.action;
+  const filterType = sp.type;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
 
   const sb = createAdminClient();
 
   // Degrade gracefully if the table doesn't exist yet.
   let rows: AuditRow[] = [];
+  let auditTotal = 0;
   let tableMissing = false;
 
   try {
@@ -80,14 +88,15 @@ export default async function AdminAuditPage({
       .from("audit_log")
       .select(
         "id, actor_email, actor_role, action, target_type, target_id, store_id, metadata, created_at",
+        { count: "exact" },
       )
       .order("created_at", { ascending: false })
-      .limit(200);
+      .range(offset, offset + PAGE_SIZE - 1);
 
     if (filterAction) q = q.eq("action", filterAction);
     if (filterType)   q = q.eq("target_type", filterType);
 
-    const { data, error } = await q;
+    const { data, error, count } = await q;
 
     if (error) {
       if (
@@ -101,6 +110,7 @@ export default async function AdminAuditPage({
       }
     } else {
       rows = (data ?? []) as AuditRow[];
+      auditTotal = count ?? 0;
     }
   } catch {
     tableMissing = true;
@@ -331,17 +341,7 @@ export default async function AdminAuditPage({
                 </table>
               </div>
 
-              <div
-                style={{
-                  padding: "8px 16px",
-                  fontSize: 12,
-                  color: "var(--muted)",
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                Showing {rows.length} most recent entries
-                {(filterAction || filterType) && " (filtered)"}
-              </div>
+              <Pagination page={page} pageSize={PAGE_SIZE} total={auditTotal} baseParams={sp} />
             </div>
           )}
         </>

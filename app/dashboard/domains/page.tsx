@@ -2,24 +2,40 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis, Card, Tag, Live } from "@/components/dx/ui";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function DomainsPage() {
+const PAGE_SIZE = 50;
+
+export default async function DomainsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   // requireDashboardStore's base select includes custom_domain, custom_domain_verified,
   // primary_domain — all fields this page needs from the store row.
   const { store } = await requireDashboardStore();
 
-  // Fetch custom_domains table if it exists
+  // Fetch custom_domains table if it exists (paginated)
   let customDomains: { domain: string; status: string; created_at: string }[] = [];
+  let domainTotal = 0;
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin
+    const { data, error, count } = await admin
       .from("custom_domains")
-      .select("domain, status, created_at")
+      .select("domain, status, created_at", { count: "exact" })
       .eq("store_id", store.id)
-      .order("created_at", { ascending: false });
-    if (!error && data) customDomains = data;
+      .order("created_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (!error && data) {
+      customDomains = data;
+      domainTotal = count ?? 0;
+    }
   } catch {}
 
   const subdomain = store.subdomain;
@@ -206,21 +222,26 @@ export default async function DomainsPage() {
                 No custom domains configured yet.
               </div>
             ) : (
-              <div className="dom-hist">
-                {customDomains.map((d, i) => (
-                  <div key={i} className="dom-histrow">
-                    <b>{d.domain}</b>
-                    {d.status === "active" ? (
-                      <Live />
-                    ) : (
-                      <Tag kind="pend">{d.status}</Tag>
-                    )}
-                    <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
-                      {new Date(d.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className="dom-hist">
+                  {customDomains.map((d, i) => (
+                    <div key={i} className="dom-histrow">
+                      <b>{d.domain}</b>
+                      {d.status === "active" ? (
+                        <Live />
+                      ) : (
+                        <Tag kind="pend">{d.status}</Tag>
+                      )}
+                      <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                        {new Date(d.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {domainTotal > PAGE_SIZE && (
+                  <Pagination page={page} pageSize={PAGE_SIZE} total={domainTotal} baseParams={sp} />
+                )}
+              </>
             )}
           </Card>
 

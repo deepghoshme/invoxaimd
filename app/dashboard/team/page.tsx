@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import TeamClient, { type TeamMember } from "./TeamClient";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +11,17 @@ export const metadata = { title: "Team & Roles — invoxai" };
 // ── Plan seat limits (placeholder until billing integration) ──────────────────
 // TODO: derive from store's active plan once billing is wired.
 const DEFAULT_SEAT_LIMIT = 8;
+const PAGE_SIZE = 50;
 
-export default async function TeamPage() {
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   // For team we still need the logged-in user's email for the owner display.
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -21,14 +31,16 @@ export default async function TeamPage() {
 
   // ── Fetch team members — degrade gracefully if table doesn't exist ────────
   let members: TeamMember[] = [];
+  let memberTotal = 0;
   let tableExists = true;
 
   try {
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from("team_members")
-      .select("id, email, full_name, avatar_url, role, status, invited_at")
+      .select("id, email, full_name, avatar_url, role, status, invited_at", { count: "exact" })
       .eq("store_id", store.id)
-      .order("invited_at", { ascending: true });
+      .order("invited_at", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
       // PostgREST returns code 42P01 (undefined table) as a PGRST116-style error
@@ -48,6 +60,7 @@ export default async function TeamPage() {
       }
     } else {
       members = (data ?? []) as TeamMember[];
+      memberTotal = count ?? 0;
     }
   } catch (err) {
     // Structural / network error — don't crash the page
@@ -65,13 +78,18 @@ export default async function TeamPage() {
   const ownerName = meta.full_name ?? meta.name ?? null;
 
   return (
-    <TeamClient
-      storeId={store.id}
-      ownerEmail={user?.email ?? ""}
-      ownerName={ownerName}
-      members={members}
-      seatLimit={DEFAULT_SEAT_LIMIT}
-      tableExists={tableExists}
-    />
+    <>
+      <TeamClient
+        storeId={store.id}
+        ownerEmail={user?.email ?? ""}
+        ownerName={ownerName}
+        members={members}
+        seatLimit={DEFAULT_SEAT_LIMIT}
+        tableExists={tableExists}
+      />
+      {memberTotal > PAGE_SIZE && (
+        <Pagination page={page} pageSize={PAGE_SIZE} total={memberTotal} baseParams={sp} />
+      )}
+    </>
   );
 }

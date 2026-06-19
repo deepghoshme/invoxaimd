@@ -2,28 +2,41 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis } from "@/components/dx/ui";
 import UpsellClient, { type UpsellOffer, type Product } from "./UpsellClient";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
 
 function inr(paise: number) {
   return "₹" + Math.round(paise / 100).toLocaleString("en-IN");
 }
 
-export default async function UpsellPage() {
+export default async function UpsellPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   const { store } = await requireDashboardStore();
   const sb = createAdminClient();
 
   /* ── graceful: detect whether migration has been applied ── */
   let migrationPending = false;
   let offers: UpsellOffer[] = [];
+  let offerTotal = 0;
 
   try {
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from("upsell_offers")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("store_id", store.id)
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) {
       if (
@@ -35,6 +48,7 @@ export default async function UpsellPage() {
       }
     } else {
       offers = (data ?? []) as UpsellOffer[];
+      offerTotal = count ?? 0;
     }
   } catch {
     migrationPending = true;
@@ -95,7 +109,7 @@ export default async function UpsellPage() {
               icon: "bag",
               color: "var(--secondary)",
               label: "Total offers",
-              value: String(offers.length),
+              value: String(offerTotal),
             },
             {
               icon: "rupee",
@@ -119,6 +133,9 @@ export default async function UpsellPage() {
         products={products}
         migrationPending={migrationPending}
       />
+      {offerTotal > PAGE_SIZE && (
+        <Pagination page={page} pageSize={PAGE_SIZE} total={offerTotal} baseParams={sp} />
+      )}
     </>
   );
 }

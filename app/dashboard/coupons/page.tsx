@@ -2,33 +2,58 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireDashboardStore } from "@/lib/auth";
 import { Phead, Kpis } from "@/components/dx/ui";
 import CouponClient, { type CouponRow } from "./CouponClient";
+import Pagination from "@/components/dx/Pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function CouponsPage() {
+const PAGE_SIZE = 50;
+
+export default async function CouponsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+
   const { store, impersonating } = await requireDashboardStore();
   const sb = createAdminClient();
 
   // ── Graceful degradation: coupons table may not exist yet ─────────────────
   let tableExists = false;
   let coupons: CouponRow[] = [];
+  let couponTotal = 0;
   let totalUses = 0;
   let activeCouponCount = 0;
 
   try {
-    const { data, error } = await sb
+    // Fetch KPI counts from all rows (lightweight)
+    const { data: allData, error: allErr } = await sb
       .from("coupons")
-      .select(
-        "id, code, discount_type, discount_value, min_order_paise, max_uses, used_count, applies_to, expires_at, is_active, created_at",
-      )
-      .eq("store_id", store.id)
-      .order("created_at", { ascending: false });
+      .select("used_count, is_active")
+      .eq("store_id", store.id);
 
-    if (!error) {
+    if (!allErr) {
       tableExists = true;
-      coupons = (data ?? []) as CouponRow[];
-      totalUses = coupons.reduce((s, c) => s + (c.used_count ?? 0), 0);
-      activeCouponCount = coupons.filter((c) => c.is_active).length;
+      couponTotal = (allData ?? []).length;
+      totalUses = (allData ?? []).reduce((s, c) => s + (c.used_count ?? 0), 0);
+      activeCouponCount = (allData ?? []).filter((c) => c.is_active).length;
+    }
+
+    if (tableExists) {
+      const { data, error } = await sb
+        .from("coupons")
+        .select(
+          "id, code, discount_type, discount_value, min_order_paise, max_uses, used_count, applies_to, expires_at, is_active, created_at",
+        )
+        .eq("store_id", store.id)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (!error) {
+        coupons = (data ?? []) as CouponRow[];
+      }
     }
   } catch {
     // table doesn't exist yet — show migration message
@@ -47,10 +72,10 @@ export default async function CouponsPage() {
         <>
           <Kpis
             items={[
-              { icon: "tag",   color: "var(--primary)",   label: "Total coupons", value: String(coupons.length) },
+              { icon: "tag",   color: "var(--primary)",   label: "Total coupons", value: String(couponTotal) },
               { icon: "eye",   color: "var(--secondary)", label: "Active",        value: String(activeCouponCount) },
               { icon: "bag",   color: "var(--green)",     label: "Total uses",    value: totalUses.toLocaleString("en-IN") },
-              { icon: "chart", color: "var(--accent)",    label: "Inactive",      value: String(coupons.length - activeCouponCount) },
+              { icon: "chart", color: "var(--accent)",    label: "Inactive",      value: String(couponTotal - activeCouponCount) },
             ]}
           />
           <CouponClient
@@ -59,6 +84,9 @@ export default async function CouponsPage() {
             initial={coupons}
             impersonating={!!impersonating}
           />
+          {couponTotal > PAGE_SIZE && (
+            <Pagination page={page} pageSize={PAGE_SIZE} total={couponTotal} baseParams={sp} />
+          )}
         </>
       )}
     </>
