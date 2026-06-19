@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAuditReport, sendUserAuditReport } from "@/lib/transactional";
 import { runRecoveryForAllStores } from "@/lib/recovery";
+import { expireOverdueSubscriptions } from "@/lib/subscriptionExpiry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result: { recovery?: unknown; audit?: string; errors: string[] } = { errors: [] };
+  const result: { recovery?: unknown; audit?: string; subscriptions?: unknown; errors: string[] } = { errors: [] };
 
   // 1. Abandoned-cart recovery
   try {
@@ -56,6 +57,14 @@ export async function GET(req: Request) {
     result.audit = "sent";
   } catch (e) {
     result.errors.push("audit: " + (e instanceof Error ? e.message : "failed"));
+  }
+
+  // 3. Expire overdue subscriptions (mark active→past_due, notify owner).
+  //    Additive + non-fatal: a failure here never aborts recovery/audit.
+  try {
+    result.subscriptions = await expireOverdueSubscriptions();
+  } catch (e) {
+    result.errors.push("subscriptions: " + (e instanceof Error ? e.message : "failed"));
   }
 
   return NextResponse.json({ ok: result.errors.length === 0, ...result });
