@@ -20,3 +20,6 @@ lcdesign/*.js
 # Live QA run artifacts (screenshots + results)
 .qa-out/
 .qa-drive.mjs
+scripts/qa-six-features.mjs
+scripts/qa-six-part2.mjs
+scripts/qa-six-settings.mjs
