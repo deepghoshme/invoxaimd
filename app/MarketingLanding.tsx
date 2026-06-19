@@ -806,26 +806,26 @@ export default function MarketingLanding() {
             <div className="mk-foot-col">
               <h5>Product</h5>
               <a href="#surfaces">Page builders</a>
-              <a href="#">Templates</a>
+              <a href="#surfaces">Templates</a>
               <a href="#features">Wallet &amp; payments</a>
               <a href="#surfaces">Analytics</a>
               <a href="#pricing">Pricing</a>
             </div>
             <div className="mk-foot-col">
               <h5>Sell with</h5>
-              <a href="#">Digital store</a>
-              <a href="#">Courses</a>
-              <a href="#">Bookings &amp; events</a>
-              <a href="#">Paid communities</a>
-              <a href="#">Lead forms</a>
+              <a href="#types">Digital store</a>
+              <a href="#types">Courses</a>
+              <a href="#types">Bookings &amp; events</a>
+              <a href="#types">Paid communities</a>
+              <a href="#types">Lead forms</a>
             </div>
             <div className="mk-foot-col">
               <h5>Company</h5>
-              <a href="#">About</a>
-              <a href="#">Help center</a>
-              <a href="#">Status</a>
-              <a href="#">Privacy</a>
-              <a href="#">Terms</a>
+              <span className="mk-foot-nolink">About</span>
+              <span className="mk-foot-nolink">Help center</span>
+              <span className="mk-foot-nolink">Status</span>
+              <span className="mk-foot-nolink">Privacy</span>
+              <span className="mk-foot-nolink">Terms</span>
             </div>
           </div>
           <div className="mk-foot-bot">
@@ -1018,6 +1018,7 @@ const MK_CSS = `
 .mk-foot-col h5{font-family:var(--font-heading);font-size:13px;font-weight:700;margin:0 0 14px;color:var(--color-text)}
 .mk-foot-col a{display:block;color:var(--color-muted);font-size:13.5px;padding:5px 0;transition:color .15s;text-decoration:none}
 .mk-foot-col a:hover{color:var(--color-primary)}
+.mk-foot-nolink{display:block;color:var(--color-muted);font-size:13.5px;padding:5px 0;opacity:.55;cursor:default}
 .mk-foot-desc{color:var(--color-muted);font-size:13.5px;margin-top:14px;max-width:28em}
 .mk-foot-bot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:40px;padding-top:24px;border-top:1px solid var(--color-border);color:var(--color-muted);font-size:13px}
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentStore } from "@/lib/auth";
-import { Phead, Kpis, Card, Table, Tag, Live, Buyer, Templates, Donut, PageType } from "./ui";
+import { Phead, Kpis, Card, Table, Tag, Live, Buyer, Templates, Donut } from "./ui";
 import NewProductButton from "@/app/dashboard/pages/products/NewProductButton";
 
 const inr = (paise?: number | null) => "₹" + Math.round((paise ?? 0) / 100).toLocaleString("en-IN");
@@ -12,11 +12,6 @@ const Search = ({ placeholder }: { placeholder: string }) => (
     <input placeholder={placeholder} />
   </div>
 );
-const Switch = ({ on = true }: { on?: boolean }) => <div className={`dx-switch${on ? " on" : ""}`}><i /></div>;
-const Field = ({ label, value, ph, type }: { label: string; value?: string; ph?: string; type?: string }) => (
-  <div className="dx-field"><label>{label}</label><input defaultValue={value} placeholder={ph} type={type} /></div>
-);
-
 /**
  * Impersonation-aware context helper.
  *
@@ -483,110 +478,15 @@ export const SELLER_PAGES: Record<string, () => Promise<React.ReactNode>> = {
     );
   },
 
-  settings: async () => {
-    const { sb, store } = await ctx();
-    const { data: cat } = store?.category_id ? await sb.from("business_categories").select("name").eq("id", store.category_id).maybeSingle() : { data: null };
-    return (
-      <>
-        <Phead title="Settings" sub="Store, profile, and account." />
-        <div className="dx-grid dx-cols">
-          <div><Card title="Store details"><Field label="Store name" value={store?.store_name ?? ""} /><div className="dx-ff"><Field label="Subdomain" value={store?.subdomain ?? ""} /><div className="dx-field"><label>Category</label><input defaultValue={cat?.name ?? ""} /></div></div><button className="btn grad">Save</button></Card></div>
-          <div><Card title="Custom domain"><div className="dx-kv"><span className="dx-fw6">{store?.custom_domain || "Not connected"}</span>{store?.custom_domain ? (store.custom_domain_verified ? <Live /> : <Tag kind="pend">Pending</Tag>) : <Tag kind="neu">—</Tag>}</div></Card></div>
-        </div>
-      </>
-    );
-  },
-
-  domains: async () => {
-    const { store } = await ctx();
-    return (
-      <>
-        <Phead title="Domains" sub="Subdomain and custom domains." />
-        <div className="dx-grid dx-g2">
-          <Card title="Subdomain"><div className="dx-kv"><span className="dx-fw6">{store?.subdomain ? `${store.subdomain}.invoxai.io` : "—"}</span>{store?.subdomain ? <Live>Active</Live> : null}</div><p className="dx-muted" style={{ fontSize: 12.5, marginTop: 8 }}>1 included · extra ₹199 each.</p></Card>
-          <Card title="Custom domain"><Field label="Your domain" value={store?.custom_domain ?? ""} ph="yourbrand.com" /><div className="dx-codebox">CNAME @ → cname.invoxai.io</div><button className="btn grad" style={{ width: "100%", marginTop: 10, justifyContent: "center" }}>Connect</button></Card>
-        </div>
-      </>
-    );
-  },
-
-  // wallet is handled by the dedicated app/dashboard/wallet/page.tsx route.
-  // This stub is intentionally removed — the [...slug] catch-all is never
-  // reached for /dashboard/wallet because the static segment wins in Next.js
-  // route resolution. Keeping a stub here was misleading (hardcoded ₹0).
-
-  coupons: async () => (
-    <>
-      <Phead title="Coupons" sub="Codes and auto-apply discount links." action={<button className="btn grad">+ New coupon</button>} />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Your coupons"><Table cols={["Code", "Type", "Scope", "Used", "Status"]} rows={[]} empty="No coupons yet." /></Card></div>
-        <div><Card title="Auto-apply link"><p className="dx-muted" style={{ fontSize: 12.5, marginBottom: 9 }}>Applies automatically at checkout.</p><div className="dx-codebox">yourstore.invoxai.io/store?coupon=CODE</div></Card></div>
-      </div>
-    </>
-  ),
-
-  abandoned: async () => (
-    <>
-      <Phead title="Abandoned cart" sub="Recover unfinished checkouts." />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Recent abandoned"><Table cols={["Buyer", "Product", "Amount", "Stage"]} rows={[]} empty="No abandoned carts." /></Card></div>
-        <div><Card title="Recovery email"><div className="dx-mrow"><Switch /><div className="tx"><b>Auto recovery</b><p>Send 1 hour after abandonment.</p></div></div><div className="dx-field" style={{ marginTop: 10 }}><label>Delay</label><select><option>1 hour</option><option>3 hours</option></select></div></Card></div>
-      </div>
-    </>
-  ),
-
-  checkout: async () => (
-    <>
-      <Phead title="Checkout" sub="Page-type-aware checkout settings." />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Checkout preview"><div className="dx-card" style={{ background: "var(--surface2)" }}><div className="dx-fw6" style={{ marginBottom: 8 }}>Product</div><div className="dx-kv"><span>Subtotal</span><span>₹0</span></div><div className="dx-kv"><span className="dx-fw6">Total</span><span className="dx-fw6">₹0</span></div><button className="btn grad" style={{ width: "100%", marginTop: 10, justifyContent: "center" }}>Pay</button></div><p className="dx-muted" style={{ fontSize: 12, marginTop: 9 }}>URL: /opp/checkout/{"{order_id}"}</p></Card></div>
-        <div><Card title="Settings"><div className="dx-mrow"><Switch /><div className="tx"><b>Coupon field</b></div></div><div className="dx-mrow"><Switch /><div className="tx"><b>Order bump / upsell</b></div></div><div className="dx-mrow"><Switch /><div className="tx"><b>Ad pixels</b></div></div></Card></div>
-      </div>
-    </>
-  ),
-
-  email: async () => (
-    <>
-      <Phead title="Email marketing" sub="Brand email, templates, automations." />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Templates" link="Browse"><Templates items={[{ name: "Welcome", sub: "Email" }, { name: "Abandoned cart", sub: "Email" }, { name: "New product", sub: "Email" }]} /></Card></div>
-        <div><Card title="Sending setup"><div className="dx-toolbar" style={{ marginBottom: 12 }}><span className="dx-fchip on">Google Mail</span><span className="dx-fchip">SMTP</span></div><Field label="Gmail address" ph="hello@yourstore.com" /><Field label="App password" ph="••••••••" type="password" /><button className="btn grad" style={{ width: "100%", justifyContent: "center" }}>Save</button></Card></div>
-      </div>
-    </>
-  ),
-
-  seo: async () => (
-    <>
-      <Phead title="Pixels & SEO" sub="Per-page tracking and search settings." />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Defaults"><Field label="Default meta title" ph="Your store" /><Field label="Default meta description" ph="Describe your store" /><div className="dx-mrow"><Switch /><div className="tx"><b>Index on Google</b></div></div></Card></div>
-        <div><Card title="Ad pixels"><Field label="Meta Pixel ID" ph="123456789012345" /><Field label="Google Ads tag" ph="AW-XXXXXXXX" /><p className="dx-muted" style={{ fontSize: 12, marginTop: 8 }}>Per-page pixels are set inside each builder.</p></Card></div>
-      </div>
-    </>
-  ),
-
-  billing: async () => (
-    <>
-      <Phead title="Plan & billing" sub="Your subscription and invoices." />
-      <div className="dx-grid dx-cols">
-        <div><Card title="Invoices"><Table cols={["Invoice", "Date", "Amount", "Status"]} rows={[]} empty="No invoices yet." /></Card></div>
-        <div><div className="dx-plan feat"><span className="dx-ribbon">Current</span><div className="dx-fw6">Free</div><div className="pr">₹0 <small>/mo</small></div><ul className="dx-flist"><li>1 page</li><li>100 contacts</li></ul><button className="btn grad" style={{ width: "100%", justifyContent: "center" }}>Upgrade</button></div></div>
-      </div>
-    </>
-  ),
+  // settings, domains, coupons, abandoned, checkout, email, seo, billing,
+  // upsell, courses, booking, events, payment, leadform, vip, landing —
+  // all removed. Every one of these has a real static route under
+  // app/dashboard/<slug>/page.tsx that wins over this catch-all in Next.js
+  // route resolution, so these entries were never reachable at runtime.
+  // They also contained fake no-op buttons (Save, Connect, + New coupon, Pay,
+  // Upgrade, + New offer, + Create) with no onClick handler. Proof of deadness:
+  //   grep -r "SELLER_PAGES" app/ → only [...slug]/page.tsx, pages/products/page.tsx,
+  //   analytics/page.tsx; none of the removed keys are called from any live page.
 
   analytics: async () => analyticsPage("all"),
-
-  // page-type management views (no backend yet)
-  // NOTE: `website` has a dedicated route at app/dashboard/website/ (static
-  // segment wins over this catch-all), so no stub is needed here.
-  // NOTE: `store` has a dedicated route at app/dashboard/store/ (overrides this).
-  courses: async () => <PageType title="Courses" sub="Sell and host courses." kpis={[{ icon: "book", color: "var(--primary)", label: "Courses", value: "0" }, { icon: "users", color: "var(--secondary)", label: "Students", value: "0" }]} cols={["Course", "Lessons", "Students", "Price"]} rows={[]} templates={TPL} />,
-  booking: async () => <PageType title="1-to-1 booking" sub="Sell consulting slots." kpis={[{ icon: "cal", color: "var(--primary)", label: "Bookings", value: "0" }]} cols={["Service", "Duration", "Price", "Booked"]} rows={[]} templates={TPL} />,
-  events: async () => <PageType title="Events" sub="Sell tickets and seats." kpis={[{ icon: "cal", color: "var(--primary)", label: "Events", value: "0" }]} cols={["Event", "Date", "Seats", "Sold"]} rows={[]} templates={TPL} />,
-  payment: async () => <PageType title="Payment pages" sub={'Standalone "pay me" links.'} kpis={[{ icon: "card", color: "var(--primary)", label: "Pages", value: "0" }]} cols={["Page", "URL", "Amount", "Paid"]} rows={[]} templates={TPL} />,
-  leadform: async () => <PageType title="Lead forms" sub="Capture leads (no payment)." kpis={[{ icon: "form", color: "var(--primary)", label: "Forms", value: "0" }, { icon: "users", color: "var(--secondary)", label: "Leads", value: "0" }]} cols={["Form", "Fields", "Leads"]} rows={[]} templates={TPL} />,
-  vip: async () => <PageType title="VIP community" sub="Paid Telegram / WhatsApp access." kpis={[{ icon: "crown", color: "var(--primary)", label: "Communities", value: "0" }]} cols={["Community", "Platform", "Price", "Members"]} rows={[]} templates={TPL} />,
-  landing: async () => <PageType title="Landing pages" sub="Campaign pages for your ads." kpis={[{ icon: "rocket", color: "var(--primary)", label: "Pages", value: "0" }]} cols={["Page", "URL", "Visitors", "Conversion"]} rows={[]} templates={TPL} />,
-  upsell: async () => (<><Phead title="Upsell" sub="Offer add-ons at checkout." action={<button className="btn grad">+ New offer</button>} /><Card title="Upsell offers"><Table cols={["Trigger product", "Offer", "Discount", "Conversion"]} rows={[]} empty="No upsell offers yet." /></Card></>),
 };

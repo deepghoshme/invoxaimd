@@ -17,9 +17,10 @@ type Result = { ok: boolean; error?: string };
  *  3. The upsert goes through the service-role client (RLS bypassed but
  *     constrained by our own code-level auth check: must be signed-in seller
  *     with a store).
- *  4. For paid plans we create the subscription as 'active' immediately.
- *     Real payment charging is a follow-up (gateway integration). The record
- *     is real; the charge is not yet wired.
+ *  4. selectPlan is only called for FREE plan selection (price = 0).
+ *     Paid plans are handled entirely by the Razorpay subscribe/verify flow
+ *     (BillingClient → /api/plans/subscribe/start → /api/plans/subscribe/verify)
+ *     and never reach this function.
  */
 export async function selectPlan(planId: string): Promise<Result> {
   const guard = await assertNotImpersonating();
