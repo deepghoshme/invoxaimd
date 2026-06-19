@@ -71,8 +71,11 @@
 .dx-nav.act { background: var(--surface2); color: var(--primary); font-weight: 600; }
 .dx-nav.act::before { content: ""; position: absolute; left: 3px; top: 8px; width: 3px; height: 18px; border-radius: 9px; background: var(--grad); }
 
-.dx-main { flex: 1; min-width: 0; padding: 22px 24px 48px; }
-.dx-phead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.dx-main { flex: 1; min-width: 0; padding: 22px 24px 48px; display: flex; flex-direction: column; gap: 16px; }
+/* Full-bleed pages (.cr-page-wrap) are always the sole child of dx-main so flex gap
+   never fires between siblings; the existing negative margins on cr-page-wrap handle
+   bleeding to edges — no override needed here. */
+.dx-phead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .dx-phead > div:first-child { flex: 1 1 auto; min-width: 0; }
 .dx-phead > :last-child { flex: 0 0 auto; }
 .dx-phead h1 { font-size: 20px; letter-spacing: -.02em; }
@@ -110,7 +113,7 @@
 .dx .btn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
 .dx-grid { display: grid; gap: 16px; }
-.dx-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 16px; }
+.dx-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .dx-cols { grid-template-columns: 1.7fr 1fr; align-items: start; }
 .dx-g2 { grid-template-columns: 1fr 1fr; }
 .dx-g3 { grid-template-columns: repeat(3, 1fr); }
@@ -136,7 +139,7 @@
 .t-neu { background: var(--surface2); color: var(--muted); }
 .dx-cat { font-size: 11px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
 
-.dx-toolbar { display: flex; gap: 9px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.dx-toolbar { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
 .dx-fchip { font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
 .dx-fchip.on { background: var(--primary); color: #fff; border-color: transparent; }
 .dx-search { flex: 1; min-width: 120px; max-width: 280px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--muted); }
@@ -193,7 +196,7 @@
 }
 
 /* ── Analytics page ──────────────────────────────────────────────────────── */
-.dx-pageseg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; margin-bottom: 18px; flex-wrap: wrap; }
+.dx-pageseg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 2px; flex-wrap: wrap; }
 .dx-pseg-btn { border: 0; background: none; font: inherit; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 7px 14px; border-radius: 999px; cursor: pointer; text-decoration: none; display: inline-block; }
 .dx-pseg-btn.on { background: var(--grad); color: #fff; }
 .dx-pseg-btn:hover:not(.on) { background: var(--surface2); color: var(--text); }
@@ -357,3 +360,15 @@
 .dx-donut .ctr { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .dx-donut .ctr b { font-family: var(--font-sora), "Sora", sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
 .dx-donut .ctr span { font-size: 10.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+/* ── Reusable right-side Drawer (portal-rendered, overlays everything) ────── */
+@keyframes dx-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.dx-scrim { position: fixed; inset: 0; z-index: 1000; background: rgba(20,12,25,.45); backdrop-filter: blur(3px); }
+.dx-drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(460px, 96vw); z-index: 1001;
+  background: var(--surface); border-left: 1px solid var(--border);
+  box-shadow: -28px 0 70px rgba(0,0,0,.22); display: flex; flex-direction: column; overflow: hidden;
+  animation: dx-drawer-in 180ms ease; }
+.dx-dhead { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); flex: none; }
+.dx-dhead h3 { font-family: var(--font-sora), "Sora", sans-serif; font-size: 16px; font-weight: 700; margin: 0; }
+.dx-dbody { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.dx-dfoot { flex: none; padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }

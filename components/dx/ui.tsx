@@ -264,7 +264,6 @@ export function PageType({
       <Card title={`Your ${title.toLowerCase()}`} link="Manage">
         <Table cols={cols} rows={rows} />
       </Card>
-      <div style={{ height: 16 }} />
       <Card title="Templates" link="Browse all">
         <Templates items={templates} />
       </Card>
