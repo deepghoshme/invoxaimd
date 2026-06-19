@@ -167,7 +167,7 @@ export async function setCommissionOverrideAction(
   const sb = createAdminClient();
   const { error } = await sb
     .from("stores")
-    .update({ commission_override: fraction })
+    .update({ commission_rate_override: fraction })
     .eq("id", storeId);
 
   if (error) return { ok: false, error: error.message };

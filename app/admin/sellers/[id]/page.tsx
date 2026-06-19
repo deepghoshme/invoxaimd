@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Phead } from "@/components/dx/ui";
 import SellerActions from "./SellerActions";
+import CommissionOverride from "./CommissionOverride";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +153,7 @@ export default async function SellerDetailPage({
     const { data, error } = await sb
       .from("stores")
       .select(
-        "id, store_name, subdomain, custom_domain, custom_domain_verified, owner_id, billing, created_at, category_id, wallet_balance, suspended, suspended_at, suspended_reason",
+        "id, store_name, subdomain, custom_domain, custom_domain_verified, owner_id, billing, created_at, category_id, wallet_balance, suspended, suspended_at, suspended_reason, commission_rate_override",
       )
       .eq("id", storeId)
       .maybeSingle();
@@ -169,7 +170,7 @@ export default async function SellerDetailPage({
         const { data: fallback, error: e2 } = await sb
           .from("stores")
           .select(
-            "id, store_name, subdomain, custom_domain, custom_domain_verified, owner_id, billing, created_at, category_id",
+            "id, store_name, subdomain, custom_domain, custom_domain_verified, owner_id, billing, created_at, category_id, commission_rate_override",
           )
           .eq("id", storeId)
           .maybeSingle();
@@ -299,6 +300,34 @@ export default async function SellerDetailPage({
 
   const category =
     (billing?.category as string | null) ?? null;
+
+  // ── Commission override ───────────────────────────────────────────────────
+  const overrideFraction =
+    store.commission_rate_override != null
+      ? Number(store.commission_rate_override)
+      : null;
+
+  // Resolve effective rate: override → category rate → default 5 %
+  let effectiveFraction = 0.05;
+  let effectiveSource = "default (5 %)";
+
+  if (overrideFraction !== null) {
+    effectiveFraction = overrideFraction;
+    effectiveSource = "admin override";
+  } else {
+    const categoryId = store.category_id as string | null;
+    if (categoryId) {
+      const { data: catRow } = await sb
+        .from("business_categories")
+        .select("commission_rate, name")
+        .eq("id", categoryId)
+        .maybeSingle();
+      if (catRow?.commission_rate != null) {
+        effectiveFraction = Number(catRow.commission_rate);
+        effectiveSource = `category: ${(catRow as Record<string, unknown>).name ?? categoryId}`;
+      }
+    }
+  }
 
   return (
     <>
@@ -662,6 +691,13 @@ export default async function SellerDetailPage({
           storeName={storeName}
           suspended={suspended}
           suspendedReason={suspendedReason}
+        />
+
+        <CommissionOverride
+          storeId={storeId}
+          overrideFraction={overrideFraction}
+          effectiveFraction={effectiveFraction}
+          effectiveSource={effectiveSource}
         />
 
         <p
