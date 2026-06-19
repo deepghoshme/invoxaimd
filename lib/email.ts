@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * clear error if sending isn't configured, so callers can stay honest rather
  * than pretend an email went out. Credentials live only on the server.
  */
+
 /** A single file attachment for nodemailer's `attachments` array. */
 export type MailAttachment = {
   filename: string;

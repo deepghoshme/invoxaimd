@@ -411,7 +411,9 @@ export async function renderInvoicePdf(
 
   // Use Playwright Chromium — confirmed launchable on this server.
   const { chromium } = await import("playwright");
-  const browser = await chromium.launch({ headless: true });
+  // --no-sandbox keeps PDF rendering robust across server/user contexts
+  // (the chromium browser must be installed for the runtime user — see memory).
+  const browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "domcontentloaded" });
