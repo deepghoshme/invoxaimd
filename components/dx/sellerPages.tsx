@@ -416,16 +416,22 @@ export const SELLER_PAGES: Record<string, () => Promise<React.ReactNode>> = {
     const catalog = (cat ?? []).map((r) => ({ id: r.id as string, name: (r.name as string) ?? "Untitled", price: r.price != null ? Number(r.price) : null, image: (r.image as string) ?? null }));
     const revenue = (paid ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
     const soldBy: Record<string, number> = {};
-    (paid ?? []).forEach((o) => { if (o.page_id) soldBy[o.page_id] = (soldBy[o.page_id] ?? 0) + 1; });
+    const revenueBy: Record<string, number> = {};
+    (paid ?? []).forEach((o) => {
+      if (o.page_id) {
+        soldBy[o.page_id] = (soldBy[o.page_id] ?? 0) + 1;
+        revenueBy[o.page_id] = (revenueBy[o.page_id] ?? 0) + (o.amount ?? 0);
+      }
+    });
     const rows = (prods ?? []).map((p) => {
       const c = (p.content ?? {}) as { headline?: string; price?: number };
-      return [<a key="n" href={`/studio/product/${p.id}`} target="_blank" rel="noreferrer" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>{c.headline || p.title || "Untitled"}</a>, `/opp/${p.public_id}`, c.price ? `₹${c.price}` : "—", String(soldBy[p.id] ?? 0), p.status === "published" ? <Live key="l" /> : <Tag key="t" kind="neu">Draft</Tag>];
+      return [<a key="n" href={`/studio/product/${p.id}`} target="_blank" rel="noreferrer" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>{c.headline || p.title || "Untitled"}</a>, `/opp/${p.public_id}`, c.price ? `₹${c.price}` : "—", String(soldBy[p.id] ?? 0), <span key="rev" style={{ fontWeight: 700, color: "var(--green)" }}>{revenueBy[p.id] ? inr(revenueBy[p.id]) : "—"}</span>, p.status === "published" ? <Live key="l" /> : <Tag key="t" kind="neu">Draft</Tag>];
     });
     return (
       <>
         <Phead title="One-page products" sub="Full landing / checkout pages — create one from scratch or from a store product." action={<NewProductButton catalog={catalog} />} />
         <Kpis items={[{ icon: "bag", color: "var(--primary)", label: "Products", value: String(prods?.length ?? 0) }, { icon: "rupee", color: "var(--green)", label: "Revenue", value: inr(revenue) }, { icon: "up", color: "var(--secondary)", label: "Sold", value: String((paid ?? []).length) }]} />
-        <Card title="Your products" link="Manage"><Table cols={["Product", "URL", "Price", "Sold", "Status"]} rows={rows} empty="No one-page products yet — create your first." /></Card>
+        <Card title="Your products" link="Manage"><Table cols={["Product", "URL", "Price", "Sold", "Revenue", "Status"]} rows={rows} empty="No one-page products yet — create your first." /></Card>
         <div style={{ height: 16 }} />
         <Card title="Templates" link="Browse all"><Templates items={TPL} /></Card>
       </>

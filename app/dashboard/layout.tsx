@@ -23,7 +23,6 @@ const NAV: DxNavGroup[] = [
     { label: "Courses", icon: "book", href: "/dashboard/courses" },
     { label: "1-to-1 booking", icon: "cal", href: "/dashboard/booking" },
     { label: "Events", icon: "cal", href: "/dashboard/events" },
-    { label: "Payment page", icon: "card", href: "/dashboard/payment" },
     { label: "Lead form", icon: "form", href: "/dashboard/leadform" },
     { label: "VIP community", icon: "crown", href: "/dashboard/vip" },
     { label: "Landing page", icon: "rocket", href: "/dashboard/landing" },
