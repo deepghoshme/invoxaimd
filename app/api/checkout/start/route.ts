@@ -13,6 +13,8 @@ export async function POST(req: Request) {
     buyer_email?: string;
     buyer_name?: string;
     buyer_phone?: string;
+    /** Buyer's state/UT — optional, used for GST intra/inter-state routing on invoice. */
+    buyer_state?: string | null;
   };
   try {
     body = await req.json();
@@ -29,16 +31,19 @@ export async function POST(req: Request) {
   const gateway = await getStoreGateway(order.store_id);
   if (!gateway || !gateway.is_enabled || !gateway.key_id || !gateway.key_secret) {
     return NextResponse.json(
-      { error: "This seller hasn’t finished setting up payments." },
+      { error: "This seller hasn't finished setting up payments." },
       { status: 503 },
     );
   }
 
   // Persist buyer details (best-effort) before creating the gateway order.
+  // buyer_state is optional — a null/empty value is allowed and never blocks checkout.
+  const buyerState = body.buyer_state?.trim() || null;
   await updateOrder(order.id, {
     buyer_email: body.buyer_email?.trim() || null,
     buyer_name: body.buyer_name?.trim() || null,
     buyer_phone: body.buyer_phone?.trim() || null,
+    buyer_state: buyerState,
   });
 
   let rp;

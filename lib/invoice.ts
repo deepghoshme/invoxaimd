@@ -40,12 +40,12 @@ export type InvoiceRow = {
  * derive the taxable value and GST breakdown.
  *
  * Formula:
- *   taxable = round(total / (1 + rate/100))   ← everything below the GST
- *   taxAmount = total - taxable                ← GST embedded in total
+ *   taxable = round(total / (1 + rate/100))   <- everything below the GST
+ *   taxAmount = total - taxable                <- GST embedded in total
  *
- * Intra-state (sameState=true) → CGST = SGST = taxAmount/2, IGST = 0
- * Inter-state  (sameState=false) → IGST = taxAmount, CGST = SGST = 0
- * rate = 0 → subtotal = total, all tax fields = 0 (valid zero-rate invoice)
+ * Intra-state (sameState=true) -> CGST = SGST = taxAmount/2, IGST = 0
+ * Inter-state  (sameState=false) -> IGST = taxAmount, CGST = SGST = 0
+ * rate = 0 -> subtotal = total, all tax fields = 0 (valid zero-rate invoice)
  *
  * All amounts are in paise (integer) — never floats passed outside this file.
  */
@@ -116,6 +116,8 @@ type OrderForInvoice = {
   store_id: string;
   buyer_email: string | null;
   buyer_name: string | null;
+  /** Buyer's state/UT — captured at checkout since 2026-06. Used for GST routing. */
+  buyer_state?: string | null;
   amount: number;    // in paise
   currency: string;
   product_title?: string | null;
@@ -125,14 +127,14 @@ type OrderForInvoice = {
  * Create a GST tax invoice row for a confirmed order.
  *
  * Tax-rate resolution (order invoices):
- *   stores.gst_rate (seller-set per-store rate) → fallback 0
+ *   stores.gst_rate (seller-set per-store rate) -> fallback 0
  *
- * sameState assumption:
- *   We compare seller state (stores.billing.state) vs buyer state if available.
- *   For order invoices the buyer's state is NOT reliably collected at checkout,
- *   so we DEFAULT TO sameState=true (intra-state, CGST+SGST split).
- *   This is conservative for GSTIN compliance; a future upgrade can collect
- *   buyer GST/state at checkout and refine this.
+ * sameState derivation:
+ *   Seller state: stores.billing->>'state' (set during onboarding).
+ *   Buyer state:  orders.buyer_state (captured at checkout since 2026-06).
+ *   Both are trimmed and lowercased before comparison.
+ *   If EITHER is missing/empty -> safe fallback sameState=true (CGST+SGST).
+ *   When BOTH are present and differ -> sameState=false -> IGST (inter-state).
  *
  * Seller identity resolution (priority):
  *   1. stores.gstin / stores.legal_name (explicit column, set via settings)
@@ -175,12 +177,27 @@ export async function createInvoiceForOrder({
     ].filter(Boolean);
     const sellerAddress = sellerAddressParts.length ? sellerAddressParts.join(", ") : null;
 
-    // --- Tax rate & sameState assumption ------------------------------------
+    // --- Tax rate & sameState derivation ------------------------------------
     // Use the seller's configured GST rate; default to 0 (valid zero-rate invoice).
     const taxRate = Number(store.gst_rate ?? 0) || 0;
-    // Default sameState=true (CGST+SGST). Buyer state not collected at checkout.
-    // ASSUMPTION: intra-state until buyer GST state is captured. Document here.
-    const sameState = true;
+
+    // Derive sameState from seller state (stores.billing->>'state') vs buyer state
+    // (orders.buyer_state, captured at checkout since 2026-06).
+    //
+    // Normalisation: trim + lowercase both values before comparing so that
+    // "Maharashtra" == "maharashtra" and leading/trailing whitespace is ignored.
+    //
+    // Safe fallback: if EITHER state is missing/empty, sameState=true (CGST+SGST)
+    // — the same conservative default as before. This preserves prior behaviour
+    // for old orders or checkouts where the buyer skipped the state field.
+    //
+    // When BOTH are present and differ -> sameState=false -> IGST (inter-state).
+    const sellerState = (billing.state ?? "").trim().toLowerCase();
+    const buyerStateRaw = (order.buyer_state ?? "").trim().toLowerCase();
+    const sameState =
+      sellerState && buyerStateRaw
+        ? sellerState === buyerStateRaw
+        : true; // conservative fallback — intra-state when either is unknown
 
     const gst = computeGstSplit(order.amount, taxRate, sameState);
 
@@ -243,7 +260,7 @@ export async function createInvoiceForOrder({
  * Create a GST tax invoice for a platform plan payment.
  *
  * Tax-rate resolution (plan invoices):
- *   platform_settings.default_tax_rate → fallback 0
+ *   platform_settings.default_tax_rate -> fallback 0
  *   If platform_settings.gstin is not set, tax_rate is forced to 0 and the
  *   invoice is still valid as a receipt (zero-rate).
  *
@@ -293,7 +310,7 @@ export async function createInvoiceForPlan({
     const platformLegalName = ps?.legal_name ?? null;
     const platformAddress = ps?.registered_address ?? null;
     // If platform GSTIN is not set, use tax_rate=0 (note in code as promised).
-    // NOTE: Platform has no GSTIN configured → issuing zero-rate invoice (valid receipt).
+    // NOTE: Platform has no GSTIN configured -> issuing zero-rate invoice (valid receipt).
     const taxRate = platformGstin ? Number(ps?.default_tax_rate ?? 0) || 0 : 0;
     const sameState = true; // same assumption as order invoices
 

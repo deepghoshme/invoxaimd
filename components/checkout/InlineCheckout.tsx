@@ -11,6 +11,46 @@ declare global {
 
 const CODES = ["+91", "+1", "+44", "+971", "+61", "+65", "+880", "+92"];
 
+// All 28 Indian states + 8 Union Territories (as of 2024).
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chandigarh",
+  "Chhattisgarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jammu and Kashmir",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Ladakh",
+  "Lakshadweep",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Puducherry",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+];
+
 type BumpOfferView = {
   offer_id: string;
   name: string;
@@ -82,6 +122,7 @@ export default function InlineCheckout({
   const [name, setName] = useState("");
   const [code, setCode] = useState("+91");
   const [phone, setPhone] = useState("");
+  const [buyerState, setBuyerState] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -142,7 +183,7 @@ export default function InlineCheckout({
       // Coupon outcome
       if (coupon) {
         if (data.coupon_error || !data.discount_paise) {
-          setCouponErr(data.coupon_error || "This coupon isn’t valid for this purchase.");
+          setCouponErr(data.coupon_error || "This coupon isn't valid for this purchase.");
           setAppliedCode(null);
         } else {
           setCouponErr(null);
@@ -200,7 +241,7 @@ export default function InlineCheckout({
     setErr(null);
 
     if (!(await loadRazorpay())) {
-      setErr("Couldn’t load the payment library. Check your connection.");
+      setErr("Couldn't load the payment library. Check your connection.");
       return setLoading(false);
     }
 
@@ -229,6 +270,7 @@ export default function InlineCheckout({
           buyer_email: email,
           buyer_name: name,
           buyer_phone: phone ? `${code} ${phone}` : "",
+          buyer_state: buyerState.trim() || null,
         }),
       });
       const start = await sRes.json();
@@ -277,11 +319,32 @@ export default function InlineCheckout({
   if (done) {
     return (
       <div className="co-card co-success">
-        <div style={{ fontSize: "2.2rem" }}>✅</div>
+        <div style={{ fontSize: "2.2rem" }}>&#x2705;</div>
         <h3 style={{ margin: "0.3rem 0" }}>Payment successful</h3>
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted" style={{ margin: "0.25rem 0 0.75rem" }}>
           Access for <strong>{productTitle}</strong>
           {order?.bumpTitle ? <> and <strong>{order.bumpTitle}</strong></> : null} will be sent to {email}.
+        </p>
+        <a
+          href="https://app.invoxai.io/account"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            marginTop: 4,
+            padding: "8px 18px",
+            borderRadius: 8,
+            background: "var(--primary, #FF6A3D)",
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: 14,
+            textDecoration: "none",
+          }}
+        >
+          View your order &#x2192;
+        </a>
+        <p style={{ marginTop: 8, fontSize: 12, color: "var(--muted, #7a6770)" }}>
+          Log in with <strong>{email}</strong> to track this order and access your purchases.
         </p>
       </div>
     );
@@ -304,6 +367,22 @@ export default function InlineCheckout({
         </select>
         <input className="input" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))} placeholder="98XXXXXXXX" />
       </div>
+
+      <label className="co-label">
+        State{" "}
+        <span style={{ fontWeight: 400, color: "var(--muted, #7a6770)", fontSize: 12 }}>
+          (optional — for GST invoice)
+        </span>
+      </label>
+      <select
+        className="select"
+        style={{ width: "100%" }}
+        value={buyerState}
+        onChange={(e) => setBuyerState(e.target.value)}
+      >
+        <option value="">Select your state / UT</option>
+        {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+      </select>
 
       {/* Order-bump offers */}
       {offers.length > 0 && (
@@ -346,13 +425,13 @@ export default function InlineCheckout({
       <div className="co-coupon">
         {appliedCode ? (
           <div className="co-row" style={{ alignItems: "center" }}>
-            <span style={{ color: "var(--ok, #16a34a)", fontWeight: 600 }}>✓ Coupon applied</span>
+            <span style={{ color: "var(--ok, #16a34a)", fontWeight: 600 }}>&#x2713; Coupon applied</span>
             <button type="button" className="co-coupon-remove" onClick={removeCoupon} style={{ background: "none", border: "none", textDecoration: "underline", cursor: "pointer", fontSize: 12 }}>Remove</button>
           </div>
         ) : (
           <div className="co-phone" style={{ marginTop: 4 }}>
             <input className="input" value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponErr(null); }} placeholder="Have a coupon?" disabled={preview} />
-            <button type="button" className="btn" onClick={applyCoupon} disabled={syncing || preview || !couponInput.trim()} style={{ whiteSpace: "nowrap" }}>{syncing ? "…" : "Apply"}</button>
+            <button type="button" className="btn" onClick={applyCoupon} disabled={syncing || preview || !couponInput.trim()} style={{ whiteSpace: "nowrap" }}>{syncing ? "&#x2026;" : "Apply"}</button>
           </div>
         )}
         {couponErr && <div className="alert alert-error" style={{ marginTop: 8 }}>{couponErr}</div>}
@@ -361,7 +440,7 @@ export default function InlineCheckout({
       <div className="co-summary">
         <div className="co-row"><span>Sub Total</span><span>{formatMoney(amount, currency)}</span></div>
         {discountPaise > 0 && (
-          <div className="co-row" style={{ color: "var(--ok, #16a34a)" }}><span>Discount</span><span>− {formatMoney(discountPaise, currency)}</span></div>
+          <div className="co-row" style={{ color: "var(--ok, #16a34a)" }}><span>Discount</span><span>&#x2212; {formatMoney(discountPaise, currency)}</span></div>
         )}
         {bumpPaise > 0 && (
           <div className="co-row"><span>{order?.bumpTitle || "Add-on"}</span><span>+ {formatMoney(bumpPaise, currency)}</span></div>
@@ -371,14 +450,14 @@ export default function InlineCheckout({
 
       {err && <div className="alert alert-error" style={{ marginTop: 10 }}>{err}</div>}
       {!payEnabled && !preview && (
-        <div className="alert alert-error" style={{ marginTop: 10 }}>Payments aren’t set up yet.</div>
+        <div className="alert alert-error" style={{ marginTop: 10 }}>Payments aren&apos;t set up yet.</div>
       )}
 
       <button className="btn co-buy btn-shimmer" onClick={buyNow} disabled={loading || syncing || (!payEnabled && !preview)}>
         <span className="btn-shine" style={{ background: "linear-gradient(90deg, transparent, #ffffff, transparent)" }} />
-        {loading ? "Processing…" : ctaLabel} <span aria-hidden>→</span>
+        {loading ? "Processing…" : ctaLabel} <span aria-hidden>&#x2192;</span>
       </button>
-      <p className="co-secure">🔒 Secure payment via Razorpay</p>
+      <p className="co-secure">&#x1F512; Secure payment via Razorpay</p>
     </div>
   );
 }
