@@ -264,7 +264,7 @@ export default async function SeoPage() {
             </div>
             {activeBase && (
               <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-                Sitemap at{" "}
+                Sitemap:{" "}
                 <a
                   href={`${activeBase}/sitemap.xml`}
                   target="_blank"
@@ -272,8 +272,7 @@ export default async function SeoPage() {
                   style={{ color: "var(--primary)" }}
                 >
                   {activeBase.replace("https://", "")}/sitemap.xml
-                </a>{" "}
-                (auto-generated, not yet live).
+                </a>
               </p>
             )}
             <a
