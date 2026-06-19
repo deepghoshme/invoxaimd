@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyRazorpaySignature, fetchRazorpayOrder } from "@/lib/razorpay";
 import { sendWalletReceipt } from "@/lib/transactional";
+import { createInvoiceForWallet } from "@/lib/invoice";
 
 /**
  * POST /api/wallet/verify
@@ -194,8 +195,32 @@ export async function POST(req: Request) {
     .update({ wallet_balance: newBalance })
     .eq("id", store.id);
 
+  // Create a wallet invoice (kind='wallet') — non-fatal: failure must never
+  // block the wallet credit or the 200 response.
+  let walletInvoice = null;
+  try {
+    walletInvoice = await createInvoiceForWallet({
+      adminClient: admin,
+      storeId: store.id,
+      buyerEmail: user.email ?? null,
+      buyerName: null, // no name available at this point; invoice email shows email
+      amountPaise: totalCredit,
+      currency: order.currency || "INR",
+      razorpayOrderId: razorpay_order_id,
+    });
+  } catch (invoiceErr) {
+    console.warn("[wallet/verify] invoice creation failed (non-fatal):", invoiceErr);
+  }
+
   // Wallet recharge receipt (from wallet@, record copy to admin@). Non-fatal.
-  await sendWalletReceipt({ to: user.email ?? null, creditedPaise: totalCredit, balancePaise: newBalance });
+  // When an invoice was created, the PDF bill is attached to the email.
+  await sendWalletReceipt({
+    to: user.email ?? null,
+    creditedPaise: totalCredit,
+    balancePaise: newBalance,
+    currency: order.currency || "INR",
+    invoice: walletInvoice,
+  });
 
   return NextResponse.json({
     ok: true,

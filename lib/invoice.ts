@@ -257,6 +257,123 @@ export async function createInvoiceForOrder({
 }
 
 /**
+ * Create a GST tax invoice for a wallet top-up payment.
+ *
+ * Tax-rate resolution (wallet invoices):
+ *   platform_settings.default_tax_rate -> fallback 0
+ *   If platform_settings.gstin is not set, tax_rate is forced to 0 and the
+ *   invoice is still valid as a receipt (zero-rate).
+ *
+ * sameState: defaulted to true (same reasoning as plan invoices).
+ *
+ * Idempotent on razorpay_order_id stored in meta.razorpay_order_id with kind='wallet'.
+ */
+export async function createInvoiceForWallet({
+  adminClient,
+  storeId,
+  buyerEmail,
+  buyerName,
+  amountPaise,
+  currency,
+  razorpayOrderId,
+}: {
+  adminClient: SupabaseClient;
+  storeId: string;
+  buyerEmail: string | null;
+  buyerName?: string | null;
+  amountPaise: number;
+  currency?: string;
+  razorpayOrderId?: string | null;
+}): Promise<InvoiceRow | null> {
+  try {
+    // --- Idempotency check on razorpay_order_id in meta (kind='wallet') ------
+    if (razorpayOrderId) {
+      const { data: existing } = await adminClient
+        .from("invoices")
+        .select("*")
+        .eq("kind", "wallet")
+        .contains("meta", { razorpay_order_id: razorpayOrderId })
+        .maybeSingle();
+      if (existing) return existing as InvoiceRow;
+    }
+
+    // --- Platform identity + tax rate (same as plan invoices) ----------------
+    const { data: ps } = await adminClient
+      .from("platform_settings")
+      .select("gstin, legal_name, registered_address, default_tax_rate")
+      .limit(1)
+      .maybeSingle();
+
+    const platformGstin = ps?.gstin ?? null;
+    const platformLegalName = ps?.legal_name ?? null;
+    const platformAddress = ps?.registered_address ?? null;
+    // NOTE: Platform has no GSTIN configured -> issuing zero-rate invoice (valid receipt).
+    const taxRate = platformGstin ? Number(ps?.default_tax_rate ?? 0) || 0 : 0;
+    const sameState = true; // same assumption as plan invoices
+
+    const gst = computeGstSplit(amountPaise, taxRate, sameState);
+
+    // --- Sequential invoice number ------------------------------------------
+    const { data: numData, error: numErr } = await adminClient.rpc("next_invoice_number");
+    if (numErr || !numData) {
+      console.error("[invoice] next_invoice_number rpc failed (wallet)", numErr);
+      return null;
+    }
+    const invoiceNumber = numData as string;
+
+    // --- Insert invoice row --------------------------------------------------
+    const { data: inv, error: invErr } = await adminClient
+      .from("invoices")
+      .insert({
+        store_id: storeId,
+        order_id: null,
+        invoice_number: invoiceNumber,
+        buyer_name: buyerName ?? null,
+        buyer_email: buyerEmail,
+        currency: currency || "INR",
+        subtotal_paise: gst.subtotalPaise,
+        tax_rate: gst.taxRatePct,
+        cgst_paise: gst.cgstPaise,
+        sgst_paise: gst.sgstPaise,
+        igst_paise: gst.igstPaise,
+        total_paise: amountPaise,
+        gstin: platformGstin,
+        seller_legal_name: platformLegalName,
+        seller_address: platformAddress,
+        kind: "wallet",
+        meta: {
+          ...(razorpayOrderId ? { razorpay_order_id: razorpayOrderId } : {}),
+        },
+      })
+      .select("*")
+      .single();
+
+    if (invErr) {
+      if (invErr.code === "23505") {
+        // concurrent insert — re-fetch if we have enough to match on
+        if (razorpayOrderId) {
+          const { data: dup } = await adminClient
+            .from("invoices")
+            .select("*")
+            .eq("kind", "wallet")
+            .contains("meta", { razorpay_order_id: razorpayOrderId })
+            .maybeSingle();
+          return (dup as InvoiceRow | null) ?? null;
+        }
+        return null;
+      }
+      console.error("[invoice] wallet insert failed", invErr);
+      return null;
+    }
+
+    return inv as InvoiceRow;
+  } catch (e) {
+    console.error("[invoice] createInvoiceForWallet unexpected error", e);
+    return null;
+  }
+}
+
+/**
  * Create a GST tax invoice for a platform plan payment.
  *
  * Tax-rate resolution (plan invoices):

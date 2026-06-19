@@ -111,25 +111,63 @@ export async function sendOrderReceipt(o: {
   } catch { /* non-fatal */ }
 }
 
-/** Seller wallet-recharge receipt (from wallet@, copy to admin@). */
+/** Seller wallet-recharge receipt (from wallet@, copy to admin@).
+ *  When an invoice row is provided, generates the PDF and attaches it.
+ *  PDF generation failure is non-fatal — the email still sends without it.
+ */
 export async function sendWalletReceipt(o: {
   to: string | null;
   creditedPaise: number;
   balancePaise: number;
   currency?: string;
+  /** When provided the wallet recharge PDF invoice is attached to the email. */
+  invoice?: InvoiceRow | null;
 }): Promise<void> {
   if (!o.to) return;
   const m = await getPlatformMailer();
   if (!m.ok) return;
   const r = EMAIL_ROUTES.wallet_txn;
   const cur = o.currency || "INR";
+
+  // Include invoice details in email body when invoice is available.
+  const invoiceBlock = o.invoice
+    ? `<p style="font-size:12px;color:#8a8088;margin-top:14px">Invoice No. <strong>${esc(o.invoice.invoice_number)}</strong> has been generated and is attached to this email.</p>`
+    : "";
+
   const inner = `<p>Your wallet has been topped up.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
       ${row("Credited", money(o.creditedPaise, cur))}
       ${row("New balance", money(o.balancePaise, cur))}
-    </table>`;
+    </table>${invoiceBlock}`;
+
+  // Generate PDF attachment when an invoice is present — non-fatal.
+  let pdfAttachments: { filename: string; content: Buffer; contentType: string }[] = [];
+  if (o.invoice) {
+    try {
+      const pdfBuffer = await renderInvoicePdf(o.invoice, {
+        sellerLegalName: o.invoice.seller_legal_name,
+        sellerGstin: o.invoice.gstin,
+        sellerAddress: o.invoice.seller_address,
+      });
+      pdfAttachments = [{
+        filename: `Invoice-${o.invoice.invoice_number}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf",
+      }];
+    } catch (pdfErr) {
+      console.warn("[transactional] PDF generation failed for wallet receipt; sending email without attachment", pdfErr);
+    }
+  }
+
   try {
-    await m.mailer.send({ from: r.from, cc: r.cc, to: o.to, subject: `Wallet recharged — ${money(o.creditedPaise, cur)} added`, html: shell("Wallet recharged", inner) });
+    await m.mailer.send({
+      from: r.from,
+      cc: r.cc,
+      to: o.to,
+      subject: `Wallet recharged — ${money(o.creditedPaise, cur)} added`,
+      html: shell("Wallet recharged", inner),
+      ...(pdfAttachments.length ? { attachments: pdfAttachments } : {}),
+    });
   } catch { /* non-fatal */ }
 }
 
@@ -614,6 +652,146 @@ export async function sendTeamInviteEmail(o: {
       html: shell(`You're invited to ${store}`, inner),
     });
   } catch { /* non-fatal */ }
+}
+
+// ─── Daily wallet report ──────────────────────────────────────────────────────
+
+/**
+ * Send a daily wallet activity summary to the admin (wallet@ route).
+ *
+ * Summarises the last 24 h of wallet_ledger activity across the platform:
+ *   - Total credits (recharges + bonuses) and their combined paise value.
+ *   - Total debits (commissions) and their combined paise value.
+ *   - Per-store breakdown: store_id + credit/debit counts + net movement.
+ *
+ * Gated on email_config.daily_wallet_enabled (reads via admin client directly,
+ * since the cron has no session). If the flag is off or the table is missing,
+ * the function returns without sending.
+ *
+ * HTML-only summary — no PDF (PDF would need an invoice row; this is a report
+ * aggregating many rows). The per-recharge PDF is already handled in GOAL 1.
+ *
+ * Non-fatal: any error is caught so the cron never fails due to this report.
+ */
+export async function sendDailyWalletReport(): Promise<{ sent: boolean; credits: number; debits: number }> {
+  const emptyResult = { sent: false, credits: 0, debits: 0 };
+  try {
+    const admin = createAdminClient();
+
+    // --- Gate on daily_wallet_enabled flag ----------------------------------
+    const { data: cfg } = await admin
+      .from("email_config")
+      .select("daily_wallet_enabled")
+      .eq("id", true)
+      .maybeSingle();
+    if (!cfg?.daily_wallet_enabled) return emptyResult;
+
+    const m = await getPlatformMailer();
+    if (!m.ok) return emptyResult;
+
+    // --- Fetch last-24h wallet_ledger rows ----------------------------------
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: rows } = await admin
+      .from("wallet_ledger")
+      .select("store_id, type, amount, reason, created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+
+    const ledgerRows = (rows ?? []) as {
+      store_id: string;
+      type: "credit" | "debit";
+      amount: number;
+      reason: string;
+      created_at: string;
+    }[];
+
+    // --- Aggregate platform-wide totals -------------------------------------
+    let totalCreditPaise = 0;
+    let totalDebitPaise = 0;
+    let creditCount = 0;
+    let debitCount = 0;
+
+    const perStore: Record<string, { credits: number; debits: number; creditPaise: number; debitPaise: number }> = {};
+
+    for (const r of ledgerRows) {
+      const s = perStore[r.store_id] ?? { credits: 0, debits: 0, creditPaise: 0, debitPaise: 0 };
+      if (r.type === "credit") {
+        totalCreditPaise += r.amount;
+        creditCount++;
+        s.credits++;
+        s.creditPaise += r.amount;
+      } else {
+        totalDebitPaise += r.amount;
+        debitCount++;
+        s.debits++;
+        s.debitPaise += r.amount;
+      }
+      perStore[r.store_id] = s;
+    }
+
+    const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+    // --- Build store breakdown rows -----------------------------------------
+    const storeEntries = Object.entries(perStore);
+    const storeRows = storeEntries.length
+      ? storeEntries
+          .map(([sid, v]) => `<tr>
+            <td style="padding:4px 8px;font-size:11px;font-family:monospace;color:#7a6770">${esc(sid.slice(-8).toUpperCase())}</td>
+            <td style="padding:4px 8px;font-size:12px;text-align:right">${v.credits}</td>
+            <td style="padding:4px 8px;font-size:12px;text-align:right">${money(v.creditPaise)}</td>
+            <td style="padding:4px 8px;font-size:12px;text-align:right">${v.debits}</td>
+            <td style="padding:4px 8px;font-size:12px;text-align:right">${money(v.debitPaise)}</td>
+            <td style="padding:4px 8px;font-size:12px;text-align:right;font-weight:600">${money(v.creditPaise - v.debitPaise)}</td>
+          </tr>`)
+          .join("")
+      : `<tr><td colspan="6" style="padding:8px;color:#8a8088;font-size:12px;text-align:center">No wallet activity in the last 24 hours.</td></tr>`;
+
+    const storeTable = `<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px">
+      <thead>
+        <tr style="background:#f5f3f7">
+          <th style="padding:5px 8px;text-align:left;font-size:11px;color:#7a6770">Store (last 8)</th>
+          <th style="padding:5px 8px;text-align:right;font-size:11px;color:#7a6770">Credits</th>
+          <th style="padding:5px 8px;text-align:right;font-size:11px;color:#7a6770">Credit ₹</th>
+          <th style="padding:5px 8px;text-align:right;font-size:11px;color:#7a6770">Debits</th>
+          <th style="padding:5px 8px;text-align:right;font-size:11px;color:#7a6770">Debit ₹</th>
+          <th style="padding:5px 8px;text-align:right;font-size:11px;color:#7a6770">Net</th>
+        </tr>
+      </thead>
+      <tbody>${storeRows}</tbody>
+    </table>`;
+
+    const summaryTable = `<table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
+      ${row("Period", `Last 24 h — ${today}`)}
+      ${row("Total credits", `${creditCount} txns — ${money(totalCreditPaise)}`)}
+      ${row("Total debits (commissions)", `${debitCount} txns — ${money(totalDebitPaise)}`)}
+      ${row("Net platform movement", money(totalCreditPaise - totalDebitPaise))}
+      ${row("Stores active", String(storeEntries.length))}
+    </table>`;
+
+    const inner = `<p>Platform wallet activity summary for the last 24 hours.</p>
+      ${summaryTable}
+      <h3 style="font-size:13px;margin:18px 0 4px;color:#4a3f47">Per-store breakdown</h3>
+      ${storeTable}`;
+
+    const r = EMAIL_ROUTES.wallet_txn;
+    // Send to admin@ (record recipient); wallet_txn from is wallet@.
+    const adminTo = EMAIL_ROUTES.admin_audit_report.to?.[0] ?? null;
+    if (!adminTo) return emptyResult;
+
+    try {
+      await m.mailer.send({
+        from: r.from,
+        to: adminTo,
+        subject: `Daily wallet report — ${today} (${creditCount} credits, ${debitCount} debits)`,
+        html: shell("Daily wallet report", inner),
+      });
+    } catch { /* non-fatal send failure */ }
+
+    return { sent: true, credits: creditCount, debits: debitCount };
+  } catch (e) {
+    console.error("[transactional] sendDailyWalletReport error", e);
+    return emptyResult;
+  }
 }
 
 /**
