@@ -16,6 +16,7 @@ import {
   type TemplateSalesStat,
   type TemplateManifest,
 } from "./actions";
+import { validateManifest } from "@/lib/template-manifest";
 
 /* ── helpers ─────────────────────────────────────────────────── */
 
@@ -119,6 +120,27 @@ const css = `
   .tm-preview-kv   { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
   .tm-preview-kv b { font-weight: 600; }
   .tm-json-err    { font-size: 12px; color: var(--red, #e5476f); margin-top: 4px; }
+
+  /* drag-and-drop zone */
+  .tm-dropzone    { border: 2px dashed var(--border); border-radius: 14px; padding: 28px 20px; text-align: center; cursor: pointer; background: var(--surface2); transition: border-color .15s, background .15s; position: relative; }
+  .tm-dropzone:hover, .tm-dropzone.drag-over { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, var(--surface2)); }
+  .tm-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .tm-dropzone-icon { font-size: 28px; margin-bottom: 8px; }
+  .tm-dropzone-label { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .tm-dropzone-sub   { font-size: 12px; color: var(--muted); }
+  .tm-dropzone-fname { font-size: 12px; font-weight: 600; color: var(--primary); margin-top: 6px; }
+
+  /* live preview pane */
+  .tm-lp-wrap     { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface2); }
+  .tm-lp-bar      { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .tm-lp-badge    { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 3px 10px; border-radius: 99px; background: color-mix(in srgb, var(--green, #1fb57a) 14%, transparent); color: var(--green, #1fb57a); border: 1px solid color-mix(in srgb, var(--green, #1fb57a) 30%, transparent); }
+  .tm-lp-type     { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .tm-lp-frame    { width: 100%; border: 0; display: block; }
+
+  /* client-side validation result */
+  .tm-cv-ok       { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #166534; display: flex; align-items: center; gap: 8px; }
+  .tm-cv-ok::before { content: "Manifest valid"; font-weight: 700; }
+  .tm-cv-warn     { background: #fff8e6; border: 1px solid #f5d97a; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #7a5c00; }
 `;
 
 /* ── select style helper ──────────────────────────────────────── */
@@ -567,66 +589,216 @@ function DrawerForm({ row, onClose }: DrawerProps) {
   );
 }
 
+/* ── ManifestLivePreview ─────────────────────────────────────── */
+//
+// Renders a sandboxed iframe pointing at /admin-tpl-preview with the content
+// passed as a base64-encoded query param. The frame is in the same origin so
+// the admin session cookie is forwarded automatically — no extra auth needed.
+//
+// Height is fixed at 540px (≈ half a 1080p screen) to give a meaningful
+// viewport without dominating the panel. The frame itself renders the view
+// component at natural width and the admin can see overall design at a glance.
+//
+// For types that support a real render (bio, store, website, courses) this shows
+// the full live component. Other types fall back to a structured summary rendered
+// server-side in the preview page.
+
+function ManifestLivePreview({
+  type, content,
+}: {
+  type: string;
+  content: Record<string, unknown>;
+}) {
+  // Encode content as base64 for the URL param. btoa needs Latin-1 safe string;
+  // use TextEncoder + Uint8Array path to handle Unicode content values.
+  let encoded = "";
+  try {
+    const json = JSON.stringify(content);
+    // Use built-in btoa with encodeURIComponent trick for Unicode safety
+    encoded = btoa(unescape(encodeURIComponent(json)));
+  } catch {
+    return null;
+  }
+
+  const src = `/admin-tpl-preview?type=${encodeURIComponent(type)}&c=${encoded}`;
+  const typeLabel = TYPE_LABELS[type] ?? type;
+
+  // Height varies: bio pages are narrow/tall; website/store need more height to show sections
+  const frameHeight = type === "bio" ? 620 : 580;
+
+  return (
+    <div className="tm-lp-wrap">
+      <div className="tm-lp-bar">
+        <div className="tm-lp-type">{typeLabel} preview</div>
+        <span className="tm-lp-badge">Live render</span>
+      </div>
+      <iframe
+        key={src}
+        src={src}
+        className="tm-lp-frame"
+        style={{ height: frameHeight }}
+        sandbox="allow-scripts allow-same-origin"
+        title={`${typeLabel} template preview`}
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
 /* ── ImportManifestPanel ─────────────────────────────────────── */
+
+// Client-side validation state: parsed manifest or errors (no server round-trip).
+// We use validateManifest() (safe to call from client — no server-only imports)
+// so the admin gets instant feedback as they type or after a file drop.
+
+type ClientValidation =
+  | { kind: "idle" }
+  | { kind: "json-error"; err: string }
+  | { kind: "manifest-errors"; errors: string[] }
+  | { kind: "valid"; manifest: TemplateManifest };
+
+function runClientValidation(raw: string): ClientValidation {
+  if (!raw.trim()) return { kind: "idle" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    return { kind: "json-error", err: String(e) };
+  }
+  const result = validateManifest(parsed);
+  if (!result.ok) return { kind: "manifest-errors", errors: result.errors };
+  return { kind: "valid", manifest: result.manifest };
+}
 
 function ImportManifestPanel({ onDone }: { onDone: () => void }) {
   const [raw, setRaw] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<
+  const [saveResult, setSaveResult] = useState<
     { kind: "errors"; errors: string[] } | { kind: "success"; id: string } | null
   >(null);
+
+  // Client-side validation runs synchronously on every raw change (pure fn, no memoization needed)
+  const cv = runClientValidation(raw);
+
+  function applyRaw(text: string, name?: string) {
+    setRaw(text);
+    setSaveResult(null);
+    if (name) setFileName(name);
+  }
+
+  // ── File reading (shared by drop + click-browse) ──
+
+  function readFile(file: File) {
+    if (!file.name.endsWith(".json") && file.type !== "application/json") {
+      // Show a friendly error by injecting bad JSON so the JSON error path triggers
+      applyRaw('{"_error":"File must be a .json file."}', file.name);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result;
+      if (typeof text === "string") applyRaw(text, file.name);
+    };
+    reader.onerror = () => {
+      applyRaw('{"_error":"Could not read file."}', file.name);
+    };
+    reader.readAsText(file);
+  }
+
+  // ── Drop zone handlers ──
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) readFile(file);
+  }
+
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(true);
+  }
+
+  function onDragLeave() {
+    setDragOver(false);
+  }
+
+  function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) readFile(file);
+    e.target.value = "";
+  }
+
+  // ── Server import (save as draft) ──
 
   function doImport() {
     if (!raw.trim()) return;
     startTransition(async () => {
-      setResult(null);
+      setSaveResult(null);
       const res = await importManifest(raw);
       if (!res.ok) {
-        setResult({ kind: "errors", errors: res.errors });
+        setSaveResult({ kind: "errors", errors: res.errors });
       } else {
-        setResult({ kind: "success", id: res.id });
+        setSaveResult({ kind: "success", id: res.id });
         setRaw("");
+        setFileName(null);
         onDone();
       }
     });
   }
 
-  function loadFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result;
-      if (typeof text === "string") setRaw(text);
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  }
+  const canImport = !pending && raw.trim().length > 0 && cv.kind !== "json-error";
+  const showPreview = cv.kind === "valid";
 
   return (
     <Card title="Import manifest">
       <div className="tm-import-panel">
         <div style={{ fontSize: 13, color: "var(--muted)" }}>
-          Paste a Template Manifest JSON (see <code>docs/TEMPLATE-AUTHORING-FORMAT.md</code>) or upload a{" "}
-          <code>.json</code> file. The manifest is validated then saved as a <strong>draft</strong>.
+          Drop a <code>.json</code> Template Manifest file onto the zone below, click to browse, or paste
+          the JSON into the textarea. The manifest is validated client-side instantly — once valid you
+          see a live preview before importing. Importing saves as a <strong>draft</strong>; use Publish to go live.
         </div>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label
-            style={{ fontSize: 12.5, fontWeight: 600, padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", background: "var(--surface2)" }}
-          >
-            Upload .json
-            <input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={loadFile} />
-          </label>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>or paste below</span>
+        {/* ── Drop zone ── */}
+        <div
+          className={`tm-dropzone${dragOver ? " drag-over" : ""}`}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+        >
+          <input
+            type="file"
+            accept=".json,application/json"
+            onChange={onFileInput}
+          />
+          <div className="tm-dropzone-icon">
+            {dragOver ? "⬇" : fileName ? "✓" : "↑"}
+          </div>
+          <div className="tm-dropzone-label">
+            {dragOver ? "Drop to load manifest" : "Drag & drop a .json file here"}
+          </div>
+          <div className="tm-dropzone-sub">or click to browse your computer</div>
+          {fileName && !dragOver && (
+            <div className="tm-dropzone-fname">{fileName}</div>
+          )}
         </div>
 
+        {/* ── Divider ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>OR PASTE JSON</span>
+          <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+        </div>
+
+        {/* ── Textarea (always visible as alternative) ── */}
         <textarea
           rows={10}
           className="tm-mono"
           value={raw}
-          placeholder={`{\n  "name": "Sunset Studio",\n  "type": "website",\n  "tier": "premium",\n  "price_paise": 49900,\n  ...`}
-          onChange={(e) => { setRaw(e.target.value); setResult(null); }}
+          placeholder={`{\n  "name": "Sunset Studio",\n  "type": "website",\n  "tier": "premium",\n  "price_paise": 49900,\n  "description": "...",\n  "tags": ["agency","dark"],\n  "thumbnail_url": "",\n  "theme": {},\n  "content": { "site": "Sunset Studio", "theme": "dark", ... }\n}`}
+          onChange={(e) => { applyRaw(e.target.value); setFileName(null); }}
           style={{
             width: "100%", padding: "10px 12px", border: "1px solid var(--border)",
             borderRadius: 10, background: "var(--bg)", color: "var(--text)", resize: "vertical",
@@ -635,29 +807,74 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
           spellCheck={false}
         />
 
-        {result?.kind === "errors" && (
+        {/* ── Client-side validation feedback ── */}
+        {cv.kind === "json-error" && (
           <div className="tm-errs">
-            <strong>Validation failed</strong>
+            <strong>Invalid JSON</strong>
+            <div style={{ marginTop: 4, fontFamily: "monospace", fontSize: 12, opacity: .85 }}>{cv.err}</div>
+          </div>
+        )}
+
+        {cv.kind === "manifest-errors" && (
+          <div className="tm-errs">
+            <strong>Manifest validation failed</strong>
             <ul>
-              {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+              {cv.errors.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
           </div>
         )}
 
-        {result?.kind === "success" && (
-          <div className="tm-success-box">
-            Template imported successfully (ID: <code>{result.id}</code>). It is saved as a draft — edit it above to adjust and publish.
+        {cv.kind === "valid" && (
+          <div className="tm-cv-ok">
+            <span style={{ marginLeft: 4, color: "#166534", fontSize: 12 }}>
+              {cv.manifest.name} ({cv.manifest.type}, {cv.manifest.tier})
+              {cv.manifest.tier === "premium" && cv.manifest.price_paise > 0
+                ? ` — ${inr(cv.manifest.price_paise)}`
+                : ""}
+            </span>
           </div>
         )}
 
-        <div>
+        {/* ── Live preview ── */}
+        {showPreview && (
+          <ManifestLivePreview type={cv.manifest.type} content={cv.manifest.content} />
+        )}
+
+        {/* ── Server import result ── */}
+        {saveResult?.kind === "errors" && (
+          <div className="tm-errs">
+            <strong>Server import failed</strong>
+            <ul>
+              {saveResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {saveResult?.kind === "success" && (
+          <div className="tm-success-box">
+            Imported as draft (ID: <code>{saveResult.id}</code>). Use the grid card to publish when ready.
+          </div>
+        )}
+
+        {/* ── Action ── */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <button
             className="btn grad"
             onClick={doImport}
-            disabled={pending || !raw.trim()}
+            disabled={!canImport}
           >
-            {pending ? "Validating…" : "Validate & import"}
+            {pending ? "Importing…" : "Import as draft"}
           </button>
+          {cv.kind === "valid" && !saveResult && (
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>
+              Manifest passes validation — import will save as a draft.
+            </span>
+          )}
+          {raw.trim() && cv.kind !== "valid" && !pending && (
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>
+              Fix validation errors above before importing.
+            </span>
+          )}
         </div>
       </div>
     </Card>

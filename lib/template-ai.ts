@@ -11,7 +11,8 @@
  *
  * Environment variables:
  *   ANTHROPIC_API_KEY  — Anthropic secret key. Required for real model calls.
- *   ANTHROPIC_MODEL    — Override model ID (default: claude-3-5-sonnet-latest).
+ *   ANTHROPIC_MODEL    — Override model ID (default: claude-sonnet-4-6).
+ *                        For max design quality use claude-opus-4-8.
  *
  * To enable real generation:
  *   1. Add ANTHROPIC_API_KEY=sk-ant-... to your .env.local (never commit it).
@@ -123,7 +124,7 @@ Return ONE JSON manifest only, matching the spec above.`;
  *
  * When ANTHROPIC_API_KEY is set: makes a real HTTP request to
  *   https://api.anthropic.com/v1/messages
- * with model claude-3-5-sonnet-latest (or ANTHROPIC_MODEL env override).
+ * with model claude-sonnet-4-6 (or ANTHROPIC_MODEL env override).
  *
  * When the key is absent: returns a deterministic stub manifest string that
  * PASSES validateManifest + validateContentForType for the requested type.
@@ -138,7 +139,7 @@ export async function callClaude(
 
   if (apiKey) {
     // ── Real Claude call ──────────────────────────────────────────────────────
-    const model = process.env.ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest";
+    const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
