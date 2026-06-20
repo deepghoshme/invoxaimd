@@ -197,12 +197,17 @@ export async function toggleTemplateStatus(id: string, current: string): Promise
 /**
  * Parse a JSON manifest string (or pre-parsed object), validate it against the
  * TemplateManifest schema + the type-specific content allowlist, then INSERT a
- * new templates row with status='draft'.
+ * new templates row.
+ *
+ * @param raw   - JSON string or pre-parsed manifest object.
+ * @param opts  - Optional options bag.
+ * @param opts.publish - When true, inserts with status='published'; default (false/omitted) = 'draft'.
  *
  * ADMIN-ONLY.
  */
 export async function importManifest(
   raw: string | object,
+  opts?: { publish?: boolean },
 ): Promise<{ ok: true; id: string } | { ok: false; errors: string[] }> {
   const guard = await requireAdmin();
   if (!guard.ok) return { ok: false, errors: [guard.error] };
@@ -232,7 +237,8 @@ export async function importManifest(
     return { ok: false, errors: contentResult.errors };
   }
 
-  // 4. INSERT a draft template row
+  // 4. INSERT a template row (draft by default; published when opts.publish === true)
+  const status = opts?.publish === true ? "published" : "draft";
   const sb = await createClient();
   const { data, error } = await sb
     .from("templates")
@@ -246,7 +252,7 @@ export async function importManifest(
       tags: manifest.tags,
       theme: manifest.theme,
       content: manifest.content,
-      status: "draft",
+      status,
       license_model: "per_store",
     })
     .select("id")

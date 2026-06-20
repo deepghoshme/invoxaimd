@@ -85,6 +85,8 @@ const WEBSITE_KEYS = new Set<string>([
   "auth", "social", "legal",
   // Historical section-data aliases used in the worked example / older content blobs
   "features", "spotlight", "testimonials",
+  // Premium finance / masterclass sections (added 2026-06-20)
+  "ticker", "kpi", "gauges", "badge",
 ]);
 
 // store → lib/store.ts StoreContent

@@ -304,7 +304,7 @@ export default function WebsiteView({
                 </div>
               </a>
             ))}</div>
-          ) : <div className="galempty">Publish one-page products and they’ll appear here automatically.</div>}
+          ) : <div className="galempty">Publish one-page products and they'll appear here automatically.</div>}
         </div>
       );
     },
@@ -374,16 +374,38 @@ export default function WebsiteView({
     },
     testimonials: () => {
       const h = head("testimonials", "Loved by customers", "Real words from our community.");
+      const style = c.testStyle ?? "grid";
+      const cards = (c.tests ?? []).map((t, i) => (
+        <div className="tcard" key={i}>
+          <div className="st">★★★★★</div><p>"{t.q}"</p>
+          <div className="who"><div className="tav">{(t.n || "?").charAt(0)}</div>
+            <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div></div>
+        </div>
+      ));
+      if (style === "marquee") {
+        // Duplicate for a seamless infinite scroll; pause on hover is handled via CSS.
+        const doubled = [...(c.tests ?? []), ...(c.tests ?? [])];
+        return (
+          <div className="sect" key="testimonials">
+            <div className="sect-h"><h2>{h.title}</h2>{h.sub && <p>{h.sub}</p>}</div>
+            <div className="tgrid tgrid-marquee">
+              <div className="tmtrack">
+                {doubled.map((t, i) => (
+                  <div className="tcard" key={i}>
+                    <div className="st">★★★★★</div><p>"{t.q}"</p>
+                    <div className="who"><div className="tav">{(t.n || "?").charAt(0)}</div>
+                      <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
       return (
       <div className="sect" key="testimonials">
         <div className="sect-h"><h2>{h.title}</h2>{h.sub && <p>{h.sub}</p>}</div>
-        <div className={`tgrid${(c.testStyle ?? "grid") === "carousel" ? " tgrid-carousel" : ""}`}>{(c.tests ?? []).map((t, i) => (
-          <div className="tcard" key={i}>
-            <div className="st">★★★★★</div><p>“{t.q}”</p>
-            <div className="who"><div className="tav">{(t.n || "?").charAt(0)}</div>
-              <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div></div>
-          </div>
-        ))}</div>
+        <div className={`tgrid${style === "carousel" ? " tgrid-carousel" : ""}`}>{cards}</div>
       </div>
       );
     },
@@ -413,6 +435,93 @@ export default function WebsiteView({
         <a className="b1" href={cta(c.ctaBand?.url ?? c.ctaurl, c.cta || "Get started")}>{c.cta || "Get started"}</a>
       </div>
     ),
+
+    // ── Premium sections ─────────────────────────────────────────────────────
+
+    ticker: () => {
+      const items = c.ticker ?? [];
+      if (!items.length) return null;
+      // Duplicate the list so the marquee loops seamlessly (–50% trick).
+      const doubled = [...items, ...items];
+      return (
+        <div className="tickerstrip" key="ticker">
+          <div className="ttrack">
+            {doubled.map((it, i) => (
+              <span className="titem" key={i}>
+                <span className="tlabel">{it.label}</span>
+                <span className="tval">{it.value}</span>
+                {it.change !== undefined && (
+                  <span className={`tchg${it.up === true ? " up" : it.up === false ? " dn" : " nt"}`}>
+                    {it.up === true ? "▲" : it.up === false ? "▼" : ""}{it.change}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    kpi: () => {
+      const items = c.kpi ?? [];
+      if (!items.length) return null;
+      const h = head("kpi", "Performance at a glance", "Real numbers. Real results.");
+      return (
+        <div className="sect" key="kpi">
+          <div className="sect-h"><h2>{h.title}</h2>{h.sub && <p>{h.sub}</p>}</div>
+          <div className="kpigrid">
+            {items.map((it, i) => (
+              <div className="kpicard" key={i}>
+                <div className="kn">{it.value}{it.suffix && <span className="ksuf">{it.suffix}</span>}</div>
+                <div className="kl">{it.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    gauges: () => {
+      const items = c.gauges ?? [];
+      if (!items.length) return null;
+      const h = head("gauges", "Strategy accuracy", "Backtested across 5 years of live market data.");
+      return (
+        <div className="sect" key="gauges">
+          <div className="sect-h"><h2>{h.title}</h2>{h.sub && <p>{h.sub}</p>}</div>
+          <div className="gaugelist">
+            {items.map((it, i) => (
+              <GaugeBar key={i} label={it.label} percent={it.percent} live={live} />
+            ))}
+          </div>
+        </div>
+      );
+    },
+
+    badge: () => {
+      const items = c.badge ?? [];
+      if (!items.length) return null;
+      const h = head("badge", "Credentials & registrations", "");
+      return (
+        <div className="sect" key="badge">
+          {(h.title || h.sub) && <div className="sect-h"><h2>{h.title}</h2>{h.sub && <p>{h.sub}</p>}</div>}
+          <div className="badgestrip">
+            {items.map((it, i) => (
+              <span className="badgepill" key={i}>
+                {it.icon && (
+                  <span className="bic">
+                    {it.icon.startsWith("http") || it.icon.startsWith("/")
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={it.icon} alt="" />
+                      : it.icon}
+                  </span>
+                )}
+                {it.text}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    },
   };
 
   const Foot = () => {
@@ -566,7 +675,7 @@ async function submitMessage(track: Track | undefined, body: Record<string, unkn
 function ContactForm({ c, track }: { c: WebsiteContent; track?: Track }) {
   const [f, setF] = useState({ name: "", email: "", message: "" });
   const [st, setSt] = useState<"idle" | "sending" | "done" | "error">("idle");
-  if (st === "done") return <div className="cbox" style={{ display: "grid", placeItems: "center", textAlign: "center", minHeight: 160 }}>✅<br />Thanks{f.name ? `, ${f.name}` : ""}! We’ll be in touch soon.</div>;
+  if (st === "done") return <div className="cbox" style={{ display: "grid", placeItems: "center", textAlign: "center", minHeight: 160 }}>✅<br />Thanks{f.name ? `, ${f.name}` : ""}! We'll be in touch soon.</div>;
   return (
     <form className="cbox cform" onSubmit={async (e) => { e.preventDefault(); setSt("sending"); const ok = await submitMessage(track, { kind: "contact", ...f }); setSt(ok ? "done" : "error"); }}>
       <input placeholder="Your name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
@@ -731,10 +840,45 @@ function Countdown({ title, sub, date, variant = "cards" }: { title?: string; su
   );
 }
 
+function GaugeBar({ label, percent, live }: { label: string; percent: number; live?: boolean }) {
+  const fillRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = fillRef.current;
+    if (!el) return;
+    // If live (published site) animate on scroll into view; else show immediately.
+    if (!live) { el.style.width = `${percent}%`; return; }
+    // Check reduced-motion preference.
+    const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) { el.style.width = `${percent}%`; return; }
+    el.style.width = "0%";
+    let triggered = false;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && !triggered) {
+          triggered = true;
+          requestAnimationFrame(() => { el.style.width = `${percent}%`; });
+          io.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [live, percent]);
+  return (
+    <div className="gaugerow">
+      <div className="grhead">
+        <span className="grlabel">{label}</span>
+        <span className="grpct">{percent}%</span>
+      </div>
+      <div className="gtrack"><div className="gfill ani" ref={fillRef} /></div>
+    </div>
+  );
+}
+
 function NewsletterForm({ c, track }: { c: WebsiteContent; track?: Track }) {
   const [email, setEmail] = useState("");
   const [st, setSt] = useState<"idle" | "sending" | "done" | "error">("idle");
-  if (st === "done") return <div className="newsform" style={{ justifyContent: "center" }}>✅ You’re subscribed — thank you!</div>;
+  if (st === "done") return <div className="newsform" style={{ justifyContent: "center" }}>✅ You're subscribed — thank you!</div>;
   return (
     <form className="newsform" onSubmit={async (e) => { e.preventDefault(); setSt("sending"); const ok = await submitMessage(track, { kind: "newsletter", email }); setSt(ok ? "done" : "error"); }}>
       <input placeholder="you@email.com" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />

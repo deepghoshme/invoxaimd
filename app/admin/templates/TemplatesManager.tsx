@@ -675,8 +675,9 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [publishNow, setPublishNow] = useState(false);
   const [saveResult, setSaveResult] = useState<
-    { kind: "errors"; errors: string[] } | { kind: "success"; id: string } | null
+    { kind: "errors"; errors: string[] } | { kind: "success"; id: string; published: boolean } | null
   >(null);
 
   // Client-side validation runs synchronously on every raw change (pure fn, no memoization needed)
@@ -731,17 +732,18 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
     e.target.value = "";
   }
 
-  // ── Server import (save as draft) ──
+  // ── Server import ──
 
   function doImport() {
     if (!raw.trim()) return;
+    const shouldPublish = publishNow;
     startTransition(async () => {
       setSaveResult(null);
-      const res = await importManifest(raw);
+      const res = await importManifest(raw, { publish: shouldPublish });
       if (!res.ok) {
         setSaveResult({ kind: "errors", errors: res.errors });
       } else {
-        setSaveResult({ kind: "success", id: res.id });
+        setSaveResult({ kind: "success", id: res.id, published: shouldPublish });
         setRaw("");
         setFileName(null);
         onDone();
@@ -852,9 +854,28 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
 
         {saveResult?.kind === "success" && (
           <div className="tm-success-box">
-            Imported as draft (ID: <code>{saveResult.id}</code>). Use the grid card to publish when ready.
+            {saveResult.published
+              ? <>Published immediately (ID: <code>{saveResult.id}</code>). The template is now live in the seller gallery.</>
+              : <>Imported as draft (ID: <code>{saveResult.id}</code>). Use the grid card to publish when ready.</>
+            }
           </div>
         )}
+
+        {/* ── Publish toggle ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+            <input
+              type="checkbox"
+              checked={publishNow}
+              onChange={(e) => setPublishNow(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: "var(--primary)", cursor: "pointer" }}
+            />
+            Publish immediately
+          </label>
+          <div style={{ fontSize: 11.5, color: "var(--muted)", paddingLeft: 24 }}>
+            On = goes live instantly in the seller gallery. Off = saved as draft for review.
+          </div>
+        </div>
 
         {/* ── Action ── */}
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -863,11 +884,13 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
             onClick={doImport}
             disabled={!canImport}
           >
-            {pending ? "Importing…" : "Import as draft"}
+            {pending ? "Importing…" : publishNow ? "Import & publish" : "Import as draft"}
           </button>
           {cv.kind === "valid" && !saveResult && (
             <span style={{ fontSize: 12, color: "var(--muted)" }}>
-              Manifest passes validation — import will save as a draft.
+              {publishNow
+                ? "Manifest valid — will be published immediately on import."
+                : "Manifest passes validation — import will save as a draft."}
             </span>
           )}
           {raw.trim() && cv.kind !== "valid" && !pending && (
@@ -919,6 +942,7 @@ function GenerateWithAIPanel({ onDone }: { onDone: () => void }) {
   const [rawEdit, setRawEdit] = useState("");
   const [rawErr, setRawErr] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<{ text: string; err: boolean } | null>(null);
+  const [publishNow, setPublishNow] = useState(false);
 
   function field<K extends keyof AIBrief>(k: K, v: AIBrief[K]) {
     setBrief((p) => ({ ...p, [k]: v }));
@@ -962,13 +986,19 @@ function GenerateWithAIPanel({ onDone }: { onDone: () => void }) {
   function doSave() {
     const jsonToSave = rawEdit.trim();
     if (!jsonToSave || rawErr) { setSaveMsg({ text: "Fix JSON errors before saving.", err: true }); return; }
+    const shouldPublish = publishNow;
     startSave(async () => {
       setSaveMsg(null);
-      const res = await importManifest(jsonToSave);
+      const res = await importManifest(jsonToSave, { publish: shouldPublish });
       if (!res.ok) {
         setSaveMsg({ text: `Save failed: ${res.errors.join("; ")}`, err: true });
       } else {
-        setSaveMsg({ text: `Saved as draft (ID: ${res.id})`, err: false });
+        setSaveMsg({
+          text: shouldPublish
+            ? `Published immediately (ID: ${res.id})`
+            : `Saved as draft (ID: ${res.id})`,
+          err: false,
+        });
         onDone();
       }
     });
@@ -1130,13 +1160,29 @@ function GenerateWithAIPanel({ onDone }: { onDone: () => void }) {
               )}
             </div>
 
+            {/* Publish toggle */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                <input
+                  type="checkbox"
+                  checked={publishNow}
+                  onChange={(e) => setPublishNow(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: "var(--primary)", cursor: "pointer" }}
+                />
+                Publish immediately
+              </label>
+              <div style={{ fontSize: 11.5, color: "var(--muted)", paddingLeft: 24 }}>
+                On = goes live instantly in the seller gallery. Off = saved as draft for review.
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <button
                 className="btn grad"
                 onClick={doSave}
                 disabled={saving || !!rawErr || !rawEdit.trim()}
               >
-                {saving ? "Saving…" : "Save as draft"}
+                {saving ? "Saving…" : publishNow ? "Save & publish" : "Save as draft"}
               </button>
               {saveMsg && (
                 <span style={{ fontSize: 12.5, color: saveMsg.err ? "var(--red, #e5476f)" : "var(--green, #1fb57a)", fontWeight: 600 }}>
@@ -1167,16 +1213,27 @@ function GenerateWithAIPanel({ onDone }: { onDone: () => void }) {
             />
             {rawErr && <div className="tm-json-err">{rawErr}</div>}
             {!rawErr && rawEdit.trim() && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
-                <span style={{ fontSize: 11.5, color: "var(--green, #1fb57a)" }}>Valid JSON — try saving</span>
-                <button className="btn grad" onClick={doSave} disabled={saving}>
-                  {saving ? "Saving…" : "Save as draft"}
-                </button>
-                {saveMsg && (
-                  <span style={{ fontSize: 12.5, color: saveMsg.err ? "var(--red, #e5476f)" : "var(--green, #1fb57a)", fontWeight: 600 }}>
-                    {saveMsg.text}
-                  </span>
-                )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                  <input
+                    type="checkbox"
+                    checked={publishNow}
+                    onChange={(e) => setPublishNow(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: "var(--primary)", cursor: "pointer" }}
+                  />
+                  Publish immediately
+                </label>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 11.5, color: "var(--green, #1fb57a)" }}>Valid JSON — try saving</span>
+                  <button className="btn grad" onClick={doSave} disabled={saving}>
+                    {saving ? "Saving…" : publishNow ? "Save & publish" : "Save as draft"}
+                  </button>
+                  {saveMsg && (
+                    <span style={{ fontSize: 12.5, color: saveMsg.err ? "var(--red, #e5476f)" : "var(--green, #1fb57a)", fontWeight: 600 }}>
+                      {saveMsg.text}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>

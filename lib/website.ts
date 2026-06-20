@@ -14,6 +14,30 @@ export type WSTest = { n: string; r: string; q: string };
 export type WSFaq = { q: string; a: string };
 export type WSLegalDoc = { on: boolean; title: string; text: string };
 
+/**
+ * A single item in the scrolling ticker bar (e.g. a stock/market data row).
+ * `up` drives the colour: true = green, false = red, absent = neutral.
+ */
+export type WSTickerItem = { label: string; value: string; change?: string; up?: boolean };
+
+/**
+ * A single KPI / metric card shown in a horizontal row.
+ * `suffix` is appended after the value (e.g. "L", "Cr", "%").
+ */
+export type WSKpiItem = { label: string; value: string; suffix?: string };
+
+/**
+ * A labeled progress-bar / gauge shown as a filled bar.
+ * `percent` is 0–100.
+ */
+export type WSGaugeItem = { label: string; percent: number };
+
+/**
+ * A single authority / credential badge (e.g. "SEBI Reg No: INH000015871").
+ * `icon` is an optional emoji or image-url shown beside the text.
+ */
+export type WSBadgeItem = { text: string; icon?: string };
+
 export type WebsiteContent = {
   // brand
   site?: string;
@@ -89,7 +113,13 @@ export type WebsiteContent = {
   galH?: number; // image-slider height (px)
   galAuto?: boolean; // auto-advance the image slider
   galStyle?: string; // gallery layout (slider | grid)
-  testStyle?: string; // testimonials layout (grid | carousel)
+  /**
+   * Testimonials layout.
+   * - "grid"     → static responsive grid (default)
+   * - "carousel" → horizontal scrolling carousel
+   * - "marquee"  → auto-scrolling horizontal marquee strip
+   */
+  testStyle?: "grid" | "carousel" | "marquee";
   statsCount?: boolean; // animate stats counting up
   brands?: string;
   brandLogos?: string[]; // brand-slider logo images (else uses `brands` text)
@@ -111,6 +141,40 @@ export type WebsiteContent = {
   auth?: { on?: boolean; loginUrl?: string; signupUrl?: string; accountUrl?: string }; // nav login/signup
   social?: { ig?: string; yt?: string; x?: string; tg?: string };
   legal?: Record<string, WSLegalDoc>;
+
+  // ── Premium finance / masterclass sections ──────────────────────────────────
+
+  /**
+   * Scrolling data ticker bar — renders as a horizontal marquee strip near the
+   * top of the page (above or below the nav). Each item shows label + value +
+   * optional percentage change with directional colour (up=green, down=red).
+   * Example: { label:"NIFTY", value:"24,812.40", change:"+0.84%", up:true }
+   */
+  ticker?: WSTickerItem[];
+
+  /**
+   * KPI / metric cards — a horizontal row of headline numbers.
+   * Rendered as a grid of cards, each showing `value` + optional `suffix` large
+   * and `label` below. Typical: 3–6 cards in a row.
+   * Example: { label:"Net Profit", value:"75", suffix:"L" }
+   */
+  kpi?: WSKpiItem[];
+
+  /**
+   * Labeled progress bars / gauges — a vertical list of bars.
+   * Each bar fills to `percent` (0–100) with the label on the left and the
+   * numeric value on the right. Great for strategy accuracy, win-rate metrics, etc.
+   * Example: { label:"Boomerang Accuracy", percent:78 }
+   */
+  gauges?: WSGaugeItem[];
+
+  /**
+   * Authority / credential badge strip — a horizontal row of trust badges.
+   * Each badge shows an optional `icon` (emoji or image URL) + `text`.
+   * Renders inline, space-separated, typically near the hero or footer.
+   * Example: { text:"SEBI Reg No: INH000015871", icon:"🏛️" }
+   */
+  badge?: WSBadgeItem[];
 };
 
 /** Animated, full-site background motions. */
@@ -178,7 +242,7 @@ export const CD_STYLES: [string, string][] = [
 /** Gallery layouts. */
 export const GAL_STYLES: [string, string][] = [["slider", "Slider"], ["grid", "Grid"]];
 /** Testimonials layouts. */
-export const TEST_STYLES: [string, string][] = [["grid", "Grid"], ["carousel", "Carousel"]];
+export const TEST_STYLES: [string, string][] = [["grid", "Grid"], ["carousel", "Carousel"], ["marquee", "Marquee"]];
 
 /** Contact page layouts. */
 export const CONTACT_STYLES: [string, string][] = [
@@ -220,10 +284,21 @@ export const SECTIONS: [string, string][] = [
   ["banner", "Banner strip"], ["logos", "Logos grid"], ["gallery", "Image slider"], ["brands", "Brand slider"],
   ["team", "Team"], ["pricing", "Pricing"], ["shop", "Products / Shop"], ["countdown", "Countdown"], ["video", "Video"], ["about", "About"],
   ["map", "Map"], ["testimonials", "Testimonials"], ["faq", "FAQ"], ["newsletter", "Newsletter"], ["cta", "CTA band"],
+  // Premium finance / masterclass sections
+  ["ticker", "Ticker bar"],
+  ["badge", "Badge strip"],
+  ["kpi", "KPI cards"],
+  ["gauges", "Gauges / bars"],
 ];
 export const LABELS: Record<string, string> = Object.fromEntries(SECTIONS);
 
-const ORDER = ["features", "steps", "spotlight", "stats", "banner", "logos", "gallery", "brands", "team", "pricing", "shop", "countdown", "video", "about", "map", "testimonials", "faq", "newsletter", "cta"];
+const ORDER = [
+  "features", "steps", "spotlight", "stats", "banner", "logos", "gallery", "brands",
+  "team", "pricing", "shop", "countdown", "video", "about", "map",
+  "testimonials", "faq", "newsletter", "cta",
+  // Premium sections appended — renderer agent controls exact placement per template
+  "ticker", "badge", "kpi", "gauges",
+];
 
 /** One-click design presets (applied over current content, keeps your text). */
 export const TEMPLATES: { name: string; patch: Partial<WebsiteContent> }[] = [
@@ -271,7 +346,15 @@ export const DEFAULT_WEBSITE: WebsiteContent = {
   hb2: "Watch intro",
   hb2url: "",
   order: [...ORDER],
-  sections: Object.fromEntries(ORDER.map((k) => [k, true])),
+  sections: {
+    // Core sections — on by default
+    ...Object.fromEntries(ORDER.filter((k) => !["ticker", "badge", "kpi", "gauges"].includes(k)).map((k) => [k, true])),
+    // Premium finance / masterclass sections — off by default so existing sites are unaffected
+    ticker: false,
+    badge: false,
+    kpi: false,
+    gauges: false,
+  },
   tint: true,
   heads: {
     features: { title: "Everything you need", sub: "Built to help you start and stay consistent." },
@@ -287,6 +370,10 @@ export const DEFAULT_WEBSITE: WebsiteContent = {
     testimonials: { title: "Loved by customers", sub: "Real words from our community." },
     faq: { title: "Frequently asked", sub: "" },
     contact: { title: "Get in touch", sub: "We usually reply within a day." },
+    // Premium finance / masterclass sections
+    kpi: { title: "Performance at a glance", sub: "Real numbers. Real results." },
+    gauges: { title: "Strategy accuracy", sub: "Backtested across 5 years of live market data." },
+    badge: { title: "Credentials & registrations", sub: "" },
   },
   feats: [
     { ic: "🧘", t: "Live classes", x: "Daily guided sessions from anywhere." },
@@ -369,4 +456,35 @@ export const DEFAULT_WEBSITE: WebsiteContent = {
     disclaimer: { on: false, title: "Disclaimer", text: "All information on this site is for general purposes only.\nResults may vary; nothing here is professional advice." },
     cookies: { on: false, title: "Cookie Policy", text: "We use cookies to improve your experience and analyse traffic.\nYou can control cookies through your browser settings." },
   },
+
+  // ── Premium finance / masterclass sample data (sections default OFF) ─────────
+
+  ticker: [
+    { label: "NIFTY 50", value: "24,812.40", change: "+0.84%", up: true },
+    { label: "SENSEX", value: "81,632.15", change: "+0.76%", up: true },
+    { label: "BANKNIFTY", value: "53,204.80", change: "-0.32%", up: false },
+    { label: "RELIANCE", value: "2,948.55", change: "+1.12%", up: true },
+    { label: "TCS", value: "4,102.30", change: "+0.45%", up: true },
+    { label: "INFY", value: "1,873.65", change: "-0.18%", up: false },
+  ],
+
+  kpi: [
+    { label: "Net Profit", value: "75", suffix: "L" },
+    { label: "Win Rate", value: "82", suffix: "%" },
+    { label: "Avg Monthly Return", value: "12", suffix: "%" },
+    { label: "Members Trained", value: "3,400", suffix: "+" },
+  ],
+
+  gauges: [
+    { label: "Boomerang Strategy Accuracy", percent: 82 },
+    { label: "Gap-Up Open Play", percent: 74 },
+    { label: "Option Selling Precision", percent: 78 },
+  ],
+
+  badge: [
+    { text: "SEBI Reg No: INH000015871", icon: "🏛️" },
+    { text: "NSE Certified", icon: "📜" },
+    { text: "10+ Years Market Experience", icon: "📈" },
+    { text: "ISO 9001:2015 Certified", icon: "✅" },
+  ],
 };

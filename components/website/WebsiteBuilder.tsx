@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import WebsiteView from "./WebsiteView";
 import {
   type WebsiteContent, type WSFeature, type WSStat, type WSPlan, type WSTest, type WSFaq, type WSSpot,
+  type WSTickerItem, type WSKpiItem, type WSGaugeItem, type WSBadgeItem,
   ACCENTS, BGS, NAVS, BTSHAPES, HERO_LAYOUTS, REVEALS, BTN_ANIMS, DIVIDERS, FONTS, WIDTHS, SEC_STYLES, STEP_STYLES, CD_STYLES, CONTACT_STYLES, GAL_STYLES, TEST_STYLES, PADS, GRID_SECTIONS, LEGAL_DOCS, ICONS, SECTIONS, LABELS, TEMPLATES,
 } from "@/lib/website";
 import { saveWebsite, publishWebsite } from "@/app/dashboard/website/actions";
@@ -137,6 +138,10 @@ export default function WebsiteBuilder({
   const faq = c.faq ?? [];
   const order = c.order ?? [];
   const sections = c.sections ?? {};
+  const ticker = c.ticker ?? [];
+  const kpi = c.kpi ?? [];
+  const gauges = c.gauges ?? [];
+  const badge = c.badge ?? [];
 
   const setFeat = (i: number, p: Partial<WSFeature>) => set({ feats: feats.map((f, j) => (j === i ? { ...f, ...p } : f)) });
   const setStat = (i: number, p: Partial<WSStat>) => set({ stats: stats.map((s, j) => (j === i ? { ...s, ...p } : s)) });
@@ -146,6 +151,10 @@ export default function WebsiteBuilder({
   const setStep = (i: number, p: Partial<{ t: string; x: string }>) => set({ steps: steps.map((s, j) => (j === i ? { ...s, ...p } : s)) });
   const setMember = (i: number, p: Partial<{ img?: string; name: string; role: string }>) => set({ team: team.map((s, j) => (j === i ? { ...s, ...p } : s)) });
   const setSpot = (i: number, p: Partial<WSSpot>) => set({ spots: spots.map((s, j) => (j === i ? { ...s, ...p } : s)) });
+  const setTicker = (i: number, p: Partial<WSTickerItem>) => set({ ticker: ticker.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+  const setKpi = (i: number, p: Partial<WSKpiItem>) => set({ kpi: kpi.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+  const setGauge = (i: number, p: Partial<WSGaugeItem>) => set({ gauges: gauges.map((x, j) => (j === i ? { ...x, ...p } : x)) });
+  const setBadge = (i: number, p: Partial<WSBadgeItem>) => set({ badge: badge.map((x, j) => (j === i ? { ...x, ...p } : x)) });
 
   // custom pages — structure is always global (use setGlobal, not the page-aware set)
   const setPg = (i: number, p: Partial<NonNullable<WebsiteContent["pages"]>[number]>) =>
@@ -454,7 +463,7 @@ export default function WebsiteBuilder({
             {c.auth?.on && <>
               <div className="field"><label>Log in link</label><input value={c.auth?.loginUrl ?? ""} onChange={(e) => set({ auth: { ...c.auth, loginUrl: e.target.value } })} placeholder="/login or https://" /></div>
               <div className="field"><label>Sign up link</label><input value={c.auth?.signupUrl ?? ""} onChange={(e) => set({ auth: { ...c.auth, signupUrl: e.target.value } })} placeholder="/signup or https://" /></div>
-              <div className="field"><label>My-account link (shows “My account” when set)</label><input value={c.auth?.accountUrl ?? ""} onChange={(e) => set({ auth: { ...c.auth, accountUrl: e.target.value } })} placeholder="/account" /></div>
+              <div className="field"><label>My-account link (shows "My account" when set)</label><input value={c.auth?.accountUrl ?? ""} onChange={(e) => set({ auth: { ...c.auth, accountUrl: e.target.value } })} placeholder="/account" /></div>
             </>}
             <div className="field" style={{ marginTop: 10 }}><label>Social handles</label><div className="ff"><input value={c.social?.ig ?? ""} onChange={(e) => set({ social: { ...c.social, ig: e.target.value } })} placeholder="Instagram" /><input value={c.social?.yt ?? ""} onChange={(e) => set({ social: { ...c.social, yt: e.target.value } })} placeholder="YouTube" /></div></div>
             <div className="ff" style={{ marginBottom: 0 }}><input className="rowfull" style={{ marginBottom: 0 }} value={c.social?.x ?? ""} onChange={(e) => set({ social: { ...c.social, x: e.target.value } })} placeholder="X" /><input className="rowfull" style={{ marginBottom: 0 }} value={c.social?.tg ?? ""} onChange={(e) => set({ social: { ...c.social, tg: e.target.value } })} placeholder="Telegram" /></div>
@@ -648,7 +657,7 @@ export default function WebsiteBuilder({
           <div className="sec">
             <h3>Testimonials</h3>
             {headFields("testimonials")}
-            <div className="field"><label>Layout</label><div className="chips">{TEST_STYLES.map((s) => <div key={s[0]} className={`chip${(c.testStyle ?? "grid") === s[0] ? " on" : ""}`} onClick={() => set({ testStyle: s[0] })}>{s[1]}</div>)}</div></div>
+            <div className="field"><label>Layout</label><div className="chips">{TEST_STYLES.map((s) => <div key={s[0]} className={`chip${(c.testStyle ?? "grid") === s[0] ? " on" : ""}`} onClick={() => set({ testStyle: s[0] as WebsiteContent["testStyle"] })}>{s[1]}</div>)}</div></div>
             {tests.map((t, i) => (
               <div key={i}>
                 <div className="frow">
@@ -743,6 +752,76 @@ export default function WebsiteBuilder({
                 </div>
               );
             })}
+          </div>
+
+          {/* Ticker bar */}
+          <div className="sec">
+            <h3>Ticker bar</h3>
+            <p className="dx-muted" style={{ fontSize: 11, marginBottom: 8 }}>A scrolling finance-style strip. Each item: label, value, optional change (e.g. "+0.84%") and direction.</p>
+            {ticker.map((it, i) => (
+              <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 9, marginBottom: 9 }}>
+                <div className="frow">
+                  <input style={{ flex: ".5" }} value={it.label} onChange={(e) => setTicker(i, { label: e.target.value })} placeholder="NIFTY 50" />
+                  <input value={it.value} onChange={(e) => setTicker(i, { value: e.target.value })} placeholder="24,812.40" />
+                  <button className="del" onClick={() => set({ ticker: ticker.filter((_, j) => j !== i) })}>✕</button>
+                </div>
+                <div className="frow" style={{ marginBottom: 0 }}>
+                  <input style={{ flex: 1 }} value={it.change ?? ""} onChange={(e) => setTicker(i, { change: e.target.value })} placeholder="+0.84% (optional)" />
+                  <select value={it.up === true ? "up" : it.up === false ? "dn" : "nt"} onChange={(e) => setTicker(i, { up: e.target.value === "up" ? true : e.target.value === "dn" ? false : undefined })} style={{ width: 64, padding: "7px 3px", border: "1px solid var(--border)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontSize: 12 }}>
+                    <option value="nt">Neutral</option>
+                    <option value="up">Up ▲</option>
+                    <option value="dn">Down ▼</option>
+                  </select>
+                </div>
+              </div>
+            ))}
+            <button className="addrow" onClick={() => set({ ticker: [...ticker, { label: "SYMBOL", value: "0.00" }] })}>+ Add ticker item</button>
+          </div>
+
+          {/* KPI cards */}
+          <div className="sec">
+            <h3>KPI cards</h3>
+            {headFields("kpi")}
+            <p className="dx-muted" style={{ fontSize: 11, marginBottom: 8 }}>Headline metric cards shown in a row. Value can include commas (e.g. "3,400"). Suffix appended after (e.g. "L", "%", "+").</p>
+            {kpi.map((it, i) => (
+              <div className="frow" key={i}>
+                <input style={{ flex: ".4" }} value={it.value} onChange={(e) => setKpi(i, { value: e.target.value })} placeholder="75" />
+                <input style={{ flex: ".2" }} value={it.suffix ?? ""} onChange={(e) => setKpi(i, { suffix: e.target.value })} placeholder="L" />
+                <input value={it.label} onChange={(e) => setKpi(i, { label: e.target.value })} placeholder="Net Profit" />
+                <button className="del" onClick={() => set({ kpi: kpi.filter((_, j) => j !== i) })}>✕</button>
+              </div>
+            ))}
+            <button className="addrow" onClick={() => set({ kpi: [...kpi, { label: "Metric", value: "0" }] })}>+ Add KPI card</button>
+          </div>
+
+          {/* Gauges */}
+          <div className="sec">
+            <h3>Gauges / bars</h3>
+            {headFields("gauges")}
+            <p className="dx-muted" style={{ fontSize: 11, marginBottom: 8 }}>Labeled progress bars, 0–100. Animate on scroll on the live site.</p>
+            {gauges.map((it, i) => (
+              <div className="frow" key={i}>
+                <input style={{ flex: 1 }} value={it.label} onChange={(e) => setGauge(i, { label: e.target.value })} placeholder="Strategy accuracy" />
+                <input type="number" style={{ width: 60 }} min={0} max={100} value={it.percent} onChange={(e) => setGauge(i, { percent: Math.min(100, Math.max(0, +e.target.value)) })} placeholder="78" />
+                <button className="del" onClick={() => set({ gauges: gauges.filter((_, j) => j !== i) })}>✕</button>
+              </div>
+            ))}
+            <button className="addrow" onClick={() => set({ gauges: [...gauges, { label: "New metric", percent: 75 }] })}>+ Add gauge</button>
+          </div>
+
+          {/* Badge strip */}
+          <div className="sec">
+            <h3>Badge strip</h3>
+            {headFields("badge", "Subtitle (optional)")}
+            <p className="dx-muted" style={{ fontSize: 11, marginBottom: 8 }}>Credential pills — e.g. SEBI reg, certifications. Icon: emoji or image URL.</p>
+            {badge.map((it, i) => (
+              <div className="frow" key={i}>
+                <input style={{ flex: ".25" }} value={it.icon ?? ""} onChange={(e) => setBadge(i, { icon: e.target.value })} placeholder="🏛️" />
+                <input value={it.text} onChange={(e) => setBadge(i, { text: e.target.value })} placeholder="SEBI Reg No: …" />
+                <button className="del" onClick={() => set({ badge: badge.filter((_, j) => j !== i) })}>✕</button>
+              </div>
+            ))}
+            <button className="addrow" onClick={() => set({ badge: [...badge, { text: "Credential", icon: "✅" }] })}>+ Add badge</button>
           </div>
 
           {/* Suggest more */}
