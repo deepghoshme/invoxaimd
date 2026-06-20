@@ -9,7 +9,13 @@
  *  - Preview modal: thumbnail + metadata summary.
  *  - Apply button logic:
  *      free / owned  → applyTemplate() → router.push(redirect).
- *      premium unowned → startTemplatePurchase() stub → "coming soon" toast.
+ *      premium unowned → rail chooser:
+ *          Wallet  → startTemplatePurchase(id, pageType, targetPageId, {rail:'wallet'})
+ *                     on {ok:true}        → router.push(redirect)
+ *                     on {needsRecharge}  → show message + link to /dashboard/wallet/recharge
+ *                     on error            → toast
+ *          Razorpay → POST /api/templates/buy/start → open Razorpay checkout
+ *                     handler → POST /api/templates/buy/verify → router.push(redirect)
  *  - Scope decision (Phase D): singleton types (website/store/bio/courses) get
  *    direct Apply. Many-types (product/payment/booking/lead/vip/event) show
  *    "Open in builder to apply" linking to the relevant builder page — no picker
@@ -22,6 +28,24 @@ import { applyTemplate } from "./actions";
 import { startTemplatePurchase } from "./gallery-actions";
 import { SINGLETON_PAGE_TYPES, TYPE_TO_PAGE, type TemplateType, type PageTypeEnum } from "@/lib/templates-apply";
 import Icon from "@/components/dx/Icon";
+
+// Razorpay global type declaration (mirrors BillingClient.tsx)
+declare global {
+  interface Window {
+    Razorpay?: new (opts: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && window.Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -113,6 +137,19 @@ function fmtPrice(paise: number): string {
   return "₹" + (paise / 100).toLocaleString("en-IN");
 }
 
+function licenseLabel(model: string): string {
+  if (model === "per_page") return "per page";
+  if (model === "per_store") return "per store";
+  return model;
+}
+
+// ── Rail chooser state ────────────────────────────────────────────────────────
+
+type RailChooserState = {
+  tmpl: GalleryTemplate;
+  mapped: PageTypeEnum;
+} | null;
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function Thumbnail({ tmpl }: { tmpl: GalleryTemplate }) {
@@ -156,6 +193,69 @@ function OwnedBadge({ included }: { included?: boolean }) {
     <span className="tg-badge tg-badge-owned">
       {included ? "Included" : "Owned"}
     </span>
+  );
+}
+
+// ── Rail Chooser Modal ────────────────────────────────────────────────────────
+
+function RailChooserModal({
+  tmpl,
+  onClose,
+  onWallet,
+  onRazorpay,
+  busy,
+  rechargeMsg,
+}: {
+  tmpl: GalleryTemplate;
+  onClose: () => void;
+  onWallet: () => void;
+  onRazorpay: () => void;
+  busy: boolean;
+  rechargeMsg: string | null;
+}) {
+  const perNote = tmpl.license_model === "per_page" ? " (per page)" : "";
+
+  return (
+    <div className="tg-modal-backdrop" onClick={onClose}>
+      <div className="tg-modal tg-rail-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="tg-modal-close" onClick={onClose} aria-label="Close">
+          &times;
+        </button>
+        <div className="tg-modal-body">
+          <h2 className="tg-modal-title" style={{ fontSize: 17 }}>Buy &amp; Apply — {tmpl.name}</h2>
+          <p className="tg-modal-desc">
+            {fmtPrice(tmpl.price_paise)}{perNote} &middot; {licenseLabel(tmpl.license_model)}
+          </p>
+
+          {rechargeMsg && (
+            <div className="tg-recharge-msg">
+              {rechargeMsg}
+              {" "}
+              <a href="/dashboard/wallet/recharge" className="tg-recharge-link">
+                Top up wallet
+              </a>
+            </div>
+          )}
+
+          <div className="tg-rail-btns">
+            <button
+              className="btn grad tg-rail-btn"
+              onClick={onWallet}
+              disabled={busy}
+            >
+              {busy ? "Processing..." : `Pay with Wallet — ${fmtPrice(tmpl.price_paise)}`}
+            </button>
+            <button
+              className="btn tg-rail-btn"
+              onClick={onRazorpay}
+              disabled={busy}
+            >
+              {busy ? "Processing..." : `Pay with Card / UPI (Razorpay)`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -222,7 +322,12 @@ function PreviewModal({
             {tmpl.tier === "free" ? <FreeBadge /> : <PremiumBadge />}
             {(tmpl.owned || tmpl.included) && <OwnedBadge included={tmpl.included} />}
             {tmpl.tier === "premium" && !tmpl.owned && !tmpl.included && (
-              <span className="tg-badge tg-badge-price">{fmtPrice(tmpl.price_paise)}</span>
+              <>
+                <span className="tg-badge tg-badge-price">{fmtPrice(tmpl.price_paise)}</span>
+                {tmpl.license_model === "per_page" && (
+                  <span className="tg-badge tg-badge-perpage">per page</span>
+                )}
+              </>
             )}
           </div>
 
@@ -264,7 +369,7 @@ function PreviewModal({
                   onClick={() => onApply(tmpl)}
                   disabled={applying}
                 >
-                  {applying ? "Processing..." : `Buy & Apply ${fmtPrice(tmpl.price_paise)}`}
+                  {applying ? "Processing..." : `Buy & Apply — ${fmtPrice(tmpl.price_paise)}`}
                 </button>
               ) : (
                 <button
@@ -363,6 +468,7 @@ function TemplateCard({
                 disabled={applying}
               >
                 {applying ? "..." : `Buy & Apply ${fmtPrice(tmpl.price_paise)}`}
+                {tmpl.license_model === "per_page" && <span className="tg-perpage-note"> /pg</span>}
               </button>
             ) : (
               <button
@@ -396,6 +502,11 @@ export default function TemplateGallery({ templates }: Props) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "err" } | null>(null);
 
+  // Rail chooser state: shown when a premium-unowned template is clicked.
+  const [railChooser, setRailChooser] = useState<RailChooserState>(null);
+  const [railBusy, setRailBusy] = useState(false);
+  const [rechargeMsg, setRechargeMsg] = useState<string | null>(null);
+
   // Derived filter options
   const allTypes = Array.from(new Set(templates.map((t) => t.type))).sort();
   const allTags = Array.from(new Set(templates.flatMap((t) => t.tags))).sort();
@@ -411,6 +522,144 @@ export default function TemplateGallery({ templates }: Props) {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  // ── Wallet rail ─────────────────────────────────────────────────────────────
+  const handleWalletPurchase = useCallback(() => {
+    if (!railChooser) return;
+    const { tmpl, mapped } = railChooser;
+
+    setRailBusy(true);
+    setRechargeMsg(null);
+
+    startTransition(async () => {
+      try {
+        const result = await startTemplatePurchase(tmpl.id, mapped, undefined, { rail: "wallet" });
+        if (result.ok) {
+          setRailChooser(null);
+          showToast("Template purchased and applied! Opening builder...", "ok");
+          router.push(result.redirect);
+        } else if ("needsRecharge" in result && result.needsRecharge) {
+          const balRs = result.balance != null ? fmtPrice(result.balance) : null;
+          const priceRs = result.price_paise != null ? fmtPrice(result.price_paise) : "";
+          setRechargeMsg(
+            `Wallet balance${balRs ? ` (${balRs})` : ""} is too low for ${priceRs}.`,
+          );
+        } else {
+          showToast(result.error ?? "Purchase failed. Please try again.", "err");
+          setRailChooser(null);
+        }
+      } catch (err) {
+        showToast(String(err instanceof Error ? err.message : err), "err");
+        setRailChooser(null);
+      } finally {
+        setRailBusy(false);
+      }
+    });
+  }, [railChooser, router, showToast]);
+
+  // ── Razorpay rail ────────────────────────────────────────────────────────────
+  const handleRazorpayPurchase = useCallback(async () => {
+    if (!railChooser) return;
+    const { tmpl, mapped } = railChooser;
+
+    setRailBusy(true);
+    setRechargeMsg(null);
+
+    if (!(await loadRazorpay())) {
+      setRailBusy(false);
+      showToast("Couldn't load the payment library. Check your connection.", "err");
+      return;
+    }
+
+    try {
+      const startRes = await fetch("/api/templates/buy/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          template_id: tmpl.id,
+          page_type: mapped,
+          target_page_id: undefined,
+        }),
+      });
+      const start = await startRes.json();
+
+      if (!startRes.ok) {
+        throw new Error(start.error || "Couldn't start payment.");
+      }
+
+      // already_owned: this can happen if the license was granted between the
+      // user opening the chooser and clicking Pay. Just apply directly.
+      if (start.already) {
+        setRailChooser(null);
+        setRailBusy(false);
+        // Trigger normal apply flow.
+        setApplyingId(tmpl.id);
+        startTransition(async () => {
+          try {
+            const result = await (await import("./actions")).applyTemplate(tmpl.id, { pageType: mapped });
+            if (result.ok) {
+              showToast("Template applied! Opening builder...", "ok");
+              router.push(result.redirect);
+            } else {
+              showToast((result as { error: string }).error ?? "Failed to apply.", "err");
+            }
+          } finally {
+            setApplyingId(null);
+          }
+        });
+        return;
+      }
+
+      const chargedRupees = Math.round((start.amount as number) / 100).toLocaleString("en-IN");
+
+      const rzp = new window.Razorpay!({
+        key: start.key_id,
+        order_id: start.razorpay_order_id,
+        amount: start.amount,
+        currency: start.currency,
+        name: "invoxai",
+        description: `${start.template_name} template — ₹${chargedRupees}`,
+        theme: { color: "#FF6A3D" },
+        modal: {
+          ondismiss: () => {
+            setRailBusy(false);
+          },
+        },
+        handler: async (resp: Record<string, string>) => {
+          try {
+            const vRes = await fetch("/api/templates/buy/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+              }),
+            });
+            const v = await vRes.json();
+
+            if (!vRes.ok || !v.ok) {
+              throw new Error(v.error || "Verification failed");
+            }
+
+            setRailChooser(null);
+            showToast("Template purchased and applied! Opening builder...", "ok");
+            router.push(v.redirect);
+          } catch (e) {
+            showToast(e instanceof Error ? e.message : "Verification failed", "err");
+          } finally {
+            setRailBusy(false);
+          }
+        },
+      });
+      rzp.open();
+    } catch (e) {
+      setRailBusy(false);
+      showToast(e instanceof Error ? e.message : "Payment failed", "err");
+      setRailChooser(null);
+    }
+  }, [railChooser, router, showToast]);
+
+  // ── Main apply handler ───────────────────────────────────────────────────────
   const handleApply = useCallback(
     (tmpl: GalleryTemplate) => {
       const mapped = TYPE_TO_PAGE[tmpl.type as TemplateType];
@@ -421,30 +670,25 @@ export default function TemplateGallery({ templates }: Props) {
 
       const isPremiumUnowned = tmpl.tier === "premium" && !tmpl.owned && !tmpl.included;
 
-      setApplyingId(tmpl.id);
       if (preview?.id === tmpl.id) setPreview(null);
 
+      if (isPremiumUnowned) {
+        // Open the rail chooser instead of immediately purchasing.
+        setRechargeMsg(null);
+        setRailChooser({ tmpl, mapped: mapped as PageTypeEnum });
+        return;
+      }
+
+      // Free or owned: call apply action directly.
+      setApplyingId(tmpl.id);
       startTransition(async () => {
         try {
-          if (isPremiumUnowned) {
-            // Phase E stub — purchase not implemented yet
-            const result = await startTemplatePurchase(tmpl.id, mapped);
-            if (!result.ok) {
-              if (result.error === "purchase_not_implemented") {
-                showToast("Premium purchase is coming soon. Stay tuned!", "err");
-              } else {
-                showToast(result.error, "err");
-              }
-            }
+          const result = await applyTemplate(tmpl.id, { pageType: mapped as PageTypeEnum });
+          if (result.ok) {
+            showToast("Template applied! Opening builder...", "ok");
+            router.push(result.redirect);
           } else {
-            // Free or owned: call apply action
-            const result = await applyTemplate(tmpl.id, { pageType: mapped as PageTypeEnum });
-            if (result.ok) {
-              showToast("Template applied! Opening builder...", "ok");
-              router.push(result.redirect);
-            } else {
-              showToast((result as { error: string }).error ?? "Failed to apply template.", "err");
-            }
+            showToast((result as { error: string }).error ?? "Failed to apply template.", "err");
           }
         } catch (err) {
           showToast(String(err instanceof Error ? err.message : err), "err");
@@ -529,6 +773,7 @@ export default function TemplateGallery({ templates }: Props) {
         .tg-card-name { font-size: 14px; font-weight: 700; margin: 0; line-height: 1.3; }
         .tg-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; }
         .tg-sales { font-size: 11.5px; color: var(--muted); }
+        .tg-perpage-note { font-size: 10px; opacity: 0.75; }
 
         /* ── Type badge ─────────────────────────────────────── */
         .tg-type-badge {
@@ -542,10 +787,11 @@ export default function TemplateGallery({ templates }: Props) {
           font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px;
           letter-spacing: 0.04em; text-transform: uppercase;
         }
-        .tg-badge-free  { background: color-mix(in srgb, var(--green) 18%, var(--surface2)); color: var(--green); }
-        .tg-badge-prem  { background: color-mix(in srgb, var(--gold) 20%, var(--surface2)); color: var(--gold); }
-        .tg-badge-owned { background: color-mix(in srgb, var(--primary) 18%, var(--surface2)); color: var(--primary); }
-        .tg-badge-price { background: color-mix(in srgb, var(--gold) 14%, var(--surface2)); color: var(--gold); font-size: 11px; }
+        .tg-badge-free    { background: color-mix(in srgb, var(--green) 18%, var(--surface2)); color: var(--green); }
+        .tg-badge-prem    { background: color-mix(in srgb, var(--gold) 20%, var(--surface2)); color: var(--gold); }
+        .tg-badge-owned   { background: color-mix(in srgb, var(--primary) 18%, var(--surface2)); color: var(--primary); }
+        .tg-badge-price   { background: color-mix(in srgb, var(--gold) 14%, var(--surface2)); color: var(--gold); font-size: 11px; }
+        .tg-badge-perpage { background: color-mix(in srgb, var(--muted) 14%, var(--surface2)); color: var(--muted); font-size: 10px; }
 
         /* ── Tags ───────────────────────────────────────────── */
         .tg-tags { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -567,6 +813,7 @@ export default function TemplateGallery({ templates }: Props) {
           border-radius: 18px; width: 100%; max-width: 520px; max-height: 90vh;
           overflow-y: auto; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.28);
         }
+        .tg-rail-modal { max-width: 400px; }
         .tg-modal-close {
           position: absolute; top: 12px; right: 12px; z-index: 2;
           background: var(--surface2); border: 1px solid var(--border);
@@ -602,6 +849,18 @@ export default function TemplateGallery({ templates }: Props) {
           border-radius: 8px; border: 1px solid var(--border); line-height: 1.5;
         }
 
+        /* ── Rail chooser ───────────────────────────────────── */
+        .tg-rail-btns { display: flex; flex-direction: column; gap: 10px; }
+        .tg-rail-btn { width: 100%; justify-content: center; text-align: center; }
+        .tg-recharge-msg {
+          font-size: 13px; color: #e44; background: color-mix(in srgb, #f55 10%, var(--surface2));
+          border: 1px solid color-mix(in srgb, #f55 30%, var(--border));
+          border-radius: 8px; padding: 10px 12px; line-height: 1.5;
+        }
+        .tg-recharge-link {
+          color: var(--primary); font-weight: 600; text-decoration: underline;
+        }
+
         /* ── Theme summary ──────────────────────────────────── */
         .tg-theme-summary { background: var(--surface2); border-radius: 10px; padding: 10px 12px; }
         .tg-theme-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
@@ -630,8 +889,25 @@ export default function TemplateGallery({ templates }: Props) {
       {/* Toast */}
       {toast && (
         <div className={`tg-toast ${toast.kind}`}>
-          {toast.kind === "ok" ? "✓" : "!"} {toast.msg}
+          {toast.kind === "ok" ? "+" : "!"} {toast.msg}
         </div>
+      )}
+
+      {/* Rail chooser modal */}
+      {railChooser && (
+        <RailChooserModal
+          tmpl={railChooser.tmpl}
+          onClose={() => {
+            if (!railBusy) {
+              setRailChooser(null);
+              setRechargeMsg(null);
+            }
+          }}
+          onWallet={handleWalletPurchase}
+          onRazorpay={handleRazorpayPurchase}
+          busy={railBusy || isPending}
+          rechargeMsg={rechargeMsg}
+        />
       )}
 
       {/* Filter bar */}
