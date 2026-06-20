@@ -36,6 +36,7 @@ const NAV: GatedNavGroup[] = [
     { label: "Lead form", icon: "form", href: "/dashboard/leadform", feature: "leadform" },
     { label: "VIP community", icon: "crown", href: "/dashboard/vip", feature: "vip" },
     { label: "Landing page", icon: "rocket", href: "/dashboard/landing", feature: "landing" },
+    { label: "Templates", icon: "layers", href: "/dashboard/templates" },
   ] },
   { label: "Sell", items: [
     { label: "Orders", icon: "bag", href: "/dashboard/orders" },

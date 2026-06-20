@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Phead, Card, Table, Kpis, Tag, Live } from "@/components/dx/ui";
 import {
@@ -8,6 +8,8 @@ import {
   updateTemplate,
   deleteTemplate,
   toggleTemplateStatus,
+  importManifest,
+  exportTemplateManifest,
   type TemplateRow,
   type TemplateInput,
 } from "./actions";
@@ -28,7 +30,22 @@ const TYPE_LABELS: Record<string, string> = {
   website: "Website", checkout: "Checkout", vip: "VIP channel",
 };
 
-/* ── inline styles (scoped to this feature) ─────────────────── */
+const LICENSE_LABELS: Record<string, string> = {
+  per_store: "Per store (once per store)",
+  per_page: "Per page (each apply charged)",
+  all_access: "All-access (plan feature)",
+};
+
+function tryParseJson(s: string): { ok: true; val: unknown } | { ok: false; err: string } {
+  if (!s.trim()) return { ok: false, err: "JSON is empty." };
+  try {
+    return { ok: true, val: JSON.parse(s) };
+  } catch (e) {
+    return { ok: false, err: String(e) };
+  }
+}
+
+/* ── inline styles ───────────────────────────────────────────── */
 const css = `
   .tm-badge-free  { background: #e5f7ef; color: #1fb57a; }
   .tm-badge-prem  { background: linear-gradient(135deg,#ffb23e,#ff6a3d 38%,#ff4d7d 68%,#7b3fe4); color: #fff; }
@@ -54,11 +71,11 @@ const css = `
 
   /* edit drawer */
   .tm-scrim       { position: fixed; inset: 0; z-index: 60; background: rgba(20,12,25,.45); backdrop-filter: blur(3px); }
-  .tm-drawer      { position: fixed; z-index: 61; right: 0; top: 0; bottom: 0; width: min(440px, 96vw); background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; box-shadow: -24px 0 60px rgba(0,0,0,.18); overflow: hidden; }
+  .tm-drawer      { position: fixed; z-index: 61; right: 0; top: 0; bottom: 0; width: min(560px, 96vw); background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; box-shadow: -24px 0 60px rgba(0,0,0,.18); overflow: hidden; }
   .tm-dhead       { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); flex: none; }
   .tm-dhead h3    { font-family: "Sora", sans-serif; font-size: 16px; font-weight: 700; margin: 0; }
   .tm-dbody       { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-  .tm-dfoot       { flex: none; padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+  .tm-dfoot       { flex: none; padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .tm-msg         { font-size: 12px; color: var(--muted); margin-left: auto; }
   .tm-msg.err     { color: var(--red, #e5476f); }
 
@@ -69,9 +86,144 @@ const css = `
   .tm-notice-icon { font-size: 22px; flex: none; }
   .tm-notice h3   { font-size: 15px; margin: 0 0 4px; }
   .tm-notice p    { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* mono textarea */
+  .tm-mono        { font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace; font-size: 12px; line-height: 1.6; }
+
+  /* tabs */
+  .tm-tabs        { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .tm-tab         { padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: 8px 8px 0 0; cursor: pointer; background: none; border: none; color: var(--muted); }
+  .tm-tab.on      { background: var(--surface2); color: var(--text); border-bottom: 2px solid var(--primary); }
+
+  /* import panel */
+  .tm-import-panel { display: flex; flex-direction: column; gap: 12px; }
+  .tm-errs        { background: #fff5f5; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; font-size: 12.5px; color: #991b1b; }
+  .tm-errs ul     { margin: 6px 0 0; padding-left: 20px; }
+  .tm-errs ul li  { margin-bottom: 3px; }
+  .tm-success-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; font-size: 13px; color: #166534; }
+
+  /* content preview summary */
+  .tm-preview-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .tm-preview-row  { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+  .tm-preview-kv   { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+  .tm-preview-kv b { font-weight: 600; }
+  .tm-json-err    { font-size: 12px; color: var(--red, #e5476f); margin-top: 4px; }
 `;
 
+/* ── select style helper ──────────────────────────────────────── */
+const selStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 12px", border: "1px solid var(--border)",
+  borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit",
+};
+const taStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 12px", border: "1px solid var(--border)",
+  borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit",
+  resize: "vertical",
+};
+
+/* ── ContentPreview ──────────────────────────────────────────── */
+//
+// Preview approach: SUMMARY CARD.
+//
+// Rationale: The live site renderer (app/sites/[domain]/[[...path]]/page.tsx)
+// requires a real `domain` + published pages row — there is no sandboxed
+// /preview route that accepts arbitrary content JSON without a real domain.
+// Building a new renderer just for this panel would duplicate ~10 view
+// components. A compact summary card (type, theme tokens, section order,
+// array counts) gives the admin all the actionable information without the
+// complexity/maintenance burden of a full iframe renderer.
+
+function ContentPreview({ type, content }: { type: string; content: Record<string, unknown> | null | undefined }) {
+  if (!content || Object.keys(content).length === 0) {
+    return (
+      <div className="tm-preview-card" style={{ color: "var(--muted)", fontSize: 13 }}>
+        No content payload yet. Fill in the Content JSON tab.
+      </div>
+    );
+  }
+
+  const order = Array.isArray(content.order) ? (content.order as string[]) : null;
+  const sections = content.sections && typeof content.sections === "object"
+    ? Object.entries(content.sections as Record<string, unknown>).filter(([, v]) => v).map(([k]) => k)
+    : null;
+  const theme = content.theme as string | undefined;
+  const accent = content.accent !== undefined ? String(content.accent) : undefined;
+  const font = content.font as string | undefined;
+  const bg = content.bg as string | undefined;
+
+  // Count data arrays
+  const dataArrays: { key: string; count: number }[] = [];
+  for (const [k, v] of Object.entries(content)) {
+    if (Array.isArray(v) && k !== "order" && k !== "tags") {
+      dataArrays.push({ key: k, count: v.length });
+    }
+  }
+
+  return (
+    <div className="tm-preview-card">
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted)", marginBottom: 4 }}>
+        Content summary — {TYPE_LABELS[type] ?? type}
+      </div>
+
+      {/* Theme tokens */}
+      {(theme || accent !== undefined || font || bg) && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 4 }}>Theme tokens</div>
+          <div className="tm-preview-row">
+            {theme && <span className="tm-preview-kv"><b>mode:</b> {theme}</span>}
+            {accent !== undefined && <span className="tm-preview-kv"><b>accent:</b> {accent}</span>}
+            {font && <span className="tm-preview-kv"><b>font:</b> {font}</span>}
+            {bg && <span className="tm-preview-kv"><b>bg:</b> {bg}</span>}
+            {content.btshape ? <span className="tm-preview-kv"><b>btshape:</b> {String(content.btshape)}</span> : null}
+            {content.pageWidth ? <span className="tm-preview-kv"><b>width:</b> {String(content.pageWidth)}</span> : null}
+          </div>
+        </div>
+      )}
+
+      {/* Section order */}
+      {order && order.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 4 }}>
+            Section order ({order.length})
+          </div>
+          <div className="tm-preview-row">
+            {order.map((s, i) => (
+              <span key={i} className="tm-preview-kv" style={{
+                borderColor: sections?.includes(s) ? "var(--accent)" : undefined,
+                color: sections?.includes(s) ? "var(--text)" : "var(--muted)",
+              }}>
+                {i + 1}. {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Data arrays */}
+      {dataArrays.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 4 }}>Data arrays</div>
+          <div className="tm-preview-row">
+            {dataArrays.map(({ key, count }) => (
+              <span key={key} className="tm-preview-kv">
+                <b>{key}:</b> {count} item{count !== 1 ? "s" : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Top-level key count */}
+      <div style={{ fontSize: 11, color: "var(--muted)", borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+        {Object.keys(content).length} top-level key{Object.keys(content).length !== 1 ? "s" : ""} in content blob.
+      </div>
+    </div>
+  );
+}
+
 /* ── DrawerForm ──────────────────────────────────────────────── */
+
+type DrawerTab = "meta" | "content" | "preview";
 
 type DrawerProps = {
   row: TemplateRow | null; // null = create
@@ -81,7 +233,14 @@ type DrawerProps = {
 function DrawerForm({ row, onClose }: DrawerProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [exportPending, startExport] = useTransition();
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
+  const [tab, setTab] = useState<DrawerTab>("meta");
+
+  // Stringify existing content/theme for editing
+  const initialContentStr = row?.content ? JSON.stringify(row.content, null, 2) : "";
+  const initialThemeStr = row?.theme ? JSON.stringify(row.theme, null, 2) : "";
+  const initialTagsStr = (row?.tags ?? []).join(", ");
 
   const blank: TemplateInput = {
     name: row?.name ?? "",
@@ -91,24 +250,79 @@ function DrawerForm({ row, onClose }: DrawerProps) {
     thumbnail_url: row?.thumbnail_url ?? "",
     description: row?.description ?? "",
     status: row?.status ?? "draft",
+    slug: row?.slug ?? "",
+    tags: row?.tags ?? [],
+    license_model: row?.license_model ?? "per_store",
+    content: row?.content ?? null,
+    theme: row?.theme ?? null,
+    demo_page_id: row?.demo_page_id ?? "",
   };
+
   const [f, setF] = useState<TemplateInput>(blank);
 
-  function field(key: keyof TemplateInput, value: string | number) {
+  // Raw string states for JSON fields
+  const [contentStr, setContentStr] = useState(initialContentStr);
+  const [themeStr, setThemeStr] = useState(initialThemeStr);
+  const [tagsStr, setTagsStr] = useState(initialTagsStr);
+  const [contentErr, setContentErr] = useState<string | null>(null);
+  const [themeErr, setThemeErr] = useState<string | null>(null);
+
+  function field(key: keyof TemplateInput, value: string | number | string[] | null | Record<string, unknown>) {
     setF((p) => ({ ...p, [key]: value }));
   }
 
+  function onContentChange(s: string) {
+    setContentStr(s);
+    if (!s.trim()) {
+      setContentErr(null);
+      field("content", null);
+      return;
+    }
+    const r = tryParseJson(s);
+    if (!r.ok) {
+      setContentErr(r.err);
+    } else {
+      setContentErr(null);
+      field("content", r.val as Record<string, unknown>);
+    }
+  }
+
+  function onThemeChange(s: string) {
+    setThemeStr(s);
+    if (!s.trim()) {
+      setThemeErr(null);
+      field("theme", null);
+      return;
+    }
+    const r = tryParseJson(s);
+    if (!r.ok) {
+      setThemeErr(r.err);
+    } else {
+      setThemeErr(null);
+      field("theme", r.val as Record<string, unknown>);
+    }
+  }
+
+  function onTagsChange(s: string) {
+    setTagsStr(s);
+    const tags = s.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    field("tags", tags);
+  }
+
   function save() {
+    if (contentErr || themeErr) {
+      setMsg({ text: "Fix JSON errors before saving.", err: true });
+      return;
+    }
     startTransition(async () => {
       setMsg(null);
       let res;
       if (row) {
-        res = await updateTemplate(row.id, f);
+        res = await updateTemplate(row.id, { ...f, tags: f.tags ?? [] });
       } else {
-        // create then immediately update with the full input
         const created = await createTemplate();
         if (!created.ok) { setMsg({ text: created.error, err: true }); return; }
-        res = await updateTemplate(created.data!.id, f);
+        res = await updateTemplate(created.data!.id, { ...f, tags: f.tags ?? [] });
       }
       if (!res.ok) { setMsg({ text: (res as { ok: false; error: string }).error, err: true }); return; }
       setMsg({ text: "Saved", err: false });
@@ -117,93 +331,325 @@ function DrawerForm({ row, onClose }: DrawerProps) {
     });
   }
 
+  function doExport() {
+    if (!row) return;
+    startExport(async () => {
+      const res = await exportTemplateManifest(row.id);
+      if (!res.ok) { setMsg({ text: res.error, err: true }); return; }
+      // Trigger a browser download
+      const blob = new Blob([JSON.stringify(res.manifest, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  const contentForPreview = f.content ?? (contentStr.trim() ? (() => {
+    const r = tryParseJson(contentStr);
+    return r.ok ? r.val as Record<string, unknown> : null;
+  })() : null);
+
   return (
     <>
       <div className="tm-scrim" onClick={onClose} />
       <aside className="tm-drawer">
         <div className="tm-dhead">
           <h3>{row ? "Edit template" : "New template"}</h3>
-          <button className="dx-editbtn" onClick={onClose}>Close</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {row && (
+              <button className="dx-editbtn" onClick={doExport} disabled={exportPending} title="Export manifest JSON">
+                {exportPending ? "…" : "Export JSON"}
+              </button>
+            )}
+            <button className="dx-editbtn" onClick={onClose}>Close</button>
+          </div>
         </div>
 
         <div className="tm-dbody">
-          <div className="dx-field">
-            <label>Template name</label>
-            <input value={f.name} placeholder="e.g. Aurora Bio" onChange={(e) => field("name", e.target.value)} />
+          {/* Tabs */}
+          <div className="tm-tabs">
+            <button className={`tm-tab${tab === "meta" ? " on" : ""}`} onClick={() => setTab("meta")}>Metadata</button>
+            <button className={`tm-tab${tab === "content" ? " on" : ""}`} onClick={() => setTab("content")}>Content JSON</button>
+            <button className={`tm-tab${tab === "preview" ? " on" : ""}`} onClick={() => setTab("preview")}>Preview</button>
           </div>
 
-          <div className="dx-ff">
-            <div className="dx-field">
-              <label>Page type</label>
-              <select value={f.type} onChange={(e) => field("type", e.target.value)}
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit" }}>
-                {PAGE_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
-              </select>
-            </div>
-            <div className="dx-field">
-              <label>Tier</label>
-              <select value={f.tier} onChange={(e) => field("tier", e.target.value)}
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit" }}>
-                <option value="free">Free</option>
-                <option value="premium">Premium</option>
-              </select>
-            </div>
-          </div>
+          {/* ── META TAB ── */}
+          {tab === "meta" && (
+            <>
+              <div className="dx-field">
+                <label>Template name</label>
+                <input value={f.name} placeholder="e.g. Aurora Bio" onChange={(e) => field("name", e.target.value)} />
+              </div>
 
-          {f.tier === "premium" && (
-            <div className="dx-field">
-              <label>Price (₹)</label>
-              <input
-                type="number" min={0} step={1}
-                value={Math.round(f.price_paise / 100) || ""}
-                placeholder="e.g. 499"
-                onChange={(e) => field("price_paise", Math.round(parseFloat(e.target.value) || 0) * 100)}
-              />
-            </div>
+              <div className="dx-ff">
+                <div className="dx-field">
+                  <label>Page type</label>
+                  <select value={f.type} onChange={(e) => field("type", e.target.value)} style={selStyle}>
+                    {PAGE_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
+                  </select>
+                </div>
+                <div className="dx-field">
+                  <label>Tier</label>
+                  <select value={f.tier} onChange={(e) => field("tier", e.target.value)} style={selStyle}>
+                    <option value="free">Free</option>
+                    <option value="premium">Premium</option>
+                  </select>
+                </div>
+              </div>
+
+              {f.tier === "premium" && (
+                <div className="dx-field">
+                  <label>Price (₹)</label>
+                  <input
+                    type="number" min={0} step={1}
+                    value={Math.round(f.price_paise / 100) || ""}
+                    placeholder="e.g. 499"
+                    onChange={(e) => field("price_paise", Math.round(parseFloat(e.target.value) || 0) * 100)}
+                  />
+                </div>
+              )}
+
+              <div className="dx-field">
+                <label>License model</label>
+                <select value={f.license_model ?? "per_store"} onChange={(e) => field("license_model", e.target.value)} style={selStyle}>
+                  <option value="per_store">Per store</option>
+                  <option value="per_page">Per page</option>
+                  <option value="all_access">All-access (plan feature)</option>
+                </select>
+                <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
+                  {LICENSE_LABELS[f.license_model ?? "per_store"]}
+                </div>
+              </div>
+
+              <div className="dx-field">
+                <label>Slug (URL-safe, optional)</label>
+                <input
+                  value={f.slug ?? ""}
+                  placeholder="e.g. sunset-studio-website"
+                  onChange={(e) => field("slug", e.target.value)}
+                />
+              </div>
+
+              <div className="dx-field">
+                <label>Tags (comma separated)</label>
+                <input
+                  value={tagsStr}
+                  placeholder="e.g. agency, bold, dark"
+                  onChange={(e) => onTagsChange(e.target.value)}
+                />
+                {(f.tags ?? []).length > 0 && (
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+                    {(f.tags ?? []).map((t, i) => (
+                      <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 99, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="dx-field">
+                <label>Thumbnail URL</label>
+                <input
+                  value={f.thumbnail_url}
+                  placeholder="https://… (use /api/upload)"
+                  onChange={(e) => field("thumbnail_url", e.target.value)}
+                />
+                {f.thumbnail_url && (
+                  <div style={{ marginTop: 8, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", maxWidth: 180, aspectRatio: "4/3", background: "var(--surface2)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={f.thumbnail_url} alt="thumb" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                )}
+              </div>
+
+              <div className="dx-field">
+                <label>Description</label>
+                <textarea
+                  rows={3}
+                  value={f.description}
+                  placeholder="What makes this template special…"
+                  onChange={(e) => field("description", e.target.value)}
+                  style={taStyle}
+                />
+              </div>
+
+              <div className="dx-ff">
+                <div className="dx-field">
+                  <label>Status</label>
+                  <select value={f.status} onChange={(e) => field("status", e.target.value)} style={selStyle}>
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                </div>
+                <div className="dx-field">
+                  <label>Demo page ID (optional)</label>
+                  <input
+                    value={f.demo_page_id ?? ""}
+                    placeholder="uuid of a pages row"
+                    onChange={(e) => field("demo_page_id", e.target.value || null)}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
-          <div className="dx-field">
-            <label>Thumbnail URL</label>
-            <input
-              value={f.thumbnail_url}
-              placeholder="https://… (use /api/upload)"
-              onChange={(e) => field("thumbnail_url", e.target.value)}
-            />
-            {f.thumbnail_url && (
-              <div style={{ marginTop: 8, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", maxWidth: 180, aspectRatio: "4/3", background: "var(--surface2)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.thumbnail_url} alt="thumb" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {/* ── CONTENT JSON TAB ── */}
+          {tab === "content" && (
+            <>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 4 }}>
+                Paste the <strong>content</strong> JSON for this template. Must match the{" "}
+                <code>{TYPE_LABELS[f.type] ?? f.type}</code> schema from{" "}
+                <code>lib/{f.type === "courses" ? "course" : f.type}.ts</code>.
               </div>
-            )}
-          </div>
 
-          <div className="dx-field">
-            <label>Description</label>
-            <textarea
-              rows={3}
-              value={f.description}
-              placeholder="What makes this template special…"
-              onChange={(e) => field("description", e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit", resize: "vertical" }}
-            />
-          </div>
+              <div className="dx-field">
+                <label>content (JSON)</label>
+                <textarea
+                  rows={16}
+                  className="tm-mono"
+                  value={contentStr}
+                  placeholder={`{\n  "theme": "dark",\n  "accent": 0\n}`}
+                  onChange={(e) => onContentChange(e.target.value)}
+                  style={{ ...taStyle, fontFamily: "\"JetBrains Mono\",\"Fira Code\",ui-monospace,monospace", fontSize: 12 }}
+                  spellCheck={false}
+                />
+                {contentErr && <div className="tm-json-err">{contentErr}</div>}
+                {!contentErr && contentStr.trim() && (
+                  <div style={{ fontSize: 11.5, color: "var(--green, #1fb57a)", marginTop: 4 }}>Valid JSON</div>
+                )}
+              </div>
 
-          <div className="dx-field">
-            <label>Status</label>
-            <select value={f.status} onChange={(e) => field("status", e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10, background: "var(--bg)", color: "var(--text)", font: "inherit" }}>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
-          </div>
+              <div className="dx-field">
+                <label>theme token overrides (JSON, optional)</label>
+                <textarea
+                  rows={4}
+                  className="tm-mono"
+                  value={themeStr}
+                  placeholder={`{}`}
+                  onChange={(e) => onThemeChange(e.target.value)}
+                  style={{ ...taStyle, fontFamily: "\"JetBrains Mono\",\"Fira Code\",ui-monospace,monospace", fontSize: 12 }}
+                  spellCheck={false}
+                />
+                {themeErr && <div className="tm-json-err">{themeErr}</div>}
+              </div>
+            </>
+          )}
+
+          {/* ── PREVIEW TAB ── */}
+          {tab === "preview" && (
+            <ContentPreview type={f.type} content={contentForPreview as Record<string, unknown> | null} />
+          )}
         </div>
 
         <div className="tm-dfoot">
-          <button className="btn grad" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save template"}</button>
+          <button className="btn grad" onClick={save} disabled={pending || !!contentErr || !!themeErr}>
+            {pending ? "Saving…" : "Save template"}
+          </button>
           {msg && <span className={`tm-msg${msg.err ? " err" : ""}`}>{msg.text}</span>}
         </div>
       </aside>
     </>
+  );
+}
+
+/* ── ImportManifestPanel ─────────────────────────────────────── */
+
+function ImportManifestPanel({ onDone }: { onDone: () => void }) {
+  const [raw, setRaw] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<
+    { kind: "errors"; errors: string[] } | { kind: "success"; id: string } | null
+  >(null);
+
+  function doImport() {
+    if (!raw.trim()) return;
+    startTransition(async () => {
+      setResult(null);
+      const res = await importManifest(raw);
+      if (!res.ok) {
+        setResult({ kind: "errors", errors: res.errors });
+      } else {
+        setResult({ kind: "success", id: res.id });
+        setRaw("");
+        onDone();
+      }
+    });
+  }
+
+  function loadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result;
+      if (typeof text === "string") setRaw(text);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  return (
+    <Card title="Import manifest">
+      <div className="tm-import-panel">
+        <div style={{ fontSize: 13, color: "var(--muted)" }}>
+          Paste a Template Manifest JSON (see <code>docs/TEMPLATE-AUTHORING-FORMAT.md</code>) or upload a{" "}
+          <code>.json</code> file. The manifest is validated then saved as a <strong>draft</strong>.
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label
+            style={{ fontSize: 12.5, fontWeight: 600, padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", background: "var(--surface2)" }}
+          >
+            Upload .json
+            <input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={loadFile} />
+          </label>
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>or paste below</span>
+        </div>
+
+        <textarea
+          rows={10}
+          className="tm-mono"
+          value={raw}
+          placeholder={`{\n  "name": "Sunset Studio",\n  "type": "website",\n  "tier": "premium",\n  "price_paise": 49900,\n  ...`}
+          onChange={(e) => { setRaw(e.target.value); setResult(null); }}
+          style={{
+            width: "100%", padding: "10px 12px", border: "1px solid var(--border)",
+            borderRadius: 10, background: "var(--bg)", color: "var(--text)", resize: "vertical",
+            fontFamily: "\"JetBrains Mono\",\"Fira Code\",ui-monospace,monospace", fontSize: 12,
+          }}
+          spellCheck={false}
+        />
+
+        {result?.kind === "errors" && (
+          <div className="tm-errs">
+            <strong>Validation failed</strong>
+            <ul>
+              {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {result?.kind === "success" && (
+          <div className="tm-success-box">
+            Template imported successfully (ID: <code>{result.id}</code>). It is saved as a draft — edit it above to adjust and publish.
+          </div>
+        )}
+
+        <div>
+          <button
+            className="btn grad"
+            onClick={doImport}
+            disabled={pending || !raw.trim()}
+          >
+            {pending ? "Validating…" : "Validate & import"}
+          </button>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -213,6 +659,7 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
   const router = useRouter();
   const [toggling, startToggle] = useTransition();
   const [deleting, startDelete] = useTransition();
+  const [exportPending, startExport] = useTransition();
 
   function doToggle() {
     startToggle(async () => {
@@ -220,11 +667,26 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
       router.refresh();
     });
   }
+
   function doDelete() {
     if (!confirm(`Delete "${row.name}"? This cannot be undone.`)) return;
     startDelete(async () => {
       await deleteTemplate(row.id);
       router.refresh();
+    });
+  }
+
+  function doExport() {
+    startExport(async () => {
+      const res = await exportTemplateManifest(row.id);
+      if (!res.ok) { alert(res.error); return; }
+      const blob = new Blob([JSON.stringify(res.manifest, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.filename;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -252,6 +714,15 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
       <div className="tm-card-body">
         <div className="tm-card-type">{TYPE_LABELS[row.type] ?? row.type}</div>
         <div className="tm-card-name">{row.name}</div>
+        {row.tags && row.tags.length > 0 && (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {row.tags.slice(0, 3).map((t, i) => (
+              <span key={i} style={{ fontSize: 10.5, padding: "1px 6px", borderRadius: 99, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="tm-sales">{row.sales_count} sale{row.sales_count !== 1 ? "s" : ""}</div>
 
         <div className="tm-card-foot">
@@ -259,15 +730,13 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
             {inr(row.price_paise)}
           </span>
           <div className="tm-card-acts">
-            <button
-              className="dx-editbtn"
-              onClick={doToggle}
-              disabled={toggling}
-              title={row.status === "published" ? "Unpublish" : "Publish"}
-            >
+            <button className="dx-editbtn" onClick={doToggle} disabled={toggling} title={row.status === "published" ? "Unpublish" : "Publish"}>
               {toggling ? "…" : row.status === "published" ? "Unpublish" : "Publish"}
             </button>
             <button className="dx-editbtn" onClick={onEdit}>Edit</button>
+            <button className="dx-editbtn" onClick={doExport} disabled={exportPending} title="Export manifest JSON">
+              {exportPending ? "…" : "Export"}
+            </button>
             <button className="dx-editbtn" onClick={doDelete} disabled={deleting}>
               {deleting ? "…" : "Delete"}
             </button>
@@ -289,9 +758,11 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
 type Props = { rows: TemplateRow[]; migrationMissing: boolean };
 
 export default function TemplatesManager({ rows, migrationMissing }: Props) {
+  const router = useRouter();
   const [editRow, setEditRow] = useState<TemplateRow | "new" | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [showImport, setShowImport] = useState(false);
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.type === filter);
 
@@ -300,6 +771,10 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
   const published = rows.filter((r) => r.status === "published").length;
   const premium = rows.filter((r) => r.tier === "premium").length;
   const totalSales = rows.reduce((s, r) => s + r.sales_count, 0);
+
+  const onImportDone = useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   // Table rows
   const tableRows = filtered.map((r) => [
@@ -328,7 +803,14 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
       <Phead
         title="Premium templates"
         sub="Manage the template catalog that sellers browse and purchase in the marketplace."
-        action={<button className="btn grad" onClick={() => setEditRow("new")}>+ New template</button>}
+        action={
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="dx-editbtn" onClick={() => setShowImport((v) => !v)}>
+              {showImport ? "Hide import" : "Import manifest"}
+            </button>
+            <button className="btn grad" onClick={() => setEditRow("new")}>+ New template</button>
+          </div>
+        }
       />
 
       {migrationMissing ? (
@@ -354,30 +836,24 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
         { icon: "bag", color: "var(--primary)", label: "Total sales", value: String(totalSales) },
       ]} />
 
+      {/* Import manifest panel */}
+      {showImport && (
+        <div style={{ marginBottom: 20 }}>
+          <ImportManifestPanel onDone={onImportDone} />
+        </div>
+      )}
+
       {/* filter + view toggle */}
       <div className="tm-filter-bar">
-        <span
-          className={`dx-fchip${filter === "all" ? " on" : ""}`}
-          onClick={() => setFilter("all")}
-        >All</span>
+        <span className={`dx-fchip${filter === "all" ? " on" : ""}`} onClick={() => setFilter("all")}>All</span>
         {PAGE_TYPES.map((t) => (
-          <span
-            key={t}
-            className={`dx-fchip${filter === t ? " on" : ""}`}
-            onClick={() => setFilter(t)}
-          >{TYPE_LABELS[t]}</span>
+          <span key={t} className={`dx-fchip${filter === t ? " on" : ""}`} onClick={() => setFilter(t)}>
+            {TYPE_LABELS[t]}
+          </span>
         ))}
         <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          <button
-            className={`dx-editbtn${viewMode === "grid" ? "" : ""}`}
-            style={{ fontWeight: viewMode === "grid" ? 700 : 400 }}
-            onClick={() => setViewMode("grid")}
-          >Grid</button>
-          <button
-            className="dx-editbtn"
-            style={{ fontWeight: viewMode === "table" ? 700 : 400 }}
-            onClick={() => setViewMode("table")}
-          >Table</button>
+          <button className="dx-editbtn" style={{ fontWeight: viewMode === "grid" ? 700 : 400 }} onClick={() => setViewMode("grid")}>Grid</button>
+          <button className="dx-editbtn" style={{ fontWeight: viewMode === "table" ? 700 : 400 }} onClick={() => setViewMode("table")}>Table</button>
         </span>
       </div>
 
@@ -390,7 +866,10 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
             <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>
               Add your first template — sellers will browse these in the marketplace.
             </div>
-            <button className="btn grad" onClick={() => setEditRow("new")}>+ New template</button>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <button className="dx-editbtn" onClick={() => setShowImport(true)}>Import manifest</button>
+              <button className="btn grad" onClick={() => setEditRow("new")}>+ New template</button>
+            </div>
           </div>
         </Card>
       )}
