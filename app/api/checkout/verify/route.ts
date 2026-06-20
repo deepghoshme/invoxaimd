@@ -106,15 +106,17 @@ export async function POST(req: Request) {
   // Fetch the seller's reply_to_email so buyer replies reach the seller.
   // From stays the platform alias — never the seller's address.
   let sellerReplyTo: string | null = null;
+  let sellerSendFrom: string | null = null;
   try {
     const sb2 = createAdminClient();
     const { data: storeRow2 } = await sb2
       .from("stores")
-      .select("reply_to_email")
+      .select("reply_to_email, send_from_email")
       .eq("id", order.store_id)
       .maybeSingle();
     sellerReplyTo = storeRow2?.reply_to_email ?? null;
-  } catch { /* non-fatal — missing reply_to_email just means no Reply-To header */ }
+    sellerSendFrom = storeRow2?.send_from_email ?? null;
+  } catch { /* non-fatal — missing fields just means platform-default From + no Reply-To */ }
 
   await sendOrderReceipt({
     to: order.buyer_email,
@@ -124,6 +126,7 @@ export async function POST(req: Request) {
     currency: order.currency,
     orderId: order.id,
     sellerReplyTo,
+    sellerSendFrom,
   });
 
   // ── GST Tax Invoice ────────────────────────────────────────────────────────
@@ -172,6 +175,7 @@ export async function POST(req: Request) {
           productTitle: order.product_title,
           sellerName: (storeForInv as { legal_name?: string | null }).legal_name ?? null,
           replyTo: sellerReplyTo,
+          sellerSendFrom,
         });
       }
     }

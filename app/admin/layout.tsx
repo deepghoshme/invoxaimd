@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import DxShell, { type DxNavGroup } from "@/components/dx/Shell";
 import { createClient } from "@/lib/supabase/server";
 import { getPlatformNotifications } from "@/lib/notifications";
+import NotificationSound from "@/components/NotificationSound";
 import "../dashboard/dx.css";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ const ADMIN_NAV: DxNavGroup[] = [
   ] },
   { label: "Comms", items: [
     { label: "Emails", icon: "mail", href: "/admin/emails" },
+    { label: "Reminder mail", icon: "bell", href: "/admin/reminders" },
   ] },
   { label: "Platform", items: [
     { label: "Team & roles", icon: "users", href: "/admin/team" },
@@ -74,6 +76,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       badge="admin"
       groups={ADMIN_NAV}
       notifItems={notifItems}
+      headerExtra={<NotificationSound scope="admin" />}
       user={{ email: user.email, name: meta.full_name ?? meta.name, avatarUrl: meta.avatar_url ?? meta.picture }}
       profileItems={[
         { label: "Account setting", href: "/admin/settings" },

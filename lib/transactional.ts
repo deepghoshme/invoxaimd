@@ -1,6 +1,6 @@
 import "server-only";
 import { getPlatformMailer } from "@/lib/email";
-import { EMAIL_ROUTES } from "@/lib/emailRoutes";
+import { EMAIL_ROUTES, resolveSellerFrom } from "@/lib/emailRoutes";
 import type { InvoiceRow } from "@/lib/invoice";
 import { renderInvoicePdf } from "@/lib/invoicePdf";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -85,11 +85,16 @@ export async function sendOrderReceipt(o: {
   /** Seller's reply_to_email, if set. Used as Reply-To so buyer replies reach
    *  the seller. From remains the platform invoxai alias for deliverability. */
   sellerReplyTo?: string | null;
+  /** Seller's stores.send_from_email, if set + valid. When present it becomes
+   *  the From: address for this seller's order mail (falls back to platform
+   *  alias). Deliverability still depends on the seller's domain DKIM/SPF. */
+  sellerSendFrom?: string | null;
 }): Promise<void> {
   if (!o.to) return;
   const m = await getPlatformMailer();
   if (!m.ok) return;
   const r = EMAIL_ROUTES.order_receipt;
+  const fromAddr = resolveSellerFrom("order_receipt", o.sellerSendFrom);
   const inner = `<p>Hi ${esc(o.buyerName || "there")}, your payment is confirmed. 🎉</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
       ${row("Item", esc(o.productTitle || "Your purchase"))}
@@ -99,13 +104,12 @@ export async function sendOrderReceipt(o: {
     <p style="margin-top:14px">Access / details will follow by email. Thank you!</p>`;
   try {
     await m.mailer.send({
-      from: r.from,
+      from: fromAddr,
       cc: r.cc,
       to: o.to,
       subject: `Your order is confirmed ✓ — ${o.productTitle || "Purchase"}`,
       html: shell("Payment successful", inner),
       // Reply-To: seller's address so buyer replies land with the seller.
-      // From stays the platform alias — never the seller's address.
       ...(o.sellerReplyTo ? { replyTo: o.sellerReplyTo } : {}),
     });
   } catch { /* non-fatal */ }
@@ -367,11 +371,14 @@ export async function sendTaxInvoiceEmail(o: {
   productTitle: string | null;
   sellerName: string | null;
   replyTo?: string | null;
+  /** Seller's stores.send_from_email, if set + valid → From: address. */
+  sellerSendFrom?: string | null;
 }): Promise<void> {
   if (!o.to) return;
   const m = await getPlatformMailer();
   if (!m.ok) return;
   const r = EMAIL_ROUTES.order_receipt;
+  const fromAddr = resolveSellerFrom("order_receipt", o.sellerSendFrom);
   const cur = o.invoice.currency || "INR";
   const invDate = new Date(o.invoice.created_at).toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -438,7 +445,7 @@ export async function sendTaxInvoiceEmail(o: {
 
   try {
     await m.mailer.send({
-      from: r.from,
+      from: fromAddr,
       cc: r.cc,
       to: o.to,
       subject: `Tax Invoice ${esc(o.invoice.invoice_number)} — ${o.productTitle || "Purchase"}`,
@@ -602,6 +609,99 @@ export async function sendAbandonedCartEmail(o: {
       to: o.to,
       subject,
       html: shell("Complete your purchase", inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/**
+ * Email a seller-created CUSTOM invoice to its customer. Seller-issued, so the
+ * From: address honours the seller's stores.send_from_email when set + valid
+ * (else the platform hello@ alias). The invoice PDF is attached (non-fatal).
+ *
+ * All amounts are read from the stored InvoiceRow — never recomputed here.
+ */
+export async function sendCustomInvoiceEmail(o: {
+  to: string | null;
+  invoice: InvoiceRow;
+  sellerName: string | null;
+  /** Seller's stores.send_from_email, if set + valid → From: address. */
+  sellerSendFrom?: string | null;
+  /** Seller's reply-to address (buyer replies land with the seller). */
+  replyTo?: string | null;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  // General buyer/seller mail route — seller send-from overrides the alias.
+  const fromAddr = resolveSellerFrom("general", o.sellerSendFrom);
+  const cur = o.invoice.currency || "INR";
+  const invDate = new Date(o.invoice.created_at).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const meta = (o.invoice.meta ?? {}) as Record<string, unknown>;
+  const title = (meta.title as string) || "Invoice";
+  const lineItems = Array.isArray(meta.line_items)
+    ? (meta.line_items as { description?: string; amount_paise?: number }[])
+    : [];
+
+  const itemRows = lineItems
+    .map((li) => row(esc(String(li.description ?? "Item")), money(Number(li.amount_paise ?? 0), cur)))
+    .join("");
+
+  const taxRows: string[] = [];
+  const rate = Number(o.invoice.tax_rate ?? 0);
+  if (rate > 0) {
+    if (Number(o.invoice.cgst_paise) > 0 || Number(o.invoice.sgst_paise) > 0) {
+      const halfRate = rate / 2;
+      taxRows.push(row(`CGST @ ${halfRate}%`, money(Number(o.invoice.cgst_paise), cur)));
+      taxRows.push(row(`SGST @ ${halfRate}%`, money(Number(o.invoice.sgst_paise), cur)));
+    } else if (Number(o.invoice.igst_paise) > 0) {
+      taxRows.push(row(`IGST @ ${rate}%`, money(Number(o.invoice.igst_paise), cur)));
+    }
+  }
+
+  const inner = `
+    <p style="font-size:12px;color:#8a8088;margin:0 0 12px">INVOICE</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+      ${row("Invoice No.", esc(o.invoice.invoice_number))}
+      ${row("Invoice Date", invDate)}
+      ${o.sellerName ? row("From", esc(o.sellerName)) : ""}
+      ${o.invoice.gstin ? row("GSTIN", esc(o.invoice.gstin)) : ""}
+      ${o.invoice.buyer_name ? row("Bill To", esc(o.invoice.buyer_name)) : ""}
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-top:1px solid #eee;padding-top:10px;margin-top:10px">
+      ${itemRows || row(esc(title), money(Number(o.invoice.subtotal_paise), cur))}
+      ${rate > 0 ? row("Taxable Value", money(Number(o.invoice.subtotal_paise), cur)) : ""}
+      ${taxRows.join("")}
+      <tr style="border-top:1px solid #eee">
+        <td style="padding:6px 0;color:#1c1320;font-weight:700">Total Due</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700">${money(Number(o.invoice.total_paise), cur)}</td>
+      </tr>
+    </table>
+    <p style="font-size:11px;color:#8a8088;margin-top:10px">A PDF copy of this invoice is attached.</p>`;
+
+  let pdfAttachments: { filename: string; content: Buffer; contentType: string }[] = [];
+  try {
+    const pdfBuffer = await renderInvoicePdf(o.invoice, { sellerLegalName: o.sellerName });
+    pdfAttachments = [{
+      filename: `Invoice-${o.invoice.invoice_number}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    }];
+  } catch (pdfErr) {
+    console.warn("[transactional] PDF generation failed for custom invoice; sending without attachment", pdfErr);
+  }
+
+  try {
+    await m.mailer.send({
+      from: fromAddr,
+      to: o.to,
+      subject: `Invoice ${esc(o.invoice.invoice_number)} — ${esc(title)}`,
+      html: shell(esc(title), inner),
+      ...(o.replyTo ? { replyTo: o.replyTo } : {}),
+      ...(pdfAttachments.length ? { attachments: pdfAttachments } : {}),
     });
   } catch { /* non-fatal */ }
 }
@@ -837,6 +937,45 @@ export async function sendRechargeReminderEmail(o: {
       to: o.to,
       subject: `Low wallet balance — recharge ${esc(o.storeName)} to keep accepting orders`,
       html: shell("Wallet balance low — recharge needed", inner),
+    });
+  } catch { /* non-fatal */ }
+}
+
+/**
+ * Send a SOFTER re-engagement "nudge" to a seller who does NOT qualify for the
+ * friendly recharge reminder — i.e. they are inactive or have little/no revenue,
+ * yet their wallet is low. This is the admin-configured "inactive path" mail
+ * (recharge_reminder_inactive_action = 'nudge'). Tone is light and re-engaging,
+ * not transactional. Non-fatal.
+ */
+export async function sendRechargeNudgeEmail(o: {
+  to: string;
+  storeName: string;
+  rechargeUrl: string;
+}): Promise<void> {
+  if (!o.to) return;
+  const m = await getPlatformMailer();
+  if (!m.ok) return;
+  const r = EMAIL_ROUTES.general;
+  const inner = `
+    <p>Hi,</p>
+    <p>We noticed <b>${esc(o.storeName)}</b> has been quiet lately, and your invoxai wallet is running low.</p>
+    <p>Whenever you're ready to start (or restart) accepting orders, just top up your wallet and your storefront checkout stays live for your buyers — no setup needed.</p>
+    <div style="text-align:center;margin:22px 0">
+      <a href="${esc(o.rechargeUrl)}"
+         style="display:inline-block;background:linear-gradient(135deg,#ff6a3d,#ff4d7d);color:#fff;font-weight:700;font-size:15px;padding:13px 32px;border-radius:10px;text-decoration:none">
+        Top up &amp; go live
+      </a>
+    </div>
+    <p style="font-size:12.5px;color:#8a8088">
+      No pressure — this is a one-off nudge. Recharge anytime to keep checkout running.
+    </p>`;
+  try {
+    await m.mailer.send({
+      from: r.from,
+      to: o.to,
+      subject: `Ready when you are — top up ${esc(o.storeName)} to start accepting orders`,
+      html: shell("Your store is ready to go live", inner),
     });
   } catch { /* non-fatal */ }
 }

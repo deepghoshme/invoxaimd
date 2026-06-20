@@ -161,7 +161,7 @@ export default async function BillingPage() {
     <>
       <Phead
         title="Plan & billing"
-        sub="Choose a plan. Your subscription is stored in real-time."
+        sub="Choose or switch your plan below. Platform invoices and billing history are on this same page."
       />
       <BillingClient
         plans={(plans ?? []) as Parameters<typeof BillingClient>[0]["plans"]}
@@ -169,9 +169,18 @@ export default async function BillingPage() {
         migrationPending={migrationPending}
       />
 
-      {/* Platform invoices — plan subscriptions and wallet recharges billed by the platform to this seller */}
-      <div style={{ marginTop: 20 }}>
-        <Card title="Platform invoices">
+      {/* Platform invoices — plan subscriptions and wallet recharges billed by the platform to this seller.
+          Customer/order invoices (kind="order") are strictly on the Orders page per-order, never here. */}
+      <div id="platform-invoices" style={{ marginTop: 20 }}>
+        <Card title="Platform invoices (what you paid us)">
+          <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, lineHeight: 1.6 }}>
+            These are invoices for <strong>your plan subscriptions</strong> and{" "}
+            <strong>wallet recharges</strong> — amounts you paid invoxai.
+            Your customer order receipts are on the{" "}
+            <a href="/dashboard/orders" style={{ color: "var(--primary)", fontWeight: 600 }}>
+              Orders page
+            </a>.
+          </p>
           <Table
             cols={["Invoice No.", "Date", "Type", "Taxable Value", "GST Breakdown", "Total", ""]}
             rows={taxInvoiceRows}

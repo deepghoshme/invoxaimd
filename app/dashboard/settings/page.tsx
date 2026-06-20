@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { requireDashboardStore } from "@/lib/auth";
@@ -41,6 +42,31 @@ export default async function SettingsPage() {
   return (
     <>
       <Phead title="Settings" sub="Store, profile, and account." />
+      <Link
+        href="/dashboard/settings/billing-pdf"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          textDecoration: "none",
+          background: "var(--surface, #1f1827)",
+          border: "1px solid var(--border, #2a2530)",
+          borderRadius: 12,
+          padding: "13px 16px",
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text, #fff)" }}>
+            Billing &amp; invoice customization
+          </div>
+          <div style={{ fontSize: 12.5, color: "var(--muted, #8a8088)", marginTop: 2 }}>
+            Design your invoice PDF, set a custom send-from email, and create custom bills.
+          </div>
+        </div>
+        <span style={{ fontSize: 18, color: "var(--muted, #8a8088)" }}>→</span>
+      </Link>
       <SettingsForm
         storeName={store.store_name ?? ""}
         subdomain={store.subdomain ?? null}

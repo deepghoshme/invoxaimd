@@ -890,13 +890,18 @@ export default function MarketingLanding() {
               <span className="mk-foot-nolink">About</span>
               <span className="mk-foot-nolink">Help center</span>
               <span className="mk-foot-nolink">Status</span>
-              <a href="/privacy">Privacy</a>
-              <a href="/terms">Terms</a>
+              <a href="/contact">Contact us</a>
+            </div>
+            <div className="mk-foot-col">
+              <h5>Legal</h5>
+              <a href="/privacy">Privacy policy</a>
+              <a href="/terms">Terms of service</a>
               <a href="/refund">Refund policy</a>
+              <a href="mailto:iamdeep.mk@gmail.com">iamdeep.mk@gmail.com</a>
             </div>
           </div>
           <div className="mk-foot-bot">
-            <span>© 2026 invoxai.io · Made in India 🇮🇳</span>
+            <span>© 2026 invoxai.io · Made in India</span>
             <span>SSR + CDN · Supabase · Hosted on a VPS with auto-SSL</span>
           </div>
         </div>
@@ -1088,7 +1093,7 @@ const MK_CSS = `
 .mk-cb-go{background:#fff;color:var(--color-primary);border:0;border-radius:10px;padding:12px 20px;font-family:var(--font-heading);font-weight:700;font-size:14.5px;cursor:pointer;white-space:nowrap;text-decoration:none;flex:none}
 
 .mk-foot{border-top:1px solid var(--color-border);padding:56px 0 36px}
-.mk-foot-top{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px}
+.mk-foot-top{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:30px}
 .mk-foot-col h5{font-family:var(--font-heading);font-size:13px;font-weight:700;margin:0 0 14px;color:var(--color-text)}
 .mk-foot-col a{display:block;color:var(--color-muted);font-size:13.5px;padding:5px 0;transition:color .15s;text-decoration:none}
 .mk-foot-col a:hover{color:var(--color-primary)}
@@ -1109,7 +1114,7 @@ const MK_CSS = `
   .mk-plan-feat{transform:none}
   .mk-tgrid{grid-template-columns:1fr}
   .mk-stats{grid-template-columns:1fr 1fr;gap:30px 18px}
-  .mk-foot-top{grid-template-columns:1fr 1fr}
+  .mk-foot-top{grid-template-columns:1fr 1fr 1fr}
   .mk-links{display:none}
   .mk-burger{display:flex}
   .mk-nav-r .mk-btn-ghost{display:none}
@@ -1124,5 +1129,7 @@ const MK_CSS = `
   .mk-ctaband{padding:40px 22px}
   .mk-cb-input{flex-wrap:wrap}
   .mk-cb-go{width:100%;text-align:center;padding:12px}
+  .mk-foot-top{grid-template-columns:1fr 1fr}
+  .mk-foot-col:first-child{grid-column:1/-1}
 }
 `;

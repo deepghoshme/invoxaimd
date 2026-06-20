@@ -28,12 +28,28 @@ function esc(s: string): string {
 // All monetary values come exclusively from the InvoiceRow — never
 // recomputed or derived from user input.
 // ---------------------------------------------------------------------------
+// Default platform sunset gradient for the invoice accent bar.
+const DEFAULT_ACCENT_GRADIENT = "linear-gradient(135deg, #ffb23e, #ff6a3d 40%, #ff4d7d 72%, #7b3fe4)";
+
+/** Validate a #rgb / #rrggbb hex string. Returns the lowercased hex or null. */
+function safeHex(c: string | null | undefined): string | null {
+  if (!c) return null;
+  const v = c.trim().toLowerCase();
+  return /^#[0-9a-f]{3}([0-9a-f]{3})?$/.test(v) ? v : null;
+}
+
 function buildInvoiceHtml(
   invoice: InvoiceRow,
   opts: {
     sellerLegalName?: string | null;
     sellerGstin?: string | null;
     sellerAddress?: string | null;
+    /** Seller-side invoice branding (store-level). Applies to order/custom invoices. */
+    seller?: {
+      logoUrl?: string | null;
+      accentColor?: string | null;
+      footer?: string | null;
+    } | null;
     platform?: {
       legalName?: string | null;
       gstin?: string | null;
@@ -75,9 +91,15 @@ function buildInvoiceHtml(
 
   // Line item description from meta snapshot.
   const meta = (invoice.meta ?? {}) as Record<string, unknown>;
+  // Custom invoices may carry an explicit array of line items in meta.line_items.
+  const customLineItems = Array.isArray(meta.line_items)
+    ? (meta.line_items as { description?: string; amount_paise?: number }[])
+    : null;
   let lineItem = "Service";
   if (invoice.kind === "order") {
     lineItem = (meta.product_title as string) || "Product purchase";
+  } else if (invoice.kind === "custom") {
+    lineItem = (meta.title as string) || "Custom invoice";
   } else if (invoice.kind === "plan") {
     lineItem = (meta.plan_name as string)
       ? `${meta.plan_name as string} — Platform Subscription`
@@ -117,15 +139,31 @@ function buildInvoiceHtml(
   const kindLabel =
     invoice.kind === "order"
       ? "TAX INVOICE"
+      : invoice.kind === "custom"
+      ? "INVOICE"
       : invoice.kind === "plan"
       ? "TAX INVOICE — PLATFORM SUBSCRIPTION"
       : "TAX INVOICE — WALLET";
 
+  // Seller branding applies to order/custom invoices (seller is the issuer).
+  // Plan/wallet invoices are platform-issued, so they ignore seller branding.
+  const isSellerIssued = invoice.kind === "order" || invoice.kind === "custom";
+  const sellerAccent = isSellerIssued ? safeHex(opts.seller?.accentColor) : null;
+  const sellerLogoUrl = isSellerIssued ? (opts.seller?.logoUrl ?? null) : null;
+
+  // Footer priority: explicit opts.invoiceFooter > seller footer (seller-issued)
+  // > platform footer > default.
   const footer =
     opts.invoiceFooter?.trim() ||
+    (isSellerIssued ? opts.seller?.footer?.trim() : "") ||
     opts.platform?.footer?.trim() ||
     "This is a computer-generated tax invoice. No physical signature is required.";
 
+  // Accent bar: seller-set solid colour (seller-issued) else platform gradient.
+  const accentBackground = sellerAccent
+    ? sellerAccent
+    : DEFAULT_ACCENT_GRADIENT;
+  // Header brand: seller logo (seller-issued) takes priority over platform logo.
   const platformLogoUrl = opts.platform?.logoUrl ?? null;
   const platformPan = opts.platform?.pan ?? null;
   const platformContactEmail = opts.platform?.contactEmail ?? null;
@@ -156,11 +194,11 @@ function buildInvoiceHtml(
     margin: 0 auto;
   }
 
-  /* Sunset gradient accent bar — matches the email brand style */
+  /* Accent bar — seller-set solid colour (order/custom) or platform gradient */
   .brand-bar {
     height: 7px;
     border-radius: 99px;
-    background: linear-gradient(135deg, #ffb23e, #ff6a3d 40%, #ff4d7d 72%, #7b3fe4);
+    background: ${accentBackground};
     margin-bottom: 28px;
   }
 
@@ -213,7 +251,7 @@ function buildInvoiceHtml(
     font-weight: 700;
     letter-spacing: 1.3px;
     text-transform: uppercase;
-    color: #7b3fe4;
+    color: ${sellerAccent ?? "#7b3fe4"};
     margin-bottom: 6px;
   }
   .party-block p {
@@ -302,12 +340,19 @@ function buildInvoiceHtml(
   <!-- Sunset gradient bar matching email brand -->
   <div class="brand-bar"></div>
 
-  <!-- Header: Platform logo (or text brand) + Invoice No + Date -->
+  <!-- Header: seller logo/name (order/custom) or platform brand + Invoice No + Date -->
   <div class="header-row">
     <div>
-      ${platformLogoUrl
-        ? `<img src="${esc(platformLogoUrl)}" alt="invoxai" style="max-height:48px;max-width:180px;object-fit:contain;display:block;margin-bottom:4px" />`
-        : `<div class="invoice-title">invoxai</div>`}
+      ${
+        // Seller-issued invoices: prefer seller logo, else seller business name text.
+        isSellerIssued && sellerLogoUrl
+          ? `<img src="${esc(sellerLogoUrl)}" alt="${esc(issuerName || "Seller")}" style="max-height:48px;max-width:180px;object-fit:contain;display:block;margin-bottom:4px" />`
+          : isSellerIssued && issuerName
+          ? `<div class="invoice-title">${esc(issuerName)}</div>`
+          : platformLogoUrl
+          ? `<img src="${esc(platformLogoUrl)}" alt="invoxai" style="max-height:48px;max-width:180px;object-fit:contain;display:block;margin-bottom:4px" />`
+          : `<div class="invoice-title">invoxai</div>`
+      }
       <div class="invoice-kind">${esc(kindLabel)}</div>
       ${contactLine ? `<div style="font-size:10.5px;color:#7a6770;margin-top:4px">${contactLine}</div>` : ""}
     </div>
@@ -345,12 +390,28 @@ function buildInvoiceHtml(
       </tr>
     </thead>
     <tbody>
-      <tr>
+      ${
+        // Custom invoices with explicit line items: render each item row (no
+        // per-line GST split — GST shown only in the totals section). The sum of
+        // the listed item amounts equals subtotal_paise (computed server-side).
+        customLineItems && customLineItems.length > 0
+          ? customLineItems
+              .map(
+                (li) => `<tr>
+        <td>${esc(String(li.description ?? "Item"))}</td>
+        <td class="amount">${esc(money(Number(li.amount_paise ?? 0), cur))}</td>
+        ${rate > 0 ? `<td class="amount"></td>` : ""}
+        <td class="amount">${esc(money(Number(li.amount_paise ?? 0), cur))}</td>
+      </tr>`,
+              )
+              .join("")
+          : `<tr>
         <td>${esc(lineItem)}</td>
         <td class="amount">${esc(money(Number(invoice.subtotal_paise), cur))}</td>
         ${rate > 0 ? `<td class="amount">${esc(money(Number(invoice.total_paise) - Number(invoice.subtotal_paise), cur))}</td>` : ""}
         <td class="amount"><strong>${esc(money(Number(invoice.total_paise), cur))}</strong></td>
-      </tr>
+      </tr>`
+      }
     </tbody>
   </table>
 
@@ -387,6 +448,16 @@ export type InvoicePdfOpts = {
   sellerLegalName?: string | null;
   sellerGstin?: string | null;
   sellerAddress?: string | null;
+  /**
+   * Seller-side invoice branding (store-level). When omitted, renderInvoicePdf
+   * auto-loads it from the invoice's store for order/custom invoices. Pass
+   * `seller: null` explicitly to skip the auto-load (e.g. plan/wallet invoices).
+   */
+  seller?: {
+    logoUrl?: string | null;
+    accentColor?: string | null;
+    footer?: string | null;
+  } | null;
   platform?: {
     legalName?: string | null;
     gstin?: string | null;
@@ -446,6 +517,36 @@ export async function renderInvoicePdf(
     // platform_settings read failure is non-fatal; use default footer.
   }
 
+  // Auto-load seller invoice branding for order/custom invoices, unless the
+  // caller already supplied (or explicitly nulled) opts.seller. Plan/wallet
+  // invoices are platform-issued and don't use seller branding.
+  let sellerBranding = opts.seller;
+  const sellerIssued = invoice.kind === "order" || invoice.kind === "custom";
+  if (sellerBranding === undefined && sellerIssued && invoice.store_id) {
+    try {
+      const admin = createAdminClient();
+      const { data: store } = await admin
+        .from("stores")
+        .select("logo_url, invoice_accent_color, invoice_footer")
+        .eq("id", invoice.store_id)
+        .maybeSingle();
+      if (store) {
+        const s = store as {
+          logo_url?: string | null;
+          invoice_accent_color?: string | null;
+          invoice_footer?: string | null;
+        };
+        sellerBranding = {
+          logoUrl: s.logo_url ?? null,
+          accentColor: s.invoice_accent_color ?? null,
+          footer: s.invoice_footer ?? null,
+        };
+      }
+    } catch {
+      // Non-fatal — fall back to platform defaults.
+    }
+  }
+
   // Merge fetched platform fields into opts.platform so the HTML builder has
   // the full picture. Caller-supplied opts.platform values take priority.
   const mergedPlatform = {
@@ -459,7 +560,12 @@ export async function renderInvoicePdf(
     contactPhone: opts.platform?.contactPhone ?? platformSettings?.contact_phone ?? null,
   };
 
-  const html = buildInvoiceHtml(invoice, { ...opts, platform: mergedPlatform, invoiceFooter });
+  const html = buildInvoiceHtml(invoice, {
+    ...opts,
+    seller: sellerBranding ?? null,
+    platform: mergedPlatform,
+    invoiceFooter,
+  });
 
   // Use Playwright Chromium — confirmed launchable on this server.
   const { chromium } = await import("playwright");

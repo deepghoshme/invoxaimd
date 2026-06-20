@@ -5,6 +5,7 @@ import { type StoreContent, type StoreProduct, ACCENTS, FONT_FAMILY, WIDTH_PX } 
 import { type CatalogProduct, formatPrice } from "@/lib/catalog";
 import StoreCheckout from "./StoreCheckout";
 import ReviewsSection, { type ProductReview, type ReviewStats } from "@/components/templates/ReviewsSection";
+import SiteFooter from "@/components/SiteFooter";
 
 export type RelatedProduct = { id: string; name: string; image: string; price: string };
 
@@ -39,8 +40,10 @@ export default function ProductPage({
   const [copied, setCopied] = useState(false);
   const buyboxRef = useRef<HTMLDivElement>(null);
 
-  // Sticky buy bar appears once the main buy box scrolls out of view.
+  // Sticky buy bar: on mobile (≤640px) always show from the start; on desktop
+  // reveal only once the buy box has scrolled above the viewport.
   useEffect(() => {
+    if (window.innerWidth <= 640) { setSticky(true); return; }
     const el = buyboxRef.current; if (!el) return;
     const io = new IntersectionObserver(([e]) => setSticky(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
     io.observe(el); return () => io.disconnect();
@@ -207,10 +210,7 @@ export default function ProductPage({
           </div>
         )}
 
-        <div className="sfoot">
-          <div className="b">{storeName}</div>
-          <div style={{ marginTop: 6 }}>© 2026 {storeName} · Powered by invoxai</div>
-        </div>
+        <SiteFooter brandName={storeName} className=" storeview-footer" />
 
         {sticky && !soldOut && (
           <div className="pdpx-sticky">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { type StoreContent, type StoreProduct, ACCENTS, FONT_FAMILY, WIDTH_PX } from "@/lib/store";
 import StoreCheckout from "./StoreCheckout";
+import SiteFooter from "@/components/SiteFooter";
 
 /** Storefront renderer. Namespaced under .storeview. Products are the seller's
  * store catalog (passed in on the live site; sample set in the builder). */
@@ -177,7 +178,28 @@ export default function StoreView({
           <button className="acctbtn" onClick={() => setDrawer("acct")}>👤 Login</button>
           <button className="carticon" onClick={() => setDrawer("cart")}>🛒{cartCount > 0 && <span className="cbadge">{cartCount}</span>}</button>
         </div>
+        {/* Store hero — shown when no banner section is active in the order */}
+        {!order.includes("banner") && (c.store || c.tagline) && (
+          <div className="store-hero">
+            <div className="store-hero-in">
+              <h1 className="store-hero-name">{c.store || "Store"}</h1>
+              {c.tagline && <p className="store-hero-tag">{c.tagline}</p>}
+              <div className="store-hero-trust">
+                <span>Secure checkout</span>
+                <span>Fast delivery</span>
+                <span>Easy returns</span>
+              </div>
+            </div>
+          </div>
+        )}
         {order.map((k) => (sections[k] && REN[k] ? REN[k]() : null))}
+        {/* Trust signals above footer */}
+        <div className="store-trust-bar">
+          <div className="store-trust-item"><span className="sti">🔒</span>Secure checkout</div>
+          <div className="store-trust-item"><span className="sti">↩️</span>Easy returns</div>
+          <div className="store-trust-item"><span className="sti">⚡</span>Instant digital delivery</div>
+          <div className="store-trust-item"><span className="sti">🏦</span>Multiple payment options</div>
+        </div>
         <Footer c={c} />
         {(c.bottomNav !== false) && (
           <div className="bottomnav">
@@ -254,17 +276,25 @@ export default function StoreView({
 
 function Footer({ c }: { c: StoreContent }) {
   const legal = c.legal ?? {};
-  const links = Object.keys(legal).filter((k) => legal[k]?.on).map((k) => <a key={k}>{legal[k].title}</a>);
+  const legalLinks = Object.keys(legal).filter((k) => legal[k]?.on);
   const PAYS = ["UPI", "VISA", "Mastercard", "RuPay", "Net Banking"];
   return (
-    <div className="sfoot">
-      <div className="b">{c.store}</div>
-      {links}
-      <a href="https://app.invoxai.io/account" target="_blank" rel="noreferrer" style={{ fontSize: 12.5 }}>
-        My orders &amp; account ↗
-      </a>
-      {c.footerPay !== false && <div className="paywrap">{PAYS.map((p) => <span className="paym" key={p}>{p}</span>)}</div>}
-      <div style={{ marginTop: 6 }}>© 2026 {c.store} · Powered by invoxai</div>
-    </div>
+    <>
+      {/* Payment methods + legal strip just above the site footer */}
+      {(c.footerPay !== false || legalLinks.length > 0) && (
+        <div className="sfoot-strip">
+          {legalLinks.length > 0 && (
+            <div className="sfoot-legal">
+              {legalLinks.map((k) => <a key={k}>{legal[k].title}</a>)}
+              <a href="https://app.invoxai.io/account" target="_blank" rel="noreferrer">My orders ↗</a>
+            </div>
+          )}
+          {c.footerPay !== false && (
+            <div className="paywrap">{PAYS.map((p) => <span className="paym" key={p}>{p}</span>)}</div>
+          )}
+        </div>
+      )}
+      <SiteFooter brandName={c.store || undefined} className=" storeview-footer" />
+    </>
   );
 }

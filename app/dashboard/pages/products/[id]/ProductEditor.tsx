@@ -320,7 +320,8 @@ export default function ProductEditor({
 
       {!payEnabled && (
         <div className="alert alert-error" style={{ marginBottom: 14 }}>
-          Payments aren’t connected yet — buyers can’t pay until you <a href="/dashboard/settings/payments">connect Razorpay</a>.
+          Payment gateway not configured — buyers cannot pay until you set up your store-wide gateway (one gateway covers all your subdomains and custom domain).{" "}
+          <a href="/dashboard/settings/payments">Configure payment gateway →</a>
         </div>
       )}
       {err && <div className="alert alert-error" style={{ marginBottom: 14 }}>{err}</div>}

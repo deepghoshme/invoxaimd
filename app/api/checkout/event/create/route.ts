@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStoreCommissionRate, createOrderRecord } from "@/lib/sites";
+import { createOrderRecord } from "@/lib/sites";
+import { resolveFees, computeSaleFeePaise } from "@/lib/platform-fees";
 import { type EventContent, type EventTier } from "@/lib/event";
 
 /**
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
   const unitPaise = Math.round(Number(tier.price ?? 0) * 100);
   const totalPaise = unitPaise * safeQty;
 
-  const rate = await getStoreCommissionRate(page.store_id);
+  const fees = await resolveFees(page.store_id);
 
   const order = await createOrderRecord({
     store_id: page.store_id,
@@ -75,8 +76,8 @@ export async function POST(req: Request) {
     product_title: `${content.title || page.title || "Event"} — ${tier.name}${safeQty > 1 ? ` ×${safeQty}` : ""}`,
     amount: totalPaise,
     currency,
-    commission_rate: rate,
-    commission_amount: Math.round(totalPaise * rate),
+    commission_rate: fees.commission_pct,
+    commission_amount: computeSaleFeePaise(totalPaise, fees),
     // Attach tier metadata so verify + ticket creation can read it
     // We store them in a note-like field by piggybacking the unused buyer fields
     // (buyer_name will be set properly at /start time)

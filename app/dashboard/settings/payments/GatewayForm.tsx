@@ -111,7 +111,7 @@ export default function GatewayForm({ gwMap }: { gwMap: Record<string, GatewayRo
     <div className="gw-page">
       <div className="gw-ph">
         <h1>Connect your payment gateway</h1>
-        <p>Buyers pay you directly — funds land in your own account.</p>
+        <p>Buyers pay you directly — funds land in your own account. One gateway configuration covers your subdomain, any extra subdomains, and your custom domain.</p>
       </div>
 
       <div className="gw-note">

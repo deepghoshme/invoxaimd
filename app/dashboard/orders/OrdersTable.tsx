@@ -134,6 +134,7 @@ export default function OrdersTable({
                 <th>Commission</th>
                 <th>Date</th>
                 <th>Status</th>
+                <th>Invoice</th>
               </tr>
             </thead>
             <tbody>
@@ -176,6 +177,32 @@ export default function OrdersTable({
                           ? "Failed"
                           : o.status}
                       </Tag>
+                    )}
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    {o.invoice_id ? (
+                      <a
+                        href={`/api/invoices/${o.invoice_id}/pdf`}
+                        download
+                        title="Download customer invoice PDF"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "3px 9px",
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          color: "#7b3fe4",
+                          border: "1px solid #c4a8f0",
+                          borderRadius: 6,
+                          textDecoration: "none",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        PDF
+                      </a>
+                    ) : (
+                      <span style={{ color: "var(--muted)", fontSize: 11.5 }}>—</span>
                     )}
                   </td>
                 </tr>

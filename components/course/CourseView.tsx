@@ -9,6 +9,7 @@ import {
   totalDuration,
 } from "@/lib/course";
 import { sanitizeHtml } from "@/lib/sanitize";
+import SiteFooter from "@/components/SiteFooter";
 
 // ── Inline styles as a <style> tag ──────────────────────────────────────────
 // All classes namespaced under .cu to avoid collisions with other page types.
@@ -55,7 +56,7 @@ const COURSE_CSS = `
 .cu-learn div { display: flex; gap: 9px; font-size: 14px; }
 .cu-learn div::before { content: "✓"; color: var(--green); font-weight: 800; }
 .cu-buy { background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; position: sticky; top: 76px; }
-.cu-thumb { aspect-ratio: 16/10; background: linear-gradient(135deg,#2a1830,#7b3fe4); position: relative; overflow: hidden; }
+.cu-thumb { aspect-ratio: 16/10; background: linear-gradient(135deg,var(--s2, #2a1830),var(--accent, #7b3fe4)); position: relative; overflow: hidden; }
 .cu-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cu-thumb-ph { display: grid; place-items: center; width: 100%; height: 100%; color: rgba(255,255,255,.7); font-size: 13px; }
 .cu-buy-bd { padding: 20px; }
@@ -89,15 +90,15 @@ const COURSE_CSS = `
 /* player */
 .cu-player { display: grid; grid-template-columns: 1fr 340px; min-height: calc(100dvh - 60px); }
 .cu-stage { background: #0c0c11; min-width: 0; display: flex; flex-direction: column; }
-.cu-screen { aspect-ratio: 16/9; background: radial-gradient(60% 80% at 50% 40%, #2a1830, #0c0c11); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.cu-screen { aspect-ratio: 16/9; background: radial-gradient(60% 80% at 50% 40%, color-mix(in srgb, var(--accent, #7b3fe4) 30%, #0c0c11), #0c0c11); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .cu-screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .cu-screen .play { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; color: var(--primary); font-size: 24px; cursor: pointer; animation: cu-pulse 2.4s ease-in-out infinite; }
 .cu-screen .ttl { position: absolute; bottom: 16px; left: 18px; color: #fff; font-family: var(--fh); font-weight: 700; font-size: 15px; }
 .cu-bar { background: rgba(255,255,255,.06); height: 5px; }
 .cu-bar i { display: block; height: 100%; background: var(--grad); transition: width .3s; }
-.cu-pcontrols { display: flex; align-items: center; gap: 12px; padding: 16px 22px; color: #e7e3ee; flex-wrap: wrap; }
+.cu-pcontrols { display: flex; align-items: center; gap: 12px; padding: 16px 22px; color: rgba(255,255,255,.9); flex-wrap: wrap; }
 .cu-pcontrols .nm { font-family: var(--fh); font-weight: 700; font-size: 16px; color: #fff; }
-.cu-pcontrols .sub { font-size: 12.5px; color: #9aa0ab; margin-top: 2px; }
+.cu-pcontrols .sub { font-size: 12.5px; color: rgba(255,255,255,.6); margin-top: 2px; }
 .cu-pbtn { font: inherit; font-family: var(--fh); font-weight: 600; font-size: 13px; padding: 9px 15px; border-radius: 9px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #fff; cursor: pointer; }
 .cu-pbtn.done { background: var(--green); border-color: transparent; }
 .cu-side { background: var(--card); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
@@ -115,11 +116,63 @@ const COURSE_CSS = `
 .cu-pl .nm { flex: 1; font-size: 13px; }
 .cu-pl.on .nm { font-weight: 600; }
 .cu-pl .dur { font-size: 11.5px; color: var(--muted); }
+/* ── Trust bar ── */
+.cu-trust { background: var(--s2); border-bottom: 1px solid var(--border); padding: 14px 0; }
+.cu-trust-in { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); }
+.cu-trust-in span { display: flex; align-items: center; gap: 7px; }
+.cu-trust-in span::before { content: "✓"; color: var(--green); font-weight: 800; }
+
+/* ── Instructor card ── */
+.cu-icard { display: flex; gap: 20px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin-top: 0; }
+.cu-icard .av-lg { width: 72px; height: 72px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 26px; font-family: var(--fh); flex: none; }
+.cu-icard .av-lg img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; display: block; }
+.cu-icard-info h3 { font-size: 17px; margin-bottom: 4px; }
+.cu-icard-info .role { font-size: 13px; color: var(--primary); font-weight: 600; margin-bottom: 8px; }
+.cu-icard-info p { font-size: 14px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+/* ── Testimonials ── */
+.cu-tgrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.cu-tcard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.cu-tcard .stars { color: var(--gold); font-size: 14px; letter-spacing: 1px; margin-bottom: 10px; }
+.cu-tcard p { font-size: 14px; color: var(--text); line-height: 1.65; margin: 0 0 14px; }
+.cu-tcard .who { display: flex; align-items: center; gap: 10px; }
+.cu-tcard .who .av-s { width: 32px; height: 32px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; font-family: var(--fh); flex: none; }
+.cu-tcard .who b { font-size: 13px; display: block; }
+.cu-tcard .who span { font-size: 12px; color: var(--muted); }
+
+/* ── FAQ ── */
+.cu-faq { display: flex; flex-direction: column; gap: 0; }
+.cu-faq-item { border-bottom: 1px solid var(--border); }
+.cu-faq-item:first-child { border-top: 1px solid var(--border); }
+.cu-faq-q { width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: 0; color: var(--text); padding: 16px 0; font-size: 15px; font-weight: 600; font-family: var(--fh); cursor: pointer; text-align: left; gap: 12px; }
+.cu-faq-q .chev { font-size: 18px; color: var(--muted); flex: none; transition: transform .2s; }
+.cu-faq-item.open .cu-faq-q .chev { transform: rotate(45deg); }
+.cu-faq-a { font-size: 14px; color: var(--muted); line-height: 1.7; padding-bottom: 16px; display: none; }
+.cu-faq-item.open .cu-faq-a { display: block; }
+
+/* ── Bottom CTA band ── */
+.cu-ctaband { background: var(--grad); border-radius: 20px; padding: 48px 36px; text-align: center; color: #fff; margin-bottom: 48px; position: relative; overflow: hidden; }
+.cu-ctaband::after { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 120% at 80% 0%, rgba(255,255,255,.25), transparent 60%); pointer-events: none; }
+.cu-ctaband > * { position: relative; z-index: 1; }
+.cu-ctaband h2 { font-size: clamp(24px, 3.5vw, 36px); margin-bottom: 10px; }
+.cu-ctaband p { opacity: .9; font-size: 15px; margin-bottom: 22px; }
+.cu-ctaband-btn { display: inline-block; background: #fff; color: var(--primary); border: 0; border-radius: 12px; padding: 14px 28px; font-family: var(--fh); font-weight: 800; font-size: 15.5px; cursor: pointer; }
+
+/* ── Footer wrapper inside .cu ── */
+.cu .sf-root { background: var(--card); border-top-color: var(--border); color: var(--muted); }
+.cu .sf-brand, .cu .sf-col h5 { color: var(--text); }
+
 @media (max-width: 880px) {
   .cu-hero-in { grid-template-columns: 1fr; } .cu-buy { position: static; }
   .cu-learn { grid-template-columns: 1fr; }
   .cu-player { grid-template-columns: 1fr; } .cu-side { border-left: 0; border-top: 1px solid var(--border); }
   .cu-title { font-size: 28px; }
+  .cu-tgrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .cu { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  .cu-ctaband { padding: 32px 22px; }
+  .cu-icard { flex-direction: column; align-items: flex-start; }
 }
 `;
 
@@ -140,6 +193,25 @@ function embedUrl(url: string): string | null {
   // Already an embed URL
   if (url.includes("embed")) return url;
   return null;
+}
+
+// ── FAQ accordion (client-only toggle) ──────────────────────────────────────
+
+function FaqSection({ items }: { items: { q?: string; a?: string }[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div className="cu-faq">
+      {items.map((item, i) => (
+        <div key={i} className={`cu-faq-item${open === i ? " open" : ""}`}>
+          <button className="cu-faq-q" onClick={() => setOpen(open === i ? null : i)}>
+            <span>{item.q ?? `Question ${i + 1}`}</span>
+            <span className="chev">+</span>
+          </button>
+          <div className="cu-faq-a">{item.a ?? ""}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -227,6 +299,14 @@ export default function CourseView({
 
   const instructorInitial = (c.instructor_name ?? storeName ?? "?").charAt(0).toUpperCase();
 
+  // Extended fields that the builder may write into content but aren't in the
+  // base CourseContent type yet — access via cast so tsc doesn't reject them.
+  const cx = c as Record<string, unknown>;
+  const testimonials = (cx.testimonials as { name?: string; role?: string; body?: string }[] | undefined) ?? [];
+  const faq = (cx.faq as { q?: string; a?: string }[] | undefined) ?? [];
+  const ctaHeading = (cx.cta_heading as string | undefined);
+  const ctaSubheading = (cx.cta_subheading as string | undefined);
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: COURSE_CSS }} />
@@ -256,6 +336,19 @@ export default function CourseView({
             )}
           </div>
         </nav>
+
+        {/* Trust bar */}
+        {view === "landing" && (
+          <div className="cu-trust">
+            <div className="cu-wrap cu-trust-in">
+              <span>Lifetime access</span>
+              <span>Certificate on completion</span>
+              <span>{totalLessons > 0 ? `${totalLessons} lessons` : "Self-paced"}</span>
+              {dur && <span>{dur} of content</span>}
+              <span>Instant access after enroll</span>
+            </div>
+          </div>
+        )}
 
         {/* ── LANDING ── */}
         {view === "landing" && (
@@ -379,7 +472,93 @@ export default function CourseView({
                   />
                 </section>
               )}
+
+              {/* Instructor */}
+              {c.instructor_name && (
+                <section className="cu-sec">
+                  <h2>Your instructor</h2>
+                  <div className="cu-icard">
+                    <div className="av-lg">
+                      {c.instructor_avatar
+                        ? <img src={c.instructor_avatar} alt={c.instructor_name} />
+                        : instructorInitial
+                      }
+                    </div>
+                    <div className="cu-icard-info">
+                      <h3>{c.instructor_name}</h3>
+                      {c.instructor_bio && <div className="role">{c.instructor_bio}</div>}
+                      <p>
+                        {c.instructor_bio
+                          ? `${c.instructor_name} brings deep expertise to every lesson. Each module is designed for practical, real-world application so you can start applying what you learn immediately.`
+                          : `${storeName ?? "Academy"} brings you this course with carefully structured lessons to help you achieve your goals step by step.`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Testimonials — shown only if testimonials data exists */}
+              {testimonials.length > 0 && (
+                <section className="cu-sec">
+                  <h2>What students say</h2>
+                  <div className="cu-tgrid">
+                    {testimonials.map((t, i) => (
+                      <div className="cu-tcard" key={i}>
+                        <div className="stars">★★★★★</div>
+                        <p>&ldquo;{t.body ?? ""}&rdquo;</p>
+                        <div className="who">
+                          <span className="av-s">{(t.name ?? "?").charAt(0).toUpperCase()}</span>
+                          <div>
+                            <b>{t.name ?? "Student"}</b>
+                            {t.role && <span>{t.role}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* FAQ — shown only if faq data exists */}
+              {faq.length > 0 && (
+                <section className="cu-sec">
+                  <h2>Frequently asked questions</h2>
+                  <FaqSection items={faq} />
+                </section>
+              )}
+
+              {/* Bottom CTA band */}
+              {!enrolled && (
+                <div className="cu-ctaband">
+                  <h2>{ctaHeading ?? "Ready to get started?"}</h2>
+                  <p>{ctaSubheading ?? "Join today and get lifetime access to all lessons."}</p>
+                  <button className="cu-ctaband-btn" onClick={handleEnroll}>
+                    {c.cta_label ?? "Enroll now"} →
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Site footer */}
+            <SiteFooter brandName={storeName} />
+          </div>
+        )}
+
+        {/* Mobile-only fixed bottom pay bar — hidden on desktop (≤640px only).
+            Shows the enroll action when the .cu-buy card has stacked below content. */}
+        {view === "landing" && !enrolled && (
+          <div className="mobile-pay-bar">
+            <div className="mobile-pay-bar-price">
+              {priceLabel}
+              {compareLabel && <small>was {compareLabel}</small>}
+            </div>
+            <button
+              className="mobile-pay-bar-btn"
+              onClick={handleEnroll}
+            >
+              {c.cta_label ?? "Enroll now"} →
+            </button>
           </div>
         )}
 

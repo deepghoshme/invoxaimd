@@ -1,7 +1,8 @@
 import { Phead, Card, Table } from "@/components/dx/ui";
-import { getEmailConfig } from "./actions";
+import { getEmailConfig, listSellerSendFrom } from "./actions";
 import EmailConfigForm from "./EmailConfigForm";
 import TestMailPanel from "./TestMailPanel";
+import SellerSendFromPanel from "./SellerSendFromPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,10 @@ const TEMPLATES = [
 ];
 
 export default async function AdminEmailsPage() {
-  const config = await getEmailConfig();
+  const [config, sellers] = await Promise.all([
+    getEmailConfig(),
+    listSellerSendFrom(),
+  ]);
 
   const rows = TEMPLATES.map((tpl) => [
     <span key="e" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -34,7 +38,7 @@ export default async function AdminEmailsPage() {
     <>
       <Phead
         title="Platform email"
-        sub="Configure the sending account and automated email toggles."
+        sub="Configure the sending account, automated email toggles, and per-seller send-from addresses."
       />
 
       {config?.migrationPending && (
@@ -64,6 +68,11 @@ export default async function AdminEmailsPage() {
             empty="No templates found."
           />
         </Card>
+      </div>
+
+      {/* Seller custom send-from management */}
+      <div style={{ marginTop: 18 }}>
+        <SellerSendFromPanel sellers={sellers} />
       </div>
 
       {/* Routing aliases + test-send tools */}

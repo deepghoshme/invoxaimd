@@ -54,6 +54,38 @@ export const EMAIL_ROUTES = {
 
 export type EmailCategory = keyof typeof EMAIL_ROUTES;
 
+// Basic email format guard, mirrors the DB CHECK on stores.send_from_email.
+function isEmailLike(v: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
+}
+
+/**
+ * Resolve the From: address for a seller's transactional mail.
+ *
+ * Priority:
+ *   1. The seller's configured stores.send_from_email — ONLY when it is a valid
+ *      address. This lets a seller present their own brand as the sender once
+ *      they (or the admin) have set it.
+ *   2. The platform default alias for the given email category (fallback).
+ *
+ * NOTE ON DELIVERABILITY: storing/returning a seller address here does NOT by
+ * itself guarantee the mail is delivered as that address. The sending domain
+ * still needs DKIM/SPF aligned with the platform mailer. Until a seller's
+ * domain is verified, mail providers may rewrite or reject a custom From. This
+ * resolver only chooses the address; it never claims verification. Callers that
+ * want strict deliverability should keep using the platform alias as From and
+ * the seller address as Reply-To. This is an intentional, honest platform limit.
+ */
+export function resolveSellerFrom(
+  category: EmailCategory,
+  sellerSendFrom: string | null | undefined,
+): string {
+  const fallback = EMAIL_ROUTES[category].from;
+  const candidate = (sellerSendFrom ?? "").trim();
+  if (candidate && isEmailLike(candidate)) return candidate;
+  return fallback;
+}
+
 // Flat list of every alias + its purpose — drives the admin Test-Mail panel.
 export const EMAIL_ALIASES: { address: string; purpose: string }[] = [
   { address: EMAIL_ADDR.info, purpose: "Welcome / new-join (user receives; admin copied)" },

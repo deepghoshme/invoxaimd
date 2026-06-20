@@ -28,9 +28,15 @@ export type InvoiceRow = {
   gstin: string | null;
   seller_legal_name: string | null;
   seller_address: string | null;
-  kind: "order" | "plan" | "wallet";
+  kind: "order" | "plan" | "wallet" | "custom";
   meta: Record<string, unknown> | null;
   created_at: string;
+};
+
+export type CustomLineItemInput = {
+  description: string;
+  /** Per-line amount in MAJOR currency units (e.g. rupees). Coerced server-side. */
+  amount: number;
 };
 
 // ─── GST math ─────────────────────────────────────────────────────────────────
@@ -491,5 +497,155 @@ export async function createInvoiceForPlan({
   } catch (e) {
     console.error("[invoice] createInvoiceForPlan unexpected error", e);
     return null;
+  }
+}
+
+// ─── Seller custom invoice ──────────────────────────────────────────────────────
+
+export type CreateCustomInvoiceResult =
+  | { ok: true; invoice: InvoiceRow }
+  | { ok: false; error: string };
+
+/**
+ * Create a seller-issued CUSTOM invoice (kind='custom') from manually-entered
+ * line items. The seller is the issuer; identity (legal name / GSTIN / address)
+ * is resolved from the seller's own store the same way order invoices are.
+ *
+ * MONEY IS COMPUTED SERVER-SIDE — the client only supplies line-item
+ * descriptions and per-line amounts. We:
+ *   1. Coerce each amount to integer paise (Math.round(major * 100)), rejecting
+ *      negatives / NaN. The sum is the GROSS total (what the customer pays).
+ *   2. Treat that gross as GST-INCLUSIVE and split it with computeGstSplit using
+ *      `taxRate` (0 = a plain non-GST bill, which is valid). The same intra/inter
+ *      state logic as order invoices is used via `sameState`.
+ *   3. Persist subtotal/CGST/SGST/IGST/total straight from the computed split.
+ *
+ * The individual line items are snapshotted into meta.line_items (paise) so the
+ * PDF can render them, but they are NEVER trusted for the totals — the stored
+ * subtotal/total come only from the server computation above.
+ *
+ * Not idempotent on its own (each call mints a new invoice number) — the API
+ * route is responsible for any per-request dedupe.
+ */
+export async function createCustomInvoice({
+  adminClient,
+  store,
+  buyerName,
+  buyerEmail,
+  title,
+  currency,
+  taxRate,
+  sameState,
+  lineItems,
+}: {
+  adminClient: SupabaseClient;
+  store: StoreForInvoice & { invoice_business_name?: string | null };
+  buyerName: string | null;
+  buyerEmail: string | null;
+  title: string | null;
+  currency?: string | null;
+  /** GST rate % (0 allowed). Falls back to store.gst_rate when undefined. */
+  taxRate?: number | null;
+  /** Intra-state (CGST+SGST) when true, inter-state (IGST) when false. */
+  sameState?: boolean;
+  lineItems: CustomLineItemInput[];
+}): Promise<CreateCustomInvoiceResult> {
+  try {
+    // --- Validate + coerce line items to integer paise (server-trusted) ------
+    if (!Array.isArray(lineItems) || lineItems.length === 0) {
+      return { ok: false, error: "At least one line item is required." };
+    }
+    if (lineItems.length > 50) {
+      return { ok: false, error: "Too many line items (max 50)." };
+    }
+
+    const itemsPaise: { description: string; amount_paise: number }[] = [];
+    let grossPaise = 0;
+    for (const li of lineItems) {
+      const desc = String(li?.description ?? "").trim();
+      const amtMajor = Number(li?.amount);
+      if (!desc) return { ok: false, error: "Every line item needs a description." };
+      if (desc.length > 200) return { ok: false, error: "Line item description too long (max 200 chars)." };
+      if (!Number.isFinite(amtMajor) || amtMajor < 0) {
+        return { ok: false, error: `Invalid amount for "${desc}".` };
+      }
+      const paise = Math.round(amtMajor * 100);
+      itemsPaise.push({ description: desc, amount_paise: paise });
+      grossPaise += paise;
+    }
+    if (grossPaise <= 0) {
+      return { ok: false, error: "Invoice total must be greater than zero." };
+    }
+    if (grossPaise > 100_00_00_000) {
+      // ₹10 crore guard against fat-finger / overflow.
+      return { ok: false, error: "Invoice total exceeds the allowed maximum." };
+    }
+
+    // --- Resolve seller identity (same precedence as order invoices) ---------
+    const billing = (store.billing ?? {}) as NonNullable<StoreForInvoice["billing"]>;
+    const sellerGstin = store.gstin ?? billing.tax_id ?? null;
+    const sellerLegalName =
+      store.invoice_business_name ??
+      store.legal_name ??
+      billing.business_name ??
+      null;
+    const sellerAddressParts = [
+      billing.address,
+      billing.city,
+      billing.state,
+      billing.postal_code,
+    ].filter(Boolean);
+    const sellerAddress = sellerAddressParts.length ? sellerAddressParts.join(", ") : null;
+
+    // --- GST split (server-side) --------------------------------------------
+    const rate = taxRate != null ? Number(taxRate) : Number(store.gst_rate ?? 0) || 0;
+    const safeRate = Number.isFinite(rate) && rate >= 0 && rate <= 100 ? rate : 0;
+    const gst = computeGstSplit(grossPaise, safeRate, sameState !== false);
+
+    // --- Sequential invoice number ------------------------------------------
+    const { data: numData, error: numErr } = await adminClient.rpc("next_invoice_number");
+    if (numErr || !numData) {
+      console.error("[invoice] next_invoice_number rpc failed (custom)", numErr);
+      return { ok: false, error: "Could not allocate an invoice number." };
+    }
+    const invoiceNumber = numData as string;
+
+    const { data: inv, error: invErr } = await adminClient
+      .from("invoices")
+      .insert({
+        store_id: store.id,
+        order_id: null,
+        invoice_number: invoiceNumber,
+        buyer_name: buyerName,
+        buyer_email: buyerEmail,
+        currency: (currency || "INR").toUpperCase(),
+        subtotal_paise: gst.subtotalPaise,
+        tax_rate: gst.taxRatePct,
+        cgst_paise: gst.cgstPaise,
+        sgst_paise: gst.sgstPaise,
+        igst_paise: gst.igstPaise,
+        total_paise: grossPaise,
+        gstin: sellerGstin,
+        seller_legal_name: sellerLegalName,
+        seller_address: sellerAddress,
+        kind: "custom",
+        meta: {
+          title: title?.trim() || "Custom invoice",
+          line_items: itemsPaise,
+          same_state: sameState !== false,
+        },
+      })
+      .select("*")
+      .single();
+
+    if (invErr) {
+      console.error("[invoice] custom insert failed", invErr);
+      return { ok: false, error: "Failed to create the invoice." };
+    }
+
+    return { ok: true, invoice: inv as InvoiceRow };
+  } catch (e) {
+    console.error("[invoice] createCustomInvoice unexpected error", e);
+    return { ok: false, error: "Unexpected error creating the invoice." };
   }
 }

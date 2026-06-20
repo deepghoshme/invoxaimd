@@ -43,7 +43,9 @@ export default function ExtraSubdomains({
         },
       ]);
       setInput("");
-      setSuccess(`${sub}.invoxai.io added successfully.`);
+      setSuccess(
+        `${sub}.invoxai.io is live — it uses your store's existing payment gateway automatically.`,
+      );
     });
   }
 
@@ -197,6 +199,21 @@ export default function ExtraSubdomains({
               >
                 {row.subdomain}.invoxai.io ↗
               </a>
+              {/* Live badge — always active; extra subdomains are immediate */}
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--green)",
+                  background: "rgba(31,181,122,0.1)",
+                  border: "1px solid rgba(31,181,122,0.25)",
+                  borderRadius: 99,
+                  padding: "2px 8px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Live
+              </span>
               <span
                 style={{
                   fontSize: 11,
@@ -233,9 +250,10 @@ export default function ExtraSubdomains({
       )}
 
       <p style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
-        Extra subdomains resolve to the same store as your primary subdomain —
-        no additional DNS configuration required. They are active immediately
-        after being added. This feature is available on all plans.
+        Extra subdomains resolve to the same store as your primary subdomain
+        and use your store&apos;s existing payment gateway automatically — no
+        separate connection needed. They go live immediately after being added,
+        with no extra DNS setup required. Available on all plans.
       </p>
     </div>
   );

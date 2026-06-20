@@ -127,10 +127,12 @@ export default function BillingClient({
   const [promoCode, setPromoCode] = useState("");
   const [promoMsg, setPromoMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
-  // Determine whether to show the toggle based on whether there are any annual plans
+  // Show the toggle whenever there are annual plans — even if all current plans
+  // are monthly, the toggle lets the seller see annual pricing when it exists.
+  // If there are NO annual plans at all we omit the toggle (no point switching).
   const hasAnnual = plans.some((p) => p.interval === "annual");
   const hasMonthly = plans.some((p) => p.interval === "monthly");
-  const showToggle = hasAnnual && hasMonthly;
+  const showToggle = hasAnnual; // one side (annual) must exist; monthly is implied
 
   // Default to the interval of the current subscription if available, else monthly
   const defaultInterval: IntervalToggle =
@@ -399,9 +401,26 @@ export default function BillingClient({
           </div>
           {currentSub.current_period_end && (
             <div className="cc-renew">
-              Renews {fmtDate(currentSub.current_period_end)}
+              {currentSub.status === "cancelled" || currentSub.status === "expired" || currentSub.status === "past_due"
+                ? "Expires"
+                : "Renews"}{" "}
+              {fmtDate(currentSub.current_period_end)}
             </div>
           )}
+          <div className="cc-renew" style={{ marginTop: 10, opacity: 1 }}>
+            <a
+              href="#platform-invoices"
+              style={{
+                color: "rgba(255,255,255,0.85)",
+                fontSize: 12,
+                textDecoration: "underline",
+                textDecorationColor: "rgba(255,255,255,0.4)",
+                textUnderlineOffset: 2,
+              }}
+            >
+              View billing &amp; invoice history below
+            </a>
+          </div>
         </div>
       ) : !migrationPending ? (
         <div className="bl-no-sub">

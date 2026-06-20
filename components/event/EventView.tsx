@@ -492,8 +492,8 @@ export default function EventView({
                       style={{
                         marginTop: 10,
                         padding: "10px 14px",
-                        background: "color-mix(in srgb, #e5476f 12%, transparent)",
-                        color: "#e5476f",
+                        background: "color-mix(in srgb, var(--secondary, #e5476f) 12%, transparent)",
+                        color: "var(--secondary, #e5476f)",
                         borderRadius: 10,
                         fontSize: 13,
                         fontWeight: 600,
@@ -564,7 +564,7 @@ const ET_CSS = `
   .et h1,.et h2,.et h3{margin:0;font-family:var(--fh);letter-spacing:-.02em;}
   .et p{margin:0;}
   .et-ticket{position:relative;z-index:1;width:380px;max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:0 40px 90px -40px rgba(0,0,0,.7);animation:et-pop .4s cubic-bezier(.2,.8,.2,1);}
-  .et-poster{height:150px;background:linear-gradient(130deg,#2a1830,#7b3fe4 55%,#ff4d7d);position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;background-size:cover;background-position:center;}
+  .et-poster{height:150px;background:linear-gradient(130deg,color-mix(in srgb,var(--accent) 25%,#0d0d12),var(--accent,#7b3fe4) 55%,var(--secondary,#ff4d7d));position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;background-size:cover;background-position:center;}
   .et-poster::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 90% at 80% 10%,rgba(255,255,255,.28),transparent 60%);}
   .et-poster>*{position:relative;z-index:1;color:#fff;}
   .et-poster .k{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.9;}
@@ -584,7 +584,7 @@ const ET_CSS = `
   .et-btn{flex:1;font:inherit;font-family:var(--fh);font-weight:700;font-size:13px;border:1px solid var(--border);background:var(--card);color:var(--text);padding:12px;border-radius:11px;cursor:pointer;display:block;}
   .et-btn.grad{background:var(--grad);color:#fff;border-color:transparent;}
   .et-foot{text-align:center;font-size:11px;color:var(--muted);padding-bottom:18px;}
-  .et-foot b{background:linear-gradient(135deg,#ff6a3d,#ff4d7d 55%,#7b3fe4);-webkit-background-clip:text;background-clip:text;color:transparent;font-family:var(--fh);}
+  .et-foot b{background:linear-gradient(135deg,var(--primary),var(--secondary) 55%,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent;font-family:var(--fh);}
 
   .pt{
     --bg:#fff9f4;--card:#fff;--s2:#fff3ec;
@@ -610,8 +610,8 @@ const ET_CSS = `
   .pt-blob.b2{background:var(--secondary);bottom:-18vmax;right:-10vmax;animation:pt-a2 30s ease-in-out infinite;}
   .pt-wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:36px 22px 70px;}
   .pt-card{background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-xl);overflow:hidden;}
-  .pt-poster{aspect-ratio:16/6;background:linear-gradient(120deg,#2a1830,#7b3fe4 60%,#ff4d7d);position:relative;display:flex;align-items:flex-end;padding:20px 24px;background-size:cover;background-position:center;}
-  .pt-poster .pin{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);color:#2b1b2e;font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;}
+  .pt-poster{aspect-ratio:16/6;background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 25%,#0d0d12),var(--accent,#7b3fe4) 60%,var(--secondary,#ff4d7d));position:relative;display:flex;align-items:flex-end;padding:20px 24px;background-size:cover;background-position:center;}
+  .pt-poster .pin{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);color:var(--text);font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;}
   .pt-body{padding:24px 28px 28px;}
   .pt-h3{font-size:14px;font-weight:700;margin:0 0 12px;font-family:var(--fh);}
   .pt-label{display:block;font-size:12.5px;font-weight:700;margin:14px 0 6px;}

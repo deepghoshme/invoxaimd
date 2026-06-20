@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createRazorpayOrder } from "@/lib/razorpay";
 import { getStoreSubscription, computeUpgradeCredit } from "@/lib/subscriptions";
 import { validatePromoCode, incrementPromoUsage } from "@/lib/promos";
+import { resolvePlanCheckoutFlatFee } from "@/lib/platform-fees";
 
 export const dynamic = "force-dynamic";
 
@@ -108,8 +109,18 @@ export async function POST(req: Request) {
     });
   }
 
-  // Effective charge = plan price − upgrade credit − promo discount (floor 0).
-  const chargePaise = Math.max(0, newAmountPaise - creditPaise - discountPaise);
+  // ── Flat platform fee at plan checkout ──────────────────────────────────────
+  // An optional fixed platform fee added on top of the (discounted) plan price.
+  // Precedence: plan.flat_fee_paise > platform_settings.plan_flat_fee_paise.
+  // Resolved server-side and stashed in the order notes so /verify re-validates
+  // it. It is added AFTER discounts (it's a platform fee, not part of the
+  // discountable plan price) and is NOT proration-credited.
+  const planFlatFeePaise = await resolvePlanCheckoutFlatFee(plan.id as string);
+
+  // Effective charge = plan price − upgrade credit − promo discount (floor 0)
+  // + flat platform fee.
+  const chargePaise =
+    Math.max(0, newAmountPaise - creditPaise - discountPaise) + planFlatFeePaise;
 
   // ── Zero-charge path ─────────────────────────────────────────────────────────
   // Razorpay rejects 0-amount orders. Activate directly without a payment modal.
@@ -176,6 +187,7 @@ export async function POST(req: Request) {
           // without trusting any client-supplied figure.
           full_amount_paise: String(newAmountPaise),
           credit_paise: String(creditPaise),
+          plan_flat_fee_paise: String(planFlatFeePaise),
           plan_interval: planInterval,
           // Promo fields — set only when a code was applied. /verify re-validates
           // the code and confirms the discount matches before activating the plan.

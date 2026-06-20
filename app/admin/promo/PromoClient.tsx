@@ -11,12 +11,17 @@ import {
   type PromoInput,
 } from "./actions";
 
-const SCOPES = [
-  { value: "all", label: "All plans" },
-  { value: "starter", label: "Starter only" },
-  { value: "pro", label: "Pro only" },
-  { value: "growth", label: "Growth only" },
-];
+type Scope = { value: string; label: string };
+
+// Scopes are derived from the live plans list (passed in from the server) so a
+// promo can always be targeted at any real plan — incl. custom plans. The stored
+// scope value is the plan name slug, which validatePromoCode() matches against.
+function buildScopes(plans: { id: string; name: string }[]): Scope[] {
+  return [
+    { value: "all", label: "All plans" },
+    ...plans.map((p) => ({ value: p.name.trim().toLowerCase(), label: `${p.name} only` })),
+  ];
+}
 
 const EMPTY_FORM: PromoInput = {
   code: "",
@@ -43,7 +48,7 @@ function usageLabel(code: PromoCode) {
 }
 
 // ---- Create form ----
-function CreateForm({ onCreated }: { onCreated: () => void }) {
+function CreateForm({ onCreated, scopes }: { onCreated: () => void; scopes: Scope[] }) {
   const [form, setForm] = useState<PromoInput>(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -108,7 +113,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
         <div className="dx-field">
           <label>Applies to</label>
           <select value={form.scope} onChange={(e) => set("scope", e.target.value)}>
-            {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            {scopes.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
       </div>
@@ -138,7 +143,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
         <div className="pr-ticket-label">Coupon</div>
         <div className="pr-ticket-code">{previewCode}</div>
         <div className="pr-ticket-off">{previewOff}</div>
-        <div className="pr-ticket-scope">{SCOPES.find((s) => s.value === form.scope)?.label}</div>
+        <div className="pr-ticket-scope">{scopes.find((s) => s.value === form.scope)?.label}</div>
       </div>
 
       {err && <div className="pr-alert-err">{err}</div>}
@@ -152,7 +157,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
 }
 
 // ---- Code row ----
-function CodeRow({ code, onToggle, onDelete }: { code: PromoCode; onToggle: () => void; onDelete: () => void }) {
+function CodeRow({ code, onToggle, onDelete, scopes }: { code: PromoCode; onToggle: () => void; onDelete: () => void; scopes: Scope[] }) {
   const [togglePending, startToggle] = useTransition();
   const [deletePending, startDelete] = useTransition();
 
@@ -178,7 +183,7 @@ function CodeRow({ code, onToggle, onDelete }: { code: PromoCode; onToggle: () =
       </td>
       <td>
         <span>{discountLabel(code)}</span>
-        <div className="pr-meta">{SCOPES.find((s) => s.value === code.scope)?.label ?? code.scope}</div>
+        <div className="pr-meta">{scopes.find((s) => s.value === code.scope)?.label ?? code.scope}</div>
       </td>
       <td>
         <span>{usageLabel(code)}</span>
@@ -215,9 +220,10 @@ function CodeRow({ code, onToggle, onDelete }: { code: PromoCode; onToggle: () =
 }
 
 // ---- Main page ----
-export default function PromoClient({ codes }: { codes: PromoCode[] | null }) {
+export default function PromoClient({ codes, plans }: { codes: PromoCode[] | null; plans: { id: string; name: string }[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
+  const scopes = buildScopes(plans);
 
   return (
     <>
@@ -344,7 +350,7 @@ export default function PromoClient({ codes }: { codes: PromoCode[] | null }) {
         <div className={showForm ? "pr-grid" : ""}>
           {showForm && (
             <Card title="Create promo code">
-              <CreateForm onCreated={() => { setShowForm(false); router.refresh(); }} />
+              <CreateForm scopes={scopes} onCreated={() => { setShowForm(false); router.refresh(); }} />
             </Card>
           )}
 
@@ -368,6 +374,7 @@ export default function PromoClient({ codes }: { codes: PromoCode[] | null }) {
                     <CodeRow
                       key={c.id}
                       code={c}
+                      scopes={scopes}
                       onToggle={() => router.refresh()}
                       onDelete={() => router.refresh()}
                     />

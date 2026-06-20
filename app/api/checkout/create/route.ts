@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStoreCommissionRate, createOrderRecord, getProductById } from "@/lib/sites";
+import { createOrderRecord, getProductById } from "@/lib/sites";
+import { resolveFees, computeSaleFeePaise } from "@/lib/platform-fees";
 import { type OppContent, toMinorUnit, DEFAULT_CURRENCY } from "@/lib/products";
 import { validateCoupon } from "@/lib/coupons";
 import { bumpApplies, bumpPricePaise, type BumpOffer } from "@/lib/upsell";
@@ -131,7 +132,11 @@ export async function POST(req: Request) {
     const bump = await resolveBump(storeId, body.bump_offer_id, product.id as string, currency);
     if (bump) finalAmount += bump.bumpPaise;
 
-    const rate = await getStoreCommissionRate(storeId);
+    // Platform fee = commission % + flat fee (server-resolved; seller > plan >
+    // category > global). commission_amount carries the TOTAL platform fee that
+    // is debited from the seller's wallet at verify; commission_rate keeps the
+    // %-only component for reporting/back-compat.
+    const fees = await resolveFees(storeId);
     const order = await createOrderRecord({
       store_id: storeId,
       page_id: null,
@@ -140,8 +145,8 @@ export async function POST(req: Request) {
       product_title: title,
       amount: finalAmount,
       currency,
-      commission_rate: rate,
-      commission_amount: Math.round(finalAmount * rate),
+      commission_rate: fees.commission_pct,
+      commission_amount: computeSaleFeePaise(finalAmount, fees),
       coupon_code: appliedCouponCode,
       discount_paise: discountPaise > 0 ? discountPaise : null,
       original_amount_paise: discountPaise > 0 ? originalAmount : null,
@@ -236,7 +241,7 @@ export async function POST(req: Request) {
   const bump = await resolveBump(page.store_id, body.bump_offer_id, null, currency);
   if (bump) finalAmount += bump.bumpPaise;
 
-  const rate = await getStoreCommissionRate(page.store_id);
+  const fees = await resolveFees(page.store_id);
   // Derive a human-readable product title across all supported page types.
   const productTitle =
     ((content as Record<string, unknown>).headline as string | undefined
@@ -255,8 +260,8 @@ export async function POST(req: Request) {
     product_title: productTitle,
     amount: finalAmount,
     currency,
-    commission_rate: rate,
-    commission_amount: Math.round(finalAmount * rate),
+    commission_rate: fees.commission_pct,
+    commission_amount: computeSaleFeePaise(finalAmount, fees),
     coupon_code: appliedCouponCode,
     discount_paise: discountPaise > 0 ? discountPaise : null,
     original_amount_paise: discountPaise > 0 ? originalAmount : null,

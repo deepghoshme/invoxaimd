@@ -57,6 +57,7 @@ export default function LegalShell({
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
             <a href="/refund">Refund Policy</a>
+            <a href="/contact">Contact</a>
           </div>
         </div>
       </footer>

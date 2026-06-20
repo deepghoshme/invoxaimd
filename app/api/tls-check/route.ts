@@ -49,13 +49,31 @@ export async function GET(request: Request) {
     const label = host.slice(0, -1 * (ROOT.length + 1));
     if (!label || label.includes(".")) return deny();
 
-    const { data } = await supabase
+    // Primary subdomain: check stores.subdomain (fast, indexed).
+    const { data: primary } = await supabase
       .from("stores")
       .select("id")
       .eq("subdomain", label)
       .maybeSingle();
+    if (primary) return allow();
 
-    return data ? allow() : deny();
+    // Extra alias subdomain: check store_subdomains table.
+    // Sellers can add extra *.invoxai.io aliases that resolve to their store —
+    // these need TLS certs just like the primary subdomain.
+    // Gracefully skip if the table doesn't exist yet (migration unapplied).
+    try {
+      const { data: alias, error: aliasErr } = await supabase
+        .from("store_subdomains")
+        .select("id")
+        .eq("subdomain", label)
+        .maybeSingle();
+      // Only allow if no error (e.g. table exists) AND a row was found.
+      if (!aliasErr && alias) return allow();
+    } catch {
+      // Unexpected JS exception — fail closed (deny).
+    }
+
+    return deny();
   }
 
   // Otherwise treat it as a custom domain — must exist AND be verified.

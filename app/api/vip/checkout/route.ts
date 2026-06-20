@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStoreCommissionRate, createOrderRecord } from "@/lib/sites";
+import { createOrderRecord, getStoreCommissionRate } from "@/lib/sites";
+import { resolveFees, computeSaleFeePaise } from "@/lib/platform-fees";
 import { type VipContent, type VipPlan, planToMinorUnits } from "@/lib/vip";
 
 /**
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
   }
 
   const title = `${content.title || "VIP Community"} — ${plan.name}`;
-  const rate = await getStoreCommissionRate(page.store_id);
+  const fees = await resolveFees(page.store_id);
 
   const order = await createOrderRecord({
     store_id: page.store_id,
@@ -68,8 +69,8 @@ export async function POST(req: Request) {
     product_title: title,
     amount,
     currency,
-    commission_rate: rate,
-    commission_amount: Math.round(amount * rate),
+    commission_rate: fees.commission_pct,
+    commission_amount: computeSaleFeePaise(amount, fees),
   });
 
   if (!order) return NextResponse.json({ error: "Could not create order" }, { status: 500 });

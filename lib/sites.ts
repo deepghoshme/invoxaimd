@@ -192,24 +192,17 @@ export async function getStoreGateway(storeId: string): Promise<StoreGateway | n
   return (data as StoreGateway | null) ?? null;
 }
 
-/** The commission rate that applies to a store: override → category → default. */
+/**
+ * The commission rate (0..1 fraction) that applies to a store.
+ * Delegates to resolveFees() so precedence is seller-override → plan →
+ * category → global default. Kept as a thin wrapper for existing callers that
+ * only need the percentage. Use resolveFees() directly when you also need the
+ * flat platform fee.
+ */
 export async function getStoreCommissionRate(storeId: string): Promise<number> {
-  const supabase = createAdminClient();
-  const { data: store } = await supabase
-    .from("stores")
-    .select("commission_rate_override, category_id")
-    .eq("id", storeId)
-    .maybeSingle();
-  if (store?.commission_rate_override != null) return Number(store.commission_rate_override);
-  if (store?.category_id) {
-    const { data: cat } = await supabase
-      .from("business_categories")
-      .select("commission_rate")
-      .eq("id", store.category_id)
-      .maybeSingle();
-    if (cat?.commission_rate != null) return Number(cat.commission_rate);
-  }
-  return 0.05;
+  const { resolveFees } = await import("@/lib/platform-fees");
+  const fees = await resolveFees(storeId);
+  return fees.commission_pct;
 }
 
 export type Order = {

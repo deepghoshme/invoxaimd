@@ -225,6 +225,7 @@ export default function VipView({
         @keyframes vp-pop{from{transform:scale(.9);opacity:.3}to{transform:scale(1);opacity:1}}
         @keyframes vp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
         .vp-wrap{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:40px 24px 70px}
+        @media(max-width:640px){.vp-wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
         .vp-hero{text-align:center}
         .vp-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:7px 15px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
         .vp[data-theme="dark"] .vp-badge{color:#d7c4ff}
@@ -409,6 +410,24 @@ export default function VipView({
           </div>
         </div>
       </div>
+
+      {/* Mobile-only fixed bottom pay bar — hidden on desktop via CSS (≤640px only).
+          Duplicates the primary Join action so it's always reachable without scrolling. */}
+      {joinState !== "done" && (
+        <div className="mobile-pay-bar">
+          <div className="mobile-pay-bar-price">
+            {activePlan ? formatVipPrice(activePlan.price, currency) : ""}
+            <small>{activePlan?.interval ? `per ${activePlan.interval}` : ""}</small>
+          </div>
+          <button
+            className="mobile-pay-bar-btn"
+            onClick={stage ? undefined : handleJoin}
+            disabled={joinState === "loading" || stage}
+          >
+            {joinState === "loading" ? "Processing…" : `🔓 Join now`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

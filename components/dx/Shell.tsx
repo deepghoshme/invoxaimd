@@ -7,7 +7,7 @@ import Link from "next/link";
 import Icon from "./Icon";
 import ProfileMenu, { type ProfileItem } from "./ProfileMenu";
 
-export type DxNavItem = { label: string; icon: string; href: string; exact?: boolean };
+export type DxNavItem = { label: string; icon: string; href: string; exact?: boolean; locked?: boolean };
 export type DxNavGroup = { label: string; items: DxNavItem[] };
 export type DxNotifItem = { id: string; cat?: string; icon?: string; title: string; sub?: string; ts?: string | number; href?: string };
 
@@ -137,6 +137,7 @@ export default function DxShell({
   walletHref,
   profileItems,
   notifItems,
+  headerExtra,
   homeHref,
   children,
 }: {
@@ -148,6 +149,8 @@ export default function DxShell({
   walletHref?: string;
   profileItems: ProfileItem[];
   notifItems?: DxNotifItem[];
+  /** Optional extra controls rendered in the header next to the bell (e.g. the notification-sound toggle). */
+  headerExtra?: React.ReactNode;
   homeHref: string;
   children: React.ReactNode;
 }) {
@@ -183,11 +186,24 @@ export default function DxShell({
           {groups.map((g) => (
             <div className="dx-navgroup" key={g.label}>
               <div className="dx-navlbl">{g.label}</div>
-              {g.items.map((it) => (
-                <Link key={it.href} href={it.href} className={`dx-nav${isActive(it) ? " act" : ""}`}>
-                  <Icon name={it.icon} /> {it.label}
-                </Link>
-              ))}
+              {g.items.map((it) =>
+                it.locked ? (
+                  <Link
+                    key={it.href}
+                    href="/dashboard/billing"
+                    className="dx-nav dx-nav-locked"
+                    title="Upgrade your plan to unlock this feature"
+                    style={{ opacity: 0.55 }}
+                  >
+                    <Icon name={it.icon} /> {it.label}
+                    <span aria-label="locked" title="Locked" style={{ marginLeft: "auto", fontSize: 12 }}>🔒</span>
+                  </Link>
+                ) : (
+                  <Link key={it.href} href={it.href} className={`dx-nav${isActive(it) ? " act" : ""}`}>
+                    <Icon name={it.icon} /> {it.label}
+                  </Link>
+                ),
+              )}
             </div>
           ))}
         </nav>
@@ -211,6 +227,7 @@ export default function DxShell({
               storageKey={badge === "admin" ? "invox_admin_notif_read" : "invox_notif_read"}
             />
           )}
+          {headerExtra}
           <button className="dx-icon-btn" onClick={toggleTheme} aria-label="Toggle theme">
             {dark ? "☀️" : "🌙"}
           </button>

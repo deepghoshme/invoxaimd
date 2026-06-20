@@ -1,43 +1,57 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendRechargeReminderEmail } from "@/lib/transactional";
+import { sendRechargeReminderEmail, sendRechargeNudgeEmail } from "@/lib/transactional";
 
 /**
- * Run the wallet recharge reminder job.
+ * Run the SMART wallet recharge reminder job.
  *
- * Eligibility criteria (all must pass):
- *   1. wallet_balance <= effective floor (platform wallet_floor_paise, or the
- *      store's own wallet_floor_paise if set — we use the store column which the
- *      wallet-gate lib keeps in sync with the platform default on checkout).
- *   2. last_recharge_reminder_at is NULL  OR  older than recharge_reminder_min_interval_min
- *      minutes — prevents re-spam within the interval window.
- *   3. If recharge_reminder_active_only is true: the store is "active", defined
- *      as having at least one paid order in the last 30 days OR an active
- *      subscription. Low-revenue/inactive sellers with zero wallet are NOT spammed.
- *   4. If recharge_reminder_min_revenue_paise > 0: the store's all-time GMV
- *      (sum of paid order amounts) must meet or exceed the threshold.
+ * Every store whose wallet is at/below the floor (and past the throttle window)
+ * is classified, then routed to one of two admin-configured paths:
  *
- * Money safety: this function ONLY reads wallet_balance and writes
+ *   QUALIFYING  = ACTIVE  AND  HIGH REVENUE
+ *     • ACTIVE       — has a paid order (or an active subscription) within
+ *                      `recharge_reminder_active_window_days` days
+ *                      (only enforced when recharge_reminder_active_only = true).
+ *     • HIGH REVENUE — all-time confirmed GMV (sum of paid order amounts)
+ *                      >= recharge_reminder_min_revenue_paise.
+ *     → gets the friendly recharge reminder mail.
+ *
+ *   NON-QUALIFYING = not active, or revenue below the threshold
+ *     → follows recharge_reminder_inactive_action:
+ *         'skip'  — send nothing (default).
+ *         'nudge' — send a different, softer re-engagement mail.
+ *
+ * All thresholds/parameters live in platform_settings and are admin-editable at
+ * /admin/reminders.
+ *
+ * Money safety: this function ONLY reads wallet_balance / orders and writes
  * last_recharge_reminder_at. No balance is moved, no charges are made.
  *
- * Non-fatal per store: a bad owner-email lookup or mail error does not abort
- * the batch — the store is counted in `checked` and `eligible` but not `sent`.
- * The last_recharge_reminder_at timestamp is updated AFTER the email is sent
- * so a mail failure does not advance the throttle clock.
+ * Non-fatal per store: a bad owner-email lookup or mail error does not abort the
+ * batch. The last_recharge_reminder_at timestamp is updated AFTER a mail is sent
+ * so a mail failure does not advance the throttle clock. The throttle clock is
+ * advanced for BOTH friendly and nudge sends (so a nudged seller isn't re-nudged
+ * within the interval).
+ *
+ * Returns counts: checked (below floor + past throttle), eligible (qualified for
+ * friendly mail), nudged (non-qualifying, mailed via nudge path), sent (total
+ * mails dispatched = friendly + nudge), skipped (non-qualifying, action=skip).
  */
 export async function runRechargeReminders(): Promise<{
   checked: number;
   eligible: number;
+  nudged: number;
   sent: number;
+  skipped: number;
 }> {
   const sb = createAdminClient();
-  const empty = { checked: 0, eligible: 0, sent: 0 };
+  const empty = { checked: 0, eligible: 0, nudged: 0, sent: 0, skipped: 0 };
 
   // ── 1. Read platform_settings reminder config ────────────────────────────
   const { data: ps, error: psErr } = await sb
     .from("platform_settings")
     .select(
-      "recharge_reminder_enabled, recharge_reminder_min_interval_min, recharge_reminder_active_only, recharge_reminder_min_revenue_paise, wallet_floor_paise"
+      "recharge_reminder_enabled, recharge_reminder_min_interval_min, recharge_reminder_active_only, recharge_reminder_min_revenue_paise, recharge_reminder_active_window_days, recharge_reminder_inactive_action, wallet_floor_paise"
     )
     .maybeSingle();
 
@@ -51,6 +65,8 @@ export async function runRechargeReminders(): Promise<{
     recharge_reminder_min_interval_min?: number | null;
     recharge_reminder_active_only?: boolean | null;
     recharge_reminder_min_revenue_paise?: number | null;
+    recharge_reminder_active_window_days?: number | null;
+    recharge_reminder_inactive_action?: string | null;
     wallet_floor_paise?: number | null;
   } | null;
 
@@ -62,6 +78,8 @@ export async function runRechargeReminders(): Promise<{
   const intervalMin = cfg.recharge_reminder_min_interval_min ?? 30;
   const activeOnly = cfg.recharge_reminder_active_only ?? true;
   const minRevenuePaise = Number(cfg.recharge_reminder_min_revenue_paise ?? 0);
+  const activeWindowDays = Math.max(1, Number(cfg.recharge_reminder_active_window_days ?? 14));
+  const inactiveAction = cfg.recharge_reminder_inactive_action === "nudge" ? "nudge" : "skip";
   const platformFloorPaise = Number(cfg.wallet_floor_paise ?? 0);
 
   // ── 2. Find stores whose wallet is at or below the floor ─────────────────
@@ -102,35 +120,42 @@ export async function runRechargeReminders(): Promise<{
 
   const checked = belowFloor.length;
   let eligible = 0;
+  let nudged = 0;
   let sent = 0;
+  let skipped = 0;
+
+  const rechargeUrl = "https://app.invoxai.io/dashboard/wallet";
 
   for (const store of belowFloor) {
     if (!store.owner_id) continue;
 
-    // ── 3. Activity filter (recharge_reminder_active_only) ───────────────
+    // ── 3. Classify ACTIVE (admin-set look-back window) ──────────────────
+    let isActive = true;
     if (activeOnly) {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const windowStart = new Date(
+        Date.now() - activeWindowDays * 24 * 60 * 60 * 1000
+      ).toISOString();
 
-      // Check for a paid order in the last 30 days
+      // Paid order within the active window?
       const { count: recentOrders } = await sb
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("store_id", store.id)
         .eq("status", "paid")
-        .gte("created_at", thirtyDaysAgo);
+        .gte("created_at", windowStart);
 
-      // Check for an active subscription
+      // …or an active subscription?
       const { count: activeSubs } = await sb
         .from("subscriptions")
         .select("id", { count: "exact", head: true })
         .eq("store_id", store.id)
         .eq("status", "active");
 
-      const isActive = (recentOrders ?? 0) > 0 || (activeSubs ?? 0) > 0;
-      if (!isActive) continue;
+      isActive = (recentOrders ?? 0) > 0 || (activeSubs ?? 0) > 0;
     }
 
-    // ── 4. Minimum revenue filter ─────────────────────────────────────────
+    // ── 4. Classify HIGH REVENUE (admin-set threshold) ───────────────────
+    let hasHighRevenue = true;
     if (minRevenuePaise > 0) {
       const { data: revenueData } = await sb
         .from("orders")
@@ -142,10 +167,16 @@ export async function runRechargeReminders(): Promise<{
         (sum: number, o: { amount?: number | null }) => sum + (o.amount ?? 0),
         0
       );
-      if (gmvPaise < minRevenuePaise) continue;
+      hasHighRevenue = gmvPaise >= minRevenuePaise;
     }
 
-    eligible++;
+    const qualifies = isActive && hasHighRevenue;
+
+    // Non-qualifying + skip action → no mail at all (and don't burn the throttle).
+    if (!qualifies && inactiveAction === "skip") {
+      skipped++;
+      continue;
+    }
 
     // ── 5. Resolve owner email ────────────────────────────────────────────
     try {
@@ -162,15 +193,27 @@ export async function runRechargeReminders(): Promise<{
       const storeName = store.store_name ?? "your store";
       const walletBalancePaise = store.wallet_balance ?? 0;
 
-      // ── 6. Send the friendly reminder email ──────────────────────────────
-      await sendRechargeReminderEmail({
-        to: ownerEmail,
-        storeName,
-        walletBalancePaise,
-        rechargeUrl: "https://app.invoxai.io/dashboard/wallet",
-      });
+      // ── 6. Route to the correct mail ──────────────────────────────────────
+      if (qualifies) {
+        // ACTIVE + HIGH REVENUE → friendly recharge reminder.
+        await sendRechargeReminderEmail({
+          to: ownerEmail,
+          storeName,
+          walletBalancePaise,
+          rechargeUrl,
+        });
+        eligible++;
+      } else {
+        // Non-qualifying + action 'nudge' → softer re-engagement mail.
+        await sendRechargeNudgeEmail({
+          to: ownerEmail,
+          storeName,
+          rechargeUrl,
+        });
+        nudged++;
+      }
 
-      // ── 7. Advance throttle clock (only on successful send) ──────────────
+      // ── 7. Advance throttle clock (only after a mail was dispatched) ──────
       const { error: stampErr } = await sb
         .from("stores")
         .update({ last_recharge_reminder_at: new Date().toISOString() })
@@ -181,8 +224,8 @@ export async function runRechargeReminders(): Promise<{
           `[walletReminder] Could not update last_recharge_reminder_at for store ${store.id}:`,
           stampErr.message
         );
-        // Non-fatal: sent is still incremented; the next run will re-send sooner
-        // than intended but that is safer than losing the count.
+        // Non-fatal: the next run will re-send sooner than intended but that is
+        // safer than losing the count.
       }
 
       sent++;
@@ -192,5 +235,5 @@ export async function runRechargeReminders(): Promise<{
     }
   }
 
-  return { checked, eligible, sent };
+  return { checked, eligible, nudged, sent, skipped };
 }

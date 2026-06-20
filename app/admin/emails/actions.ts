@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformMailer } from "@/lib/email";
 import { EMAIL_ALIASES } from "@/lib/emailRoutes";
 import { sendAdminAuditReport, sendUserAuditReport } from "@/lib/transactional";
+import { logAudit } from "@/lib/audit";
 
 type Result = { ok: boolean; error?: string };
 
@@ -69,7 +70,7 @@ function t(s: unknown): string {
 // ─── Admin guard (belt + RLS suspenders) ─────────────────────────────────────
 
 async function requireAdmin(): Promise<
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; email: string | undefined }
   | { ok: false; error: string }
 > {
   const supabase = await createClient();
@@ -81,7 +82,7 @@ async function requireAdmin(): Promise<
     .eq("user_id", user.id);
   const isAdmin = (roles ?? []).some((r: { role: string }) => r.role === "admin");
   if (!isAdmin) return { ok: false, error: "Admin access required." };
-  return { ok: true, userId: user.id };
+  return { ok: true, userId: user.id, email: user.email };
 }
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
@@ -322,4 +323,136 @@ export async function sendUserAuditReportNow(): Promise<Result> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Send failed." };
   }
+}
+
+// ─── Seller send-from email ───────────────────────────────────────────────────
+
+export type SellerSendFromRow = {
+  storeId: string;
+  storeName: string | null;
+  subdomain: string | null;
+  ownerEmail: string | null;
+  sendFromEmail: string | null;
+};
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/**
+ * List all stores with owner email and current send_from_email for the admin UI.
+ * Admin-only: uses service-role client (bypasses RLS).
+ */
+export async function listSellerSendFrom(): Promise<SellerSendFromRow[]> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return [];
+
+  const sb = createAdminClient();
+  const { data, error } = await sb
+    .from("stores")
+    .select("id, store_name, subdomain, send_from_email, owner_id")
+    .order("store_name", { ascending: true });
+
+  if (error) {
+    console.error("[admin/emails] listSellerSendFrom:", error.message);
+    return [];
+  }
+
+  if (!data || data.length === 0) return [];
+
+  // Fetch owner emails from auth.users via admin API (batch).
+  const ownerIds = (data as { owner_id: string }[]).map((r) => r.owner_id);
+  const emailMap: Record<string, string> = {};
+
+  // Supabase admin client supports listing users; we fetch the auth.users table
+  // directly using the admin client's rpc or via the users endpoint. We use the
+  // PostgREST view that Supabase exposes for admin queries — fall back gracefully.
+  try {
+    for (const id of ownerIds) {
+      const { data: { user } } = await sb.auth.admin.getUserById(id);
+      if (user?.email) emailMap[id] = user.email;
+    }
+  } catch {
+    // Non-fatal — owner emails just show as null
+  }
+
+  return (data as {
+    id: string;
+    store_name: string | null;
+    subdomain: string | null;
+    send_from_email: string | null;
+    owner_id: string;
+  }[]).map((r) => ({
+    storeId: r.id,
+    storeName: r.store_name,
+    subdomain: r.subdomain,
+    ownerEmail: emailMap[r.owner_id] ?? null,
+    sendFromEmail: r.send_from_email,
+  }));
+}
+
+/**
+ * Set or clear a seller's custom send-from email address.
+ *
+ * Storing this address does NOT guarantee deliverability as that address.
+ * The seller must configure DKIM/SPF for their domain and the platform must
+ * be able to authenticate as that address (SMTP credentials, etc.).
+ * Until that is done, mail send code falls back to the platform default alias.
+ * The UI must make this limitation clear — see SellerSendFromPanel.tsx.
+ */
+export async function setSellerSendFrom(
+  storeId: string,
+  sendFromEmail: string | null
+): Promise<Result> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  const email = sendFromEmail ? t(sendFromEmail) || null : null;
+
+  // Validate format when setting (not clearing).
+  if (email !== null && !EMAIL_RE.test(email)) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+
+  const sb = createAdminClient();
+
+  // Verify the store exists before updating.
+  const { data: storeRow, error: fetchErr } = await sb
+    .from("stores")
+    .select("id, store_name, subdomain, send_from_email")
+    .eq("id", storeId)
+    .maybeSingle();
+
+  if (fetchErr) return { ok: false, error: fetchErr.message };
+  if (!storeRow) return { ok: false, error: "Store not found." };
+
+  const prev = (storeRow as { send_from_email: string | null }).send_from_email;
+
+  const { error: updateErr } = await sb
+    .from("stores")
+    .update({ send_from_email: email })
+    .eq("id", storeId);
+
+  if (updateErr) {
+    if (updateErr.message.includes("does not exist")) {
+      return { ok: false, error: "Apply migration 20260619240000_stores_send_from_email.sql first." };
+    }
+    return { ok: false, error: updateErr.message };
+  }
+
+  await logAudit({
+    actorUserId: guard.userId,
+    actorEmail:  guard.email,
+    actorRole:   "admin",
+    action:      email ? "admin_set_seller_send_from" : "admin_clear_seller_send_from",
+    targetType:  "store",
+    targetId:    storeId,
+    storeId,
+    metadata:    {
+      previous_send_from: prev,
+      new_send_from: email,
+      store_name: (storeRow as { store_name: string | null }).store_name,
+    },
+  });
+
+  revalidatePath("/admin/emails");
+  return { ok: true };
 }
