@@ -290,5 +290,33 @@ export function mergeTemplateIntoContent(
     }
   }
 
+  // 4. Normalize known shape-mismatches that AI-authored/imported manifests can
+  //    produce (the value type is correct semantically but the wrong JS type for
+  //    the renderer's contract). This prevents client-side throws like
+  //    `p.f.split is not a function` when a model writes pricing features as an
+  //    array instead of the contracted comma-separated string.
+  normalizeContentShapes(merged);
+
   return merged;
+}
+
+/**
+ * In-place coercion of content values whose runtime type can drift from the
+ * authoring contract. Currently:
+ *   - website `pricing[].f` MUST be a comma-separated string (see WSPlan in
+ *     lib/website.ts); models often emit an array of feature strings. Join it.
+ * Keep this defensive and additive — never throw.
+ */
+export function normalizeContentShapes(content: Record<string, unknown>): void {
+  const pricing = (content as { pricing?: unknown }).pricing;
+  if (Array.isArray(pricing)) {
+    for (const plan of pricing) {
+      if (plan && typeof plan === "object" && Array.isArray((plan as { f?: unknown }).f)) {
+        (plan as { f: string }).f = ((plan as { f: unknown[] }).f)
+          .map((x) => String(x).trim())
+          .filter(Boolean)
+          .join(", ");
+      }
+    }
+  }
 }

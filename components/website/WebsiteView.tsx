@@ -712,7 +712,7 @@ function Pricing({ plans, label, ctaurl, yearly, mk }: { plans: import("@/lib/we
           {p.pop && <span className="popr">POPULAR</span>}
           <div className="pn">{p.n}</div>
           <div className="pp">{yearly && yr ? (p.py || p.p) : p.p}</div>
-          <ul>{p.f.split(",").map((x, j) => <li key={j}>{x.trim()}</li>)}</ul>
+          <ul>{(Array.isArray(p.f) ? p.f : String(p.f ?? "").split(",")).map((x, j) => <li key={j}>{String(x).trim()}</li>)}</ul>
           <a className="pb" href={mk(p.url || ctaurl, `${p.n} plan`)}>{p.btn || label || "Get started"}</a>
         </div>
       ))}</div>
