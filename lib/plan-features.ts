@@ -37,7 +37,8 @@ export type FeatureKey =
   | "email"
   | "seo"
   | "custom_domain"
-  | "team";
+  | "team"
+  | "templates_all_access";
 
 export type FeatureDef = {
   key: FeatureKey;
@@ -79,6 +80,7 @@ export const FEATURE_CATALOG: FeatureDef[] = [
   { key: "custom_billing", label: "Custom billing / invoices", group: "Account" },
   { key: "custom_domain", label: "Custom domain", group: "Account" },
   { key: "team", label: "Team & roles", group: "Account" },
+  { key: "templates_all_access", label: "All-access templates", group: "Account" },
 ];
 
 export const ALL_FEATURE_KEYS: FeatureKey[] = FEATURE_CATALOG.map((f) => f.key);
