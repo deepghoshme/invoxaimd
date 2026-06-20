@@ -15,6 +15,7 @@ export type BioContent = {
   button_style?: "soft" | "grad" | "outline" | "glass";
   button_shape?: "rounded" | "pill" | "square";
   bg?: string;
+  font?: string;
   socials?: { platform?: string; label?: string; url?: string }[];
   links?: BioLink[];
   featured?: BioFeatured;

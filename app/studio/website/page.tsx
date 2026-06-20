@@ -35,7 +35,10 @@ export default async function StudioWebsite() {
   // Backfill sections + legal docs added after this site was first saved.
   const allKeys = SECTIONS.map((s) => s[0]);
   content.order = [...(content.order ?? []), ...allKeys.filter((k) => !(content.order ?? []).includes(k))];
-  content.sections = { ...Object.fromEntries(allKeys.map((k) => [k, true])), ...(content.sections ?? {}) };
+  // Default missing keys to FALSE so a template that only lists its curated
+  // sections (e.g. {features:true, pricing:true}) is not overridden. Explicit
+  // true/false values already in content.sections are preserved by the spread.
+  content.sections = { ...Object.fromEntries(allKeys.map((k) => [k, false])), ...(content.sections ?? {}) };
   content.legal = { ...(DEFAULT_WEBSITE.legal ?? {}), ...(content.legal ?? {}) };
   for (const [k, label] of LEGAL_DOCS) content.legal[k] ??= { on: false, title: label, text: "" };
 

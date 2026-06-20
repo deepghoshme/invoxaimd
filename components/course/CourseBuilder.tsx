@@ -10,6 +10,8 @@ import {
   formatCoursePrice,
 } from "@/lib/course";
 import { saveCourse, setCourseStatus } from "@/app/dashboard/courses/actions";
+import { ACCENTS, FONTS } from "@/lib/website";
+import ImageInput from "@/components/ImageInput";
 
 // ── Primitives shared with other builders ────────────────────────────────────
 
@@ -422,12 +424,7 @@ export default function CourseBuilder({
               />
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Basic HTML tags allowed. Content is sanitized before display.</div>
             </div>
-            <Upload
-              label="Thumbnail / preview image"
-              value={c.thumbnail}
-              onUrl={(u) => set({ thumbnail: u })}
-              onRemove={() => set({ thumbnail: undefined })}
-            />
+            <div className="field"><label>Thumbnail / preview image</label><ImageInput value={c.thumbnail ?? ""} onChange={(u) => set({ thumbnail: u || undefined })} placeholder="https://… or upload" /></div>
             <div className="ff">
               <div className="field"><label>Price (₹)</label><input type="number" min={0} value={c.price ?? ""} onChange={(e) => set({ price: parseFloat(e.target.value) || 0 })} placeholder="999" /></div>
               <div className="field"><label>Compare-at price</label><input type="number" min={0} value={c.compare_at_price ?? ""} onChange={(e) => set({ compare_at_price: parseFloat(e.target.value) || undefined })} placeholder="1499" /></div>
@@ -570,6 +567,27 @@ export default function CourseBuilder({
                   <div key={val} className={`chip${(c.theme ?? "light") === val ? " on" : ""}`} onClick={() => set({ theme: val as "light" | "dark" })}>{label}</div>
                 ))}
               </div>
+            </div>
+            <div className="field">
+              <label>Accent color</label>
+              <div className="swatches">{ACCENTS.map((a, i) => (
+                <div key={i} className="sw" style={{ background: a[1] }} title={a[0]}
+                  onClick={() => {
+                    // Extract the first hex/rgb stop from the gradient as a simple accent
+                    const m = a[1].match(/#[0-9a-fA-F]{6}/);
+                    if (m) set({ accent: m[0] });
+                  }} />
+              ))}</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <input type="color" value={c.accent || "#ff6a3d"} onChange={(e) => set({ accent: e.target.value })} style={{ width: 44, height: 34, padding: 2, border: "1px solid var(--border)", borderRadius: 8, background: "var(--bg)", cursor: "pointer" }} />
+                {c.accent ? <button className="dx-editbtn" onClick={() => set({ accent: undefined })}>Reset</button> : <span className="dx-muted" style={{ fontSize: 12 }}>Custom hex</span>}
+              </div>
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Heading font</label>
+              <div className="chips">{FONTS.map((f) => (
+                <div key={f[0]} className={`chip${(c.font ?? "sora") === f[0] ? " on" : ""}`} onClick={() => set({ font: f[0] })}>{f[1]}</div>
+              ))}</div>
             </div>
           </Sec>
 

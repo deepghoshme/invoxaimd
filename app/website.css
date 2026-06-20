@@ -282,6 +282,11 @@
 .webview .hero-none .hsub { margin-left: auto; margin-right: auto; }
 .webview .hero-none .hbtns { justify-content: center; }
 .webview .htitle { font-family: var(--font-sora), sans-serif; font-weight: 800; font-size: 36px; line-height: 1.08; letter-spacing: -.02em; }
+/* Hero title size overrides */
+.webview .htitle.ht-sm { font-size: 24px; }
+.webview .htitle.ht-md { font-size: 36px; }
+.webview .htitle.ht-lg { font-size: 52px; }
+.webview .htitle.ht-xl { font-size: 68px; }
 .webview .hsub { color: var(--muted); font-size: 15px; margin-top: 15px; max-width: 430px; line-height: 1.55; }
 .webview .hbtns { margin-top: 24px; display: flex; gap: 11px; flex-wrap: wrap; }
 .webview .b1 { background: var(--siteGrad); color: #fff; border: 0; padding: 12px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; font: inherit; text-decoration: none; display: inline-block; }

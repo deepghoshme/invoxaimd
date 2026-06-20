@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   type CourseContent,
   type CourseModule,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/course";
 import { sanitizeHtml } from "@/lib/sanitize";
 import SiteFooter from "@/components/SiteFooter";
+import { FONT_FAMILY, FONT_GOOGLE } from "@/lib/website";
 
 // ── Inline styles as a <style> tag ──────────────────────────────────────────
 // All classes namespaced under .cu to avoid collisions with other page types.
@@ -241,9 +242,32 @@ export default function CourseView({
 }: CourseViewProps) {
   const c = page.content;
   const theme = c.theme ?? "light";
+  // Accent color override — applied as CSS vars so the whole page picks it up.
+  const accentVars: Record<string, string> = {};
+  if (c.accent) {
+    accentVars["--primary"] = c.accent;
+    accentVars["--primaryh"] = c.accent;
+    accentVars["--accent"] = c.accent;
+  }
+  // Font override — heading font
+  const fontFam = c.font ? (FONT_FAMILY[c.font] ?? null) : null;
+  if (fontFam) accentVars["--fh"] = fontFam;
+  const accentStyle = Object.keys(accentVars).length ? accentVars as React.CSSProperties : undefined;
   const lessons = allLessons(modules);
   const totalLessons = lessons.length;
   const dur = totalDuration(lessons);
+
+  // Load the chosen heading font on demand (Sora/Inter already loaded by the app).
+  useEffect(() => {
+    const g = c.font && FONT_GOOGLE[c.font];
+    if (!g) return;
+    const id = `cf-${c.font}`;
+    if (document.getElementById(id)) return;
+    const l = document.createElement("link");
+    l.id = id; l.rel = "stylesheet";
+    l.href = `https://fonts.googleapis.com/css2?family=${g}&display=swap`;
+    document.head.appendChild(l);
+  }, [c.font]);
 
   // Player state
   const [view, setView] = useState<"landing" | "player">("landing");
@@ -310,7 +334,7 @@ export default function CourseView({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: COURSE_CSS }} />
-      <div className="cu" data-theme={theme}>
+      <div className="cu" data-theme={theme} style={accentStyle}>
         {/* Nav */}
         <nav className="cu-nav">
           <div className="cu-wrap cu-nav-in">

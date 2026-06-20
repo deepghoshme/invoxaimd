@@ -185,7 +185,7 @@ export default function WebsiteView({
         {layout === "left" && showImg && <div className={`himg${c.himg ? "" : " ph"}`} style={hi} />}
         <div>
           {c.heroTyping ? <Typewriter words={c.heroTyping} /> : c.heroEyebrow ? <div className="heyebrow">{c.heroEyebrow}</div> : null}
-          <div className={`htitle${c.htitleGrad ? " gradtext" : ""}`}>{c.htitle}</div>
+          <div className={`htitle${c.htitleGrad ? " gradtext" : ""}${c.heroTitleSize ? ` ht-${c.heroTitleSize}` : ""}`} style={c.heroTitleAlign ? { textAlign: c.heroTitleAlign } : undefined}>{c.htitle}</div>
           <div className="hsub">{c.hsub}</div>
           <div className="hbtns">
             <a className="b1" href={cta(c.hb1url || c.ctaurl, c.hb1 || "")}>{c.hb1 || "Start"}</a>
@@ -378,8 +378,13 @@ export default function WebsiteView({
       const cards = (c.tests ?? []).map((t, i) => (
         <div className="tcard" key={i}>
           <div className="st">★★★★★</div><p>"{t.q}"</p>
-          <div className="who"><div className="tav">{(t.n || "?").charAt(0)}</div>
-            <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div></div>
+          <div className="who">
+            {t.img
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img className="tav" src={t.img} alt={t.n || ""} style={{ objectFit: "cover" }} />
+              : <div className="tav">{(t.n || "?").charAt(0)}</div>}
+            <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div>
+          </div>
         </div>
       ));
       if (style === "marquee") {
@@ -393,8 +398,13 @@ export default function WebsiteView({
                 {doubled.map((t, i) => (
                   <div className="tcard" key={i}>
                     <div className="st">★★★★★</div><p>"{t.q}"</p>
-                    <div className="who"><div className="tav">{(t.n || "?").charAt(0)}</div>
-                      <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div></div>
+                    <div className="who">
+                      {t.img
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img className="tav" src={t.img} alt={t.n || ""} style={{ objectFit: "cover" }} />
+                        : <div className="tav">{(t.n || "?").charAt(0)}</div>}
+                      <div><div className="nm">{t.n}</div><div className="rl">{t.r}</div></div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -432,7 +442,7 @@ export default function WebsiteView({
     cta: () => (
       <div className="ctaband" key="cta">
         <h2>{c.ctaBand?.title}</h2><p>{c.ctaBand?.sub}</p>
-        <a className="b1" href={cta(c.ctaBand?.url ?? c.ctaurl, c.cta || "Get started")}>{c.cta || "Get started"}</a>
+        <a className="b1" href={cta(c.ctaBand?.url ?? c.ctaurl, c.ctaBand?.btn || c.cta || "Get started")}>{c.ctaBand?.btn || c.cta || "Get started"}</a>
       </div>
     ),
 
@@ -703,7 +713,7 @@ function Pricing({ plans, label, ctaurl, yearly, mk }: { plans: import("@/lib/we
           <div className="pn">{p.n}</div>
           <div className="pp">{yearly && yr ? (p.py || p.p) : p.p}</div>
           <ul>{p.f.split(",").map((x, j) => <li key={j}>{x.trim()}</li>)}</ul>
-          <a className="pb" href={mk(p.url || ctaurl, `${p.n} plan`)}>{label || "Choose"}</a>
+          <a className="pb" href={mk(p.url || ctaurl, `${p.n} plan`)}>{p.btn || label || "Get started"}</a>
         </div>
       ))}</div>
     </>

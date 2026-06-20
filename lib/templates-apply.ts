@@ -268,12 +268,25 @@ export function mergeTemplateIntoContent(
   }
 
   // 3. Re-overlay seller-owned keys from existing content (the keep-whitelist).
+  //    Only overlay when the seller's value is "meaningful" — i.e. non-empty
+  //    array, non-empty object, non-empty string, not null/undefined.
+  //    This ensures an empty seller `pages: []` or `products: []` does NOT
+  //    clobber a template's authored sub-pages or sample products, while a real
+  //    seller catalog/pages still wins over the template content.
   const keysToKeep = KEEP_KEYS[pageType] ?? [];
   if (existingContent && keysToKeep.length > 0) {
     for (const key of keysToKeep) {
-      if (Object.prototype.hasOwnProperty.call(existingContent, key)) {
-        merged[key] = existingContent[key];
-      }
+      if (!Object.prototype.hasOwnProperty.call(existingContent, key)) continue;
+      const val = existingContent[key];
+      // Skip null / undefined
+      if (val == null) continue;
+      // Skip empty arrays
+      if (Array.isArray(val) && val.length === 0) continue;
+      // Skip empty strings
+      if (typeof val === "string" && val === "") continue;
+      // Skip empty plain objects (no own keys)
+      if (typeof val === "object" && !Array.isArray(val) && Object.keys(val as object).length === 0) continue;
+      merged[key] = val;
     }
   }
 

@@ -8,9 +8,9 @@ export { ACCENTS }; // reuse bio's gradient set (its first 8 match the design)
 
 export type WSFeature = { ic: string; t: string; x: string };
 export type WSStat = { n: string; l: string };
-export type WSPlan = { n: string; p: string; py?: string; f: string; pop?: boolean; url?: string };
+export type WSPlan = { n: string; p: string; py?: string; f: string; pop?: boolean; url?: string; btn?: string };
 export type WSSpot = { img?: string; title: string; text: string };
-export type WSTest = { n: string; r: string; q: string };
+export type WSTest = { n: string; r: string; q: string; img?: string };
 export type WSFaq = { q: string; a: string };
 export type WSLegalDoc = { on: boolean; title: string; text: string };
 
@@ -75,6 +75,8 @@ export type WebsiteContent = {
   heroTyping?: string; // comma-separated rotating typewriter words
   heroImgH?: number; // hero image height (px)
   heroVideo?: string; // hero background video (mp4/webm url)
+  heroTitleSize?: "sm" | "md" | "lg" | "xl"; // hero headline size override
+  heroTitleAlign?: "left" | "center" | "right"; // hero headline text align
   himg?: string;
   htitle?: string;
   hsub?: string;
@@ -127,7 +129,7 @@ export type WebsiteContent = {
   vidW?: number; // video max width (px)
   contactStyle?: string; // contact page layout (see CONTACT_STYLES)
   about?: { img?: string; title: string; text: string };
-  ctaBand?: { title: string; sub: string; url?: string };
+  ctaBand?: { title: string; sub: string; url?: string; btn?: string };
   news?: { title: string; sub: string; btn: string };
   // contact + add-ons
   email?: string;

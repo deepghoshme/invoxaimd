@@ -13,6 +13,8 @@ export type SiteStore = {
   subdomain: string | null;
   custom_domain: string | null;
   primary_domain: string;
+  /** Non-null only when resolved via an extra-subdomain alias that targets a specific page. */
+  alias_page_id?: string | null;
 };
 
 /** Store-level SEO + pixel defaults (from the store_seo migration columns). */
@@ -57,10 +59,11 @@ export async function resolveStoreByHost(host: string): Promise<SiteStore | null
 
     // Fallback: check store_subdomains for extra alias subdomains.
     // A seller can add extra {alias}.invoxai.io labels that resolve to their
-    // store without changing their primary subdomain.
+    // store without changing their primary subdomain. The alias row may also
+    // carry a page_id targeting a specific published page.
     const { data: alias } = await supabase
       .from("store_subdomains")
-      .select("store_id")
+      .select("store_id, page_id")
       .eq("subdomain", sub)
       .maybeSingle();
     if (!alias?.store_id) return null;
@@ -70,7 +73,12 @@ export async function resolveStoreByHost(host: string): Promise<SiteStore | null
       .select(cols)
       .eq("id", alias.store_id)
       .maybeSingle();
-    return (aliasStore as SiteStore | null) ?? null;
+    if (!aliasStore) return null;
+
+    const result = aliasStore as SiteStore;
+    // Attach the targeted page_id (may be null — means store root).
+    result.alias_page_id = (alias as { store_id: string; page_id: string | null }).page_id ?? null;
+    return result;
   }
 
   // Custom domain (must be verified to serve).

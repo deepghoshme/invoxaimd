@@ -1,4 +1,5 @@
 import { type BioContent, ACCENTS } from "@/lib/bio";
+import { FONT_FAMILY, FONT_GOOGLE } from "@/lib/website";
 import SocialIcon from "./SocialIcon";
 
 /** Renders a bio page from content. Namespaced under .bioview. Pure (no hooks). */
@@ -15,6 +16,12 @@ export default function BioView({
   const bg = content.bg ?? "aurora";
   const name = content.name || "Your name";
   const initial = (content.name || "A").trim().charAt(0).toUpperCase();
+  // Font override: reuse FONT_FAMILY/FONT_GOOGLE from website (same key set).
+  const fontFam = content.font ? (FONT_FAMILY[content.font] ?? null) : null;
+  const fontGoogleHref = content.font && FONT_GOOGLE[content.font]
+    ? `https://fonts.googleapis.com/css2?family=${FONT_GOOGLE[content.font]}&display=swap`
+    : null;
+  const bioFontStyle = fontFam ? { ["--font-sora" as string]: fontFam } as Record<string, string> : undefined;
   // Normalise legacy link records that used {url, label} instead of the
   // canonical {u, t} keys. Old records from early builds may have the wrong
   // keys; coerce them so they render rather than being silently dropped.
@@ -35,7 +42,8 @@ export default function BioView({
 
   return (
     <div className={`bioview${stage ? " stage" : ""}`}>
-      <div className={`bio bg-${bg} style-${style} shape-${shape}${content.cover_url ? "" : " no-cover"}${animate ? " anim" : ""}`} style={{ ["--bioGrad" as string]: accent }}>
+      {fontGoogleHref && <link rel="stylesheet" href={fontGoogleHref} />}
+      <div className={`bio bg-${bg} style-${style} shape-${shape}${content.cover_url ? "" : " no-cover"}${animate ? " anim" : ""}`} style={{ ["--bioGrad" as string]: accent, ...bioFontStyle }}>
         <div className="bgfx"><span className="fx fx-a" /><span className="fx fx-b" /><span className="fx fx-c" /></div>
         <div className="inner">
           {content.cover_url && <div className="cover" style={{ backgroundImage: `url('${content.cover_url}')` }} />}

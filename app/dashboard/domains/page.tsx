@@ -41,15 +41,35 @@ export default async function DomainsPage({
   } catch {}
 
   // Fetch extra subdomains via session client (owner-read RLS)
-  let extraSubdomains: { id: string; subdomain: string; created_at: string }[] = [];
+  let extraSubdomains: {
+    id: string;
+    subdomain: string;
+    page_id: string | null;
+    label: string | null;
+    created_at: string;
+  }[] = [];
   try {
     const sessionClient = await createClient();
     const { data } = await sessionClient
       .from("store_subdomains")
-      .select("id, subdomain, created_at")
+      .select("id, subdomain, page_id, label, created_at")
       .eq("store_id", store.id)
       .order("created_at", { ascending: true });
-    if (data) extraSubdomains = data;
+    if (data) extraSubdomains = data as typeof extraSubdomains;
+  } catch {}
+
+  // Fetch the store's published pages for the "target page" dropdown.
+  let storePages: { id: string; page_type: string; title: string | null; public_id: string | null }[] = [];
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("pages")
+      .select("id, page_type, title, public_id")
+      .eq("store_id", store.id)
+      .eq("status", "published")
+      .order("page_type", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (data) storePages = data as typeof storePages;
   } catch {}
 
   const subdomain = store.subdomain;
@@ -178,7 +198,7 @@ export default async function DomainsPage({
               campaign links, A/B landing pages, or branded entry points — all
               resolve to your store automatically.
             </p>
-            <ExtraSubdomains initial={extraSubdomains} />
+            <ExtraSubdomains initial={extraSubdomains} pages={storePages} />
           </Card>
 
           <div style={{ height: 14 }} />

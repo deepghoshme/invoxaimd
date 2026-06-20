@@ -74,6 +74,7 @@ const WEBSITE_KEYS = new Set<string>([
   "nav", "sticky", "cta", "ctaurl", "menu", "menuLinks",
   "pages",
   "heroLayout", "heroEyebrow", "heroRating", "heroBg", "heroTyping", "heroImgH", "heroVideo",
+  "heroTitleSize", "heroTitleAlign",
   "himg", "htitle", "hsub", "hb1", "hb1url", "hb2", "hb2url",
   "seo",
   "order", "sections", "tint", "heads", "secStyle", "secPad", "secCols", "secBgImg",
@@ -104,7 +105,7 @@ const STORE_KEYS = new Set<string>([
 // bio → lib/bio.ts BioContent
 const BIO_KEYS = new Set<string>([
   "cover_url", "profile_url", "name", "handle", "bio", "verified",
-  "accent", "button_style", "button_shape", "bg",
+  "accent", "button_style", "button_shape", "bg", "font",
   "socials", "links", "featured",
 ]);
 
@@ -112,7 +113,7 @@ const BIO_KEYS = new Set<string>([
 const COURSES_KEYS = new Set<string>([
   "headline", "subheadline", "description_html", "thumbnail",
   "price", "compare_at_price", "currency",
-  "theme", "accent",
+  "theme", "accent", "font",
   "instructor_name", "instructor_bio", "instructor_avatar",
   "outcomes", "includes",
   "category",

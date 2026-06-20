@@ -7,6 +7,7 @@ import {
   STORE_SECTIONS, STORE_LABELS, DISPLAYS, STORE_COLS,
 } from "@/lib/store";
 import { saveStore, publishStore } from "@/app/dashboard/store/actions";
+import ImageInput from "@/components/ImageInput";
 
 async function upload(file: File): Promise<string | null> {
   const fd = new FormData(); fd.append("file", file);
@@ -99,7 +100,7 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus, initia
           {/* Brand */}
           <div className="sec">
             <h3>Brand &amp; theme</h3>
-            <Upload ico="🅻" label="Upload logo" value={c.logo} onUrl={(u) => set({ logo: u })} onRemove={() => set({ logo: undefined })} />
+            <div className="field"><label>Logo</label><ImageInput value={c.logo ?? ""} onChange={(u) => set({ logo: u || undefined })} placeholder="https://… or upload" /></div>
             <div className="field"><label>Store name</label><input value={c.store ?? ""} onChange={(e) => set({ store: e.target.value })} /></div>
             <div className="field"><label>Tagline</label><input value={c.tagline ?? ""} onChange={(e) => set({ tagline: e.target.value })} /></div>
             <div className="field"><label>Menu links (comma separated)</label><input value={(c.menu ?? []).join(", ")} onChange={(e) => set({ menu: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} /></div>
@@ -128,7 +129,7 @@ export default function StoreBuilder({ initial, publicUrl, initialStatus, initia
             <h3>Top banner slider</h3>
             {banner.map((b, i) => (
               <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 9, marginBottom: 9 }}>
-                <Upload ico="🖼️" label="Slide image" value={b.img} onUrl={(u) => setBanner(i, { img: u })} onRemove={() => setBanner(i, { img: undefined })} />
+                <div className="field"><label>Slide image</label><ImageInput value={b.img ?? ""} onChange={(u) => setBanner(i, { img: u || undefined })} placeholder="https://… or upload" /></div>
                 <input className="rowfull" value={b.heading} onChange={(e) => setBanner(i, { heading: e.target.value })} placeholder="Heading" />
                 <input className="rowfull" value={b.sub} onChange={(e) => setBanner(i, { sub: e.target.value })} placeholder="Subtext" />
                 <div className="ff"><input className="rowfull" style={{ marginBottom: 0 }} value={b.cta} onChange={(e) => setBanner(i, { cta: e.target.value })} placeholder="Button text" /><input className="rowfull" style={{ marginBottom: 0 }} value={b.url ?? ""} onChange={(e) => setBanner(i, { url: e.target.value })} placeholder="Button link" /></div>

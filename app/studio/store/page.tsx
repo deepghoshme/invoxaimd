@@ -27,7 +27,10 @@ export default async function StudioStore() {
 
   const allKeys = STORE_SECTIONS.map((s) => s[0]);
   content.order = [...(content.order ?? []), ...allKeys.filter((k) => !(content.order ?? []).includes(k))];
-  content.sections = { ...Object.fromEntries(allKeys.map((k) => [k, true])), ...(content.sections ?? {}) };
+  // Default missing keys to FALSE so a template that only lists its curated
+  // sections is not overridden. Explicit true/false in content.sections are
+  // preserved by the spread.
+  content.sections = { ...Object.fromEntries(allKeys.map((k) => [k, false])), ...(content.sections ?? {}) };
 
   const publicUrl = store.subdomain ? `https://${store.subdomain}.invoxai.io` : null;
 

@@ -20,6 +20,8 @@ export type CourseContent = {
   theme?: CourseTheme;
   /** Accent hue for the course page */
   accent?: string;
+  /** Heading font (same keys as FONTS in lib/website.ts) */
+  font?: string;
   /** Instructor name shown on the landing */
   instructor_name?: string;
   instructor_bio?: string;

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import BioView from "./BioView";
 import { type BioContent, type BioLink, ACCENTS, STYLES, SHAPES, BGS, ICONS, TEMPLATES } from "@/lib/bio";
+import { FONTS } from "@/lib/website";
+import ImageInput from "@/components/ImageInput";
 import { SOCIALS } from "./SocialIcon";
 import { saveBio, publishBio } from "@/app/dashboard/pages/bio/actions";
 
@@ -109,8 +111,8 @@ export default function BioBuilder({
         <div>
           <div className="sec">
             <h3>Cover &amp; profile</h3>
-            <Upload ico="🖼️" label="Upload cover image" sub="1200×400 recommended" value={c.cover_url} onUrl={(u) => set({ cover_url: u })} onRemove={() => set({ cover_url: undefined })} />
-            <Upload ico="👤" label="Upload profile image" sub="square, 400×400" value={c.profile_url} onUrl={(u) => set({ profile_url: u })} onRemove={() => set({ profile_url: undefined })} />
+            <div className="field"><label>Cover image <span className="dx-muted" style={{ fontWeight: 400, fontSize: 11 }}>1200×400 recommended</span></label><ImageInput value={c.cover_url ?? ""} onChange={(u) => set({ cover_url: u || undefined })} placeholder="https://… or upload" /></div>
+            <div className="field"><label>Profile image <span className="dx-muted" style={{ fontWeight: 400, fontSize: 11 }}>square, 400×400</span></label><ImageInput value={c.profile_url ?? ""} onChange={(u) => set({ profile_url: u || undefined })} placeholder="https://… or upload" /></div>
             <div className="field"><label>Display name</label><input value={c.name ?? ""} onChange={(e) => set({ name: e.target.value })} placeholder="Your name" /></div>
             <div className="field"><label>Headline</label><input value={c.handle ?? ""} onChange={(e) => set({ handle: e.target.value })} placeholder="What you do" /></div>
             <div className="field"><label>Bio</label><textarea rows={2} value={c.bio ?? ""} onChange={(e) => set({ bio: e.target.value })} /></div>
@@ -125,7 +127,8 @@ export default function BioBuilder({
             <div className="field"><label>Accent</label><div className="swatches">{ACCENTS.map((a, i) => <div key={i} className={`sw${(c.accent ?? 0) === i ? " on" : ""}`} style={{ background: a[1] }} title={a[0]} onClick={() => set({ accent: i })} />)}</div></div>
             <div className="field"><label>Button style</label><div className="chips">{STYLES.map((s) => <div key={s[0]} className={`chip${(c.button_style ?? "soft") === s[0] ? " on" : ""}`} onClick={() => set({ button_style: s[0] })}>{s[1]}</div>)}</div></div>
             <div className="field"><label>Button shape</label><div className="chips">{SHAPES.map((s) => <div key={s[0]} className={`chip${(c.button_shape ?? "rounded") === s[0] ? " on" : ""}`} onClick={() => set({ button_shape: s[0] })}>{s[1]}</div>)}</div></div>
-            <div className="field" style={{ marginBottom: 0 }}><label>Background animation</label><div className="chips">{BGS.map((b) => <div key={b[0]} className={`chip${(c.bg ?? "aurora") === b[0] ? " on" : ""}`} onClick={() => set({ bg: b[0] })}>{b[1]}</div>)}</div></div>
+            <div className="field"><label>Background animation</label><div className="chips">{BGS.map((b) => <div key={b[0]} className={`chip${(c.bg ?? "aurora") === b[0] ? " on" : ""}`} onClick={() => set({ bg: b[0] })}>{b[1]}</div>)}</div></div>
+            <div className="field" style={{ marginBottom: 0 }}><label>Font</label><div className="chips">{FONTS.map((f) => <div key={f[0]} className={`chip${(c.font ?? "sora") === f[0] ? " on" : ""}`} onClick={() => set({ font: f[0] })}>{f[1]}</div>)}</div></div>
           </div>
 
           <div className="sec">

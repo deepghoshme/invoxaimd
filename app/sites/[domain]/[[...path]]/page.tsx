@@ -62,6 +62,27 @@ async function resolve(domain: string, path?: string[]) {
   const store = await resolveStoreByHost(domain);
   if (!store) return { store: null, page: null };
 
+  // Extra-subdomain alias with a page_id target: when the alias row targets a
+  // specific page AND there is no explicit path (root request), resolve directly
+  // to that page instead of the store root. Explicit paths (e.g. /opp/xyz) still
+  // work normally — alias_page_id only overrides the root "/" resolution.
+  const isRootRequest = !path || path.length === 0;
+  if (store.alias_page_id && isRootRequest) {
+    const { data: targetPage } = await import("@/lib/supabase/admin").then(
+      async ({ createAdminClient }) =>
+        createAdminClient()
+          .from("pages")
+          .select("id, page_type, title, template_id, content, seo, pixels, status")
+          .eq("id", store.alias_page_id!)
+          .eq("store_id", store.id)
+          .eq("status", "published")
+          .maybeSingle(),
+    );
+    // If the targeted page is published and belongs to this store, serve it.
+    // Otherwise fall through to the standard root resolution (safe degradation).
+    if (targetPage) return { store, page: targetPage as SitePage };
+  }
+
   // /{prefix}/{public_id} (not /checkout/…) → a "many" page.
   const seg0 = (path?.[0] ?? "").toLowerCase();
   if (MANY_PREFIXES.has(seg0) && path?.[1] && path[1].toLowerCase() !== "checkout") {
@@ -71,7 +92,7 @@ async function resolve(domain: string, path?: string[]) {
 
   const type = pageTypeForPath(path);
   let page: SitePage | null = type ? await getPublishedPage(store.id, type) : null;
-  if (!page && (!path || path.length === 0)) {
+  if (!page && isRootRequest) {
     // Root-path fallback precedence: website > store > bio > newest-published-of-any-type.
     // pageTypeForPath already tried "website" above; only fall through if that missed.
     page = await getPublishedPage(store.id, "store");

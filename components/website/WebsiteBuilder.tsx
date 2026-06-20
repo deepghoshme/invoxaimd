@@ -8,6 +8,7 @@ import {
   ACCENTS, BGS, NAVS, BTSHAPES, HERO_LAYOUTS, REVEALS, BTN_ANIMS, DIVIDERS, FONTS, WIDTHS, SEC_STYLES, STEP_STYLES, CD_STYLES, CONTACT_STYLES, GAL_STYLES, TEST_STYLES, PADS, GRID_SECTIONS, LEGAL_DOCS, ICONS, SECTIONS, LABELS, TEMPLATES,
 } from "@/lib/website";
 import { saveWebsite, publishWebsite } from "@/app/dashboard/website/actions";
+import ImageInput from "@/components/ImageInput";
 
 async function upload(file: File): Promise<string | null> {
   const fd = new FormData();
@@ -318,7 +319,7 @@ export default function WebsiteBuilder({
           {/* Brand */}
           <div className="sec">
             <h3>Brand</h3>
-            <Upload ico="🅻" label="Upload logo" value={c.logo} onUrl={(u) => set({ logo: u })} onRemove={() => set({ logo: undefined })} />
+            <div className="field"><label>Logo</label><ImageInput value={c.logo ?? ""} onChange={(u) => set({ logo: u || undefined })} placeholder="https://… or upload" /></div>
             {c.logo && <div className="field"><label>Logo height — {c.logoSize ?? 28}px</label><input type="range" min={18} max={56} value={c.logoSize ?? 28} onChange={(e) => set({ logoSize: +e.target.value })} /></div>}
             <Upload ico="🔖" label="Upload favicon" sub="shown in the browser tab" value={c.favicon} onUrl={(u) => set({ favicon: u })} onRemove={() => set({ favicon: undefined })} />
             <div className="field"><label>Site name (if no logo)</label><input value={c.site ?? ""} onChange={(e) => set({ site: e.target.value })} /></div>
@@ -404,12 +405,16 @@ export default function WebsiteBuilder({
           <div className="sec">
             <h3>Hero</h3>
             <div className="field"><label>Image layout</label><div className="chips">{HERO_LAYOUTS.map((h) => <div key={h[0]} className={`chip${(c.heroLayout ?? "right") === h[0] ? " on" : ""}`} onClick={() => set({ heroLayout: h[0] })}>{h[1]}</div>)}</div></div>
-            {(c.heroLayout ?? "right") !== "none" && <Upload ico="🖼️" label="Hero image" value={c.himg} onUrl={(u) => set({ himg: u })} onRemove={() => set({ himg: undefined })} />}
+            {(c.heroLayout ?? "right") !== "none" && <div className="field"><label>Hero image</label><ImageInput value={c.himg ?? ""} onChange={(u) => set({ himg: u || undefined })} placeholder="https://… or upload" /></div>}
             {(c.heroLayout ?? "right") !== "none" && <div className="field"><label>Hero image height — {c.heroImgH ?? 280}px</label><input type="range" min={180} max={460} value={c.heroImgH ?? 280} onChange={(e) => set({ heroImgH: +e.target.value })} /></div>}
             <div className="field"><label>Background video URL (mp4/webm — overrides image)</label><input value={c.heroVideo ?? ""} onChange={(e) => set({ heroVideo: e.target.value })} placeholder="https://…/clip.mp4" /></div>
             <div className="field"><label>Eyebrow pill</label><input value={c.heroEyebrow ?? ""} onChange={(e) => set({ heroEyebrow: e.target.value })} placeholder="✨ New — limited offer" /></div>
             <div className="field"><label>Typewriter words (comma-separated, overrides eyebrow)</label><input value={c.heroTyping ?? ""} onChange={(e) => set({ heroTyping: e.target.value })} placeholder="Calm, Focus, Growth" /></div>
             <div className="field"><label>Heading</label><textarea rows={2} value={c.htitle ?? ""} onChange={(e) => set({ htitle: e.target.value })} /></div>
+            <div className="ff">
+              <div className="field"><label>Title size</label><div className="chips">{[["sm","Small"],["md","Medium"],["lg","Large"],["xl","XL"]].map(([v,l]) => <div key={v} className={`chip${(c.heroTitleSize ?? "md") === v ? " on" : ""}`} onClick={() => set({ heroTitleSize: v as WebsiteContent["heroTitleSize"] })}>{l}</div>)}</div></div>
+              <div className="field"><label>Title align</label><div className="chips">{[["left","Left"],["center","Center"],["right","Right"]].map(([v,l]) => <div key={v} className={`chip${(c.heroTitleAlign ?? "left") === v ? " on" : ""}`} onClick={() => set({ heroTitleAlign: v as WebsiteContent["heroTitleAlign"] })}>{l}</div>)}</div></div>
+            </div>
             <div className="field"><label>Subheading</label><textarea rows={2} value={c.hsub ?? ""} onChange={(e) => set({ hsub: e.target.value })} /></div>
             <div className="ff"><div className="field"><label>Button 1 text</label><input value={c.hb1 ?? ""} onChange={(e) => set({ hb1: e.target.value })} /></div><div className="field"><label>Button 1 link</label><input value={c.hb1url ?? ""} onChange={(e) => set({ hb1url: e.target.value })} placeholder="/opp/… or https://" /></div></div>
             <div className="ff"><div className="field"><label>Button 2 text</label><input value={c.hb2 ?? ""} onChange={(e) => set({ hb2: e.target.value })} /></div><div className="field"><label>Button 2 link</label><input value={c.hb2url ?? ""} onChange={(e) => set({ hb2url: e.target.value })} placeholder="blank = no link" /></div></div>
@@ -555,6 +560,7 @@ export default function WebsiteBuilder({
                 {c.pricingYearly && <input className="rowfull" value={p.py ?? ""} onChange={(e) => setPlan(i, { py: e.target.value })} placeholder="Yearly price (e.g. ₹4,990/yr)" />}
                 <input className="rowfull" value={p.f} onChange={(e) => setPlan(i, { f: e.target.value })} placeholder="Feature, Feature, ..." />
                 <input className="rowfull" value={p.url ?? ""} onChange={(e) => setPlan(i, { url: e.target.value })} placeholder="Payment / checkout link (blank = uses CTA link)" />
+                <input className="rowfull" value={p.btn ?? ""} onChange={(e) => setPlan(i, { btn: e.target.value })} placeholder={`Button label (default: ${c.cta || "Get started"})`} />
                 <div className="swrow" style={{ border: 0, padding: 0 }}><span className="nm" style={{ fontWeight: 500, fontSize: 12 }}>Mark as popular</span>
                   <Switch on={!!p.pop} onClick={() => set({ pricing: pricing.map((x, j) => ({ ...x, pop: j === i ? !x.pop : false })) })} /></div>
               </div>
@@ -659,13 +665,14 @@ export default function WebsiteBuilder({
             {headFields("testimonials")}
             <div className="field"><label>Layout</label><div className="chips">{TEST_STYLES.map((s) => <div key={s[0]} className={`chip${(c.testStyle ?? "grid") === s[0] ? " on" : ""}`} onClick={() => set({ testStyle: s[0] as WebsiteContent["testStyle"] })}>{s[1]}</div>)}</div></div>
             {tests.map((t, i) => (
-              <div key={i}>
+              <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 9, marginBottom: 9 }}>
                 <div className="frow">
                   <input style={{ flex: ".5" }} value={t.n} onChange={(e) => setTest(i, { n: e.target.value })} placeholder="Name" />
                   <input value={t.r} onChange={(e) => setTest(i, { r: e.target.value })} placeholder="Role" />
                   <button className="del" onClick={() => set({ tests: tests.filter((_, j) => j !== i) })}>✕</button>
                 </div>
                 <input className="rowfull" value={t.q} onChange={(e) => setTest(i, { q: e.target.value })} placeholder="Quote" />
+                <div className="field" style={{ marginBottom: 0 }}><label>Photo (optional)</label><ImageInput value={t.img ?? ""} onChange={(url) => setTest(i, { img: url || undefined })} placeholder="https://… or upload" /></div>
               </div>
             ))}
             <button className="addrow" onClick={() => set({ tests: [...tests, { n: "Name", r: "Customer", q: "Great!" }] })}>+ Add testimonial</button>
@@ -705,7 +712,10 @@ export default function WebsiteBuilder({
             <h3>CTA band</h3>
             <div className="field"><label>Title</label><input value={c.ctaBand?.title ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, title: e.target.value } })} /></div>
             <div className="field"><label>Subtitle</label><input value={c.ctaBand?.sub ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, sub: e.target.value } })} /></div>
-            <div className="field" style={{ marginBottom: 0 }}><label>Button URL</label><input value={c.ctaBand?.url ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, url: e.target.value } })} placeholder="https://… (defaults to your main CTA link)" /></div>
+            <div className="ff">
+              <div className="field"><label>Button label</label><input value={c.ctaBand?.btn ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, btn: e.target.value } })} placeholder={c.cta || "Get started"} /></div>
+              <div className="field"><label>Button URL</label><input value={c.ctaBand?.url ?? ""} onChange={(e) => set({ ctaBand: { ...c.ctaBand!, url: e.target.value } })} placeholder="https://…" /></div>
+            </div>
           </div>
 
           {/* Contact */}
