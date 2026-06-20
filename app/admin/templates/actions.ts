@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateManifest, validateContentForType } from "@/lib/template-manifest";
-import type { TemplateType } from "@/lib/template-manifest";
+import type { TemplateType, TemplateManifest } from "@/lib/template-manifest";
 
-// Re-export TemplateType so consumers can import it from here.
-export type { TemplateType };
+// Re-export types so consumers can import from here.
+export type { TemplateType, TemplateManifest };
 
 type Result<T = void> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -406,6 +406,80 @@ export async function templateSalesStats(): Promise<
   }
 
   return { ok: true, stats: Array.from(map.values()) };
+}
+
+// ── generateTemplateWithAI ────────────────────────────────────────────────────
+
+/**
+ * Admin-only: generate a template manifest via AI (real Claude call when
+ * ANTHROPIC_API_KEY is set; deterministic stub otherwise).
+ *
+ * Returns the generated manifest + raw text for admin review/edit.
+ * Does NOT save — the admin reviews then calls importManifest to save.
+ *
+ * ADMIN-ONLY (requireAdmin guard).
+ */
+export async function generateTemplateWithAI(brief: {
+  type: string;
+  vibe: string;
+  audience?: string;
+  tier: string;
+  price_paise: number;
+  license_model: string;
+  name?: string;
+}): Promise<
+  | { ok: true; manifest: TemplateManifest; raw: string; isStub: boolean }
+  | { ok: false; error: string; raw?: string }
+> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  // Input validation
+  const VALID_TYPES = new Set([
+    "bio", "store", "product", "courses", "booking",
+    "event", "payment", "lead", "website", "checkout", "vip",
+  ]);
+  const VALID_TIERS = new Set(["free", "premium"]);
+  const VALID_LICENSE = new Set(["per_store", "per_page", "all_access"]);
+
+  if (!brief.type || !VALID_TYPES.has(brief.type)) {
+    return { ok: false, error: `Invalid type: "${brief.type}".` };
+  }
+  if (!brief.vibe || typeof brief.vibe !== "string" || brief.vibe.trim().length < 3) {
+    return { ok: false, error: "vibe must be at least 3 characters." };
+  }
+  if (!VALID_TIERS.has(brief.tier)) {
+    return { ok: false, error: `Invalid tier: "${brief.tier}".` };
+  }
+  const pricePaise = Number(brief.price_paise);
+  if (!Number.isInteger(pricePaise) || pricePaise < 0) {
+    return { ok: false, error: "price_paise must be a non-negative integer." };
+  }
+  if (brief.tier === "free" && pricePaise !== 0) {
+    return { ok: false, error: 'price_paise must be 0 when tier is "free".' };
+  }
+  if (brief.license_model && !VALID_LICENSE.has(brief.license_model)) {
+    return { ok: false, error: `Invalid license_model: "${brief.license_model}".` };
+  }
+
+  const { generateTemplateManifest } = await import("@/lib/template-ai");
+
+  const result = await generateTemplateManifest({
+    type: brief.type as TemplateType,
+    vibe: brief.vibe.trim(),
+    audience: brief.audience?.trim() || undefined,
+    tier: brief.tier as "free" | "premium",
+    price_paise: pricePaise,
+    license_model: (brief.license_model || "per_store") as "per_store" | "per_page" | "all_access",
+    name: brief.name?.trim() || undefined,
+  });
+
+  if (!result.ok) {
+    return { ok: false, error: result.error, raw: result.raw };
+  }
+
+  const isStub = !process.env.ANTHROPIC_API_KEY;
+  return { ok: true, manifest: result.manifest, raw: result.raw, isStub };
 }
 
 // ── exportTemplateManifest ────────────────────────────────────────────────────

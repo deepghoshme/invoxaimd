@@ -10,9 +10,11 @@ import {
   toggleTemplateStatus,
   importManifest,
   exportTemplateManifest,
+  generateTemplateWithAI,
   type TemplateRow,
   type TemplateInput,
   type TemplateSalesStat,
+  type TemplateManifest,
 } from "./actions";
 
 /* ── helpers ─────────────────────────────────────────────────── */
@@ -102,6 +104,14 @@ const css = `
   .tm-errs ul     { margin: 6px 0 0; padding-left: 20px; }
   .tm-errs ul li  { margin-bottom: 3px; }
   .tm-success-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; font-size: 13px; color: #166534; }
+
+  /* generate-with-ai panel */
+  .tm-ai-panel     { display: flex; flex-direction: column; gap: 14px; }
+  .tm-ai-badge     { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 10px; border-radius: 99px; background: linear-gradient(135deg,#7b3fe4,#ff4d7d); color: #fff; width: fit-content; }
+  .tm-ai-notice    { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+  .tm-ai-stub-warn { background: #fff8e6; border: 1px solid #f5d97a; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #7a5c00; }
+  .tm-ai-result    { display: flex; flex-direction: column; gap: 12px; }
+  .tm-ai-raw-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 
   /* content preview summary */
   .tm-preview-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -654,6 +664,311 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
   );
 }
 
+/* ── GenerateWithAIPanel ─────────────────────────────────────── */
+//
+// ADMIN AUTHORING TOOL — never imported by seller-facing pages.
+// Calls generateTemplateWithAI (server action) which is requireAdmin-guarded.
+// Real Claude generation activates when ANTHROPIC_API_KEY is set server-side;
+// without the key a deterministic stub runs the full validate→preview→save flow.
+
+type AIBrief = {
+  type: string;
+  vibe: string;
+  audience: string;
+  tier: string;
+  price_paise: number;
+  license_model: string;
+  name: string;
+};
+
+type AIResult =
+  | { kind: "errors"; error: string; raw?: string }
+  | { kind: "success"; manifest: TemplateManifest; raw: string; isStub: boolean };
+
+function GenerateWithAIPanel({ onDone }: { onDone: () => void }) {
+  const [brief, setBrief] = useState<AIBrief>({
+    type: "website",
+    vibe: "",
+    audience: "",
+    tier: "free",
+    price_paise: 0,
+    license_model: "per_store",
+    name: "",
+  });
+  const [generating, startGen] = useTransition();
+  const [saving, startSave] = useTransition();
+  const [result, setResult] = useState<AIResult | null>(null);
+  // Raw JSON in the editable textarea (seeded from AI output; admin can tweak)
+  const [rawEdit, setRawEdit] = useState("");
+  const [rawErr, setRawErr] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<{ text: string; err: boolean } | null>(null);
+
+  function field<K extends keyof AIBrief>(k: K, v: AIBrief[K]) {
+    setBrief((p) => ({ ...p, [k]: v }));
+    // Reset result when brief changes
+    setResult(null);
+    setRawEdit("");
+    setSaveMsg(null);
+  }
+
+  function onRawEditChange(s: string) {
+    setRawEdit(s);
+    setSaveMsg(null);
+    if (!s.trim()) { setRawErr(null); return; }
+    try { JSON.parse(s); setRawErr(null); } catch (e) { setRawErr(String(e)); }
+  }
+
+  function doGenerate() {
+    if (!brief.vibe.trim()) return;
+    startGen(async () => {
+      setResult(null);
+      setSaveMsg(null);
+      const res = await generateTemplateWithAI({
+        type: brief.type,
+        vibe: brief.vibe,
+        audience: brief.audience || undefined,
+        tier: brief.tier,
+        price_paise: brief.tier === "free" ? 0 : brief.price_paise,
+        license_model: brief.license_model,
+        name: brief.name || undefined,
+      });
+      if (!res.ok) {
+        setResult({ kind: "errors", error: res.error, raw: res.raw });
+        setRawEdit(res.raw ?? "");
+      } else {
+        setResult({ kind: "success", manifest: res.manifest, raw: res.raw, isStub: res.isStub });
+        setRawEdit(res.raw);
+      }
+    });
+  }
+
+  function doSave() {
+    const jsonToSave = rawEdit.trim();
+    if (!jsonToSave || rawErr) { setSaveMsg({ text: "Fix JSON errors before saving.", err: true }); return; }
+    startSave(async () => {
+      setSaveMsg(null);
+      const res = await importManifest(jsonToSave);
+      if (!res.ok) {
+        setSaveMsg({ text: `Save failed: ${res.errors.join("; ")}`, err: true });
+      } else {
+        setSaveMsg({ text: `Saved as draft (ID: ${res.id})`, err: false });
+        onDone();
+      }
+    });
+  }
+
+  const previewContent =
+    result?.kind === "success"
+      ? result.manifest.content
+      : (() => {
+          if (!rawEdit.trim() || rawErr) return null;
+          try { return (JSON.parse(rawEdit) as TemplateManifest).content ?? null; } catch { return null; }
+        })();
+  const previewType =
+    result?.kind === "success" ? result.manifest.type : brief.type;
+
+  return (
+    <Card title="Generate with AI">
+      <div className="tm-ai-panel">
+        <div className="tm-ai-badge">Admin authoring tool</div>
+
+        <div className="tm-ai-notice">
+          This tool is <strong>admin-only</strong>. It assembles a prompt from the Template Authoring Format spec
+          + the target type&apos;s content key contract + your brief, then calls Claude to produce a ready-to-save
+          Template Manifest. Review the output and edit if needed before saving.
+          <br /><br />
+          <strong>Real generation</strong> requires <code>ANTHROPIC_API_KEY</code> set in <code>.env.local</code>.
+          Without the key a deterministic stub runs the full pipeline (validate → preview → save) so the
+          workflow is always testable.
+        </div>
+
+        {/* Brief form */}
+        <div className="dx-ff">
+          <div className="dx-field">
+            <label>Page type</label>
+            <select value={brief.type} onChange={(e) => field("type", e.target.value)} style={selStyle}>
+              {PAGE_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
+            </select>
+          </div>
+          <div className="dx-field">
+            <label>Tier</label>
+            <select value={brief.tier} onChange={(e) => field("tier", e.target.value)} style={selStyle}>
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="dx-field">
+          <label>Vibe / brief <span style={{ color: "var(--red, #e5476f)" }}>*</span></label>
+          <textarea
+            rows={3}
+            value={brief.vibe}
+            placeholder="e.g. bold dark agency homepage for a Bangalore design studio with a 3-tier pricing section"
+            onChange={(e) => field("vibe", e.target.value)}
+            style={{ ...taStyle }}
+          />
+          <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4 }}>
+            Describe the look, feel, industry, and key sections. More detail = better output.
+          </div>
+        </div>
+
+        <div className="dx-ff">
+          <div className="dx-field">
+            <label>Target audience (optional)</label>
+            <input
+              value={brief.audience}
+              placeholder="e.g. fitness coaches, SaaS founders"
+              onChange={(e) => field("audience", e.target.value)}
+            />
+          </div>
+          <div className="dx-field">
+            <label>Template name (optional)</label>
+            <input
+              value={brief.name}
+              placeholder="e.g. Obsidian Studio"
+              onChange={(e) => field("name", e.target.value)}
+            />
+          </div>
+        </div>
+
+        {brief.tier === "premium" && (
+          <div className="dx-ff">
+            <div className="dx-field">
+              <label>Price (₹)</label>
+              <input
+                type="number" min={0} step={1}
+                value={Math.round(brief.price_paise / 100) || ""}
+                placeholder="e.g. 499"
+                onChange={(e) => field("price_paise", Math.round(parseFloat(e.target.value) || 0) * 100)}
+              />
+            </div>
+            <div className="dx-field">
+              <label>License model</label>
+              <select value={brief.license_model} onChange={(e) => field("license_model", e.target.value)} style={selStyle}>
+                <option value="per_store">Per store</option>
+                <option value="per_page">Per page</option>
+                <option value="all_access">All-access (plan feature)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <button
+            className="btn grad"
+            onClick={doGenerate}
+            disabled={generating || !brief.vibe.trim()}
+          >
+            {generating ? "Generating…" : "Generate with AI"}
+          </button>
+        </div>
+
+        {/* Error result */}
+        {result?.kind === "errors" && (
+          <div className="tm-errs">
+            <strong>Generation failed</strong>
+            <div style={{ marginTop: 6, whiteSpace: "pre-wrap", fontSize: 12 }}>{result.error}</div>
+          </div>
+        )}
+
+        {/* Stub warning */}
+        {result?.kind === "success" && result.isStub && (
+          <div className="tm-ai-stub-warn">
+            <strong>Stub mode:</strong> <code>ANTHROPIC_API_KEY</code> is not set — this output is a
+            deterministic valid-manifest stub (not a real AI generation). Set the key in{" "}
+            <code>.env.local</code> and restart the server to enable real Claude generation. The stub is
+            fully saveable and exercisable.
+          </div>
+        )}
+
+        {/* Success result — preview + editable raw JSON */}
+        {result?.kind === "success" && (
+          <div className="tm-ai-result">
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--green, #1fb57a)" }}>
+              Generation succeeded — review below.
+            </div>
+
+            <ContentPreview type={previewType} content={previewContent as Record<string, unknown> | null} />
+
+            <div>
+              <div className="tm-ai-raw-label" style={{ marginBottom: 6 }}>
+                Raw manifest JSON (edit before saving if needed)
+              </div>
+              <textarea
+                rows={18}
+                className="tm-mono"
+                value={rawEdit}
+                onChange={(e) => onRawEditChange(e.target.value)}
+                style={{
+                  width: "100%", padding: "10px 12px", border: "1px solid var(--border)",
+                  borderRadius: 10, background: "var(--bg)", color: "var(--text)", resize: "vertical",
+                  fontFamily: "\"JetBrains Mono\",\"Fira Code\",ui-monospace,monospace", fontSize: 12,
+                }}
+                spellCheck={false}
+              />
+              {rawErr && <div className="tm-json-err">{rawErr}</div>}
+              {!rawErr && rawEdit.trim() && (
+                <div style={{ fontSize: 11.5, color: "var(--green, #1fb57a)", marginTop: 4 }}>Valid JSON</div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                className="btn grad"
+                onClick={doSave}
+                disabled={saving || !!rawErr || !rawEdit.trim()}
+              >
+                {saving ? "Saving…" : "Save as draft"}
+              </button>
+              {saveMsg && (
+                <span style={{ fontSize: 12.5, color: saveMsg.err ? "var(--red, #e5476f)" : "var(--green, #1fb57a)", fontWeight: 600 }}>
+                  {saveMsg.text}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Show editable raw even on error, if raw was returned */}
+        {result?.kind === "errors" && result.raw && (
+          <div className="tm-ai-result">
+            <div className="tm-ai-raw-label" style={{ marginBottom: 6 }}>
+              Raw output from model (fix and save manually if valid JSON)
+            </div>
+            <textarea
+              rows={14}
+              className="tm-mono"
+              value={rawEdit}
+              onChange={(e) => onRawEditChange(e.target.value)}
+              style={{
+                width: "100%", padding: "10px 12px", border: "1px solid var(--border)",
+                borderRadius: 10, background: "var(--bg)", color: "var(--text)", resize: "vertical",
+                fontFamily: "\"JetBrains Mono\",\"Fira Code\",ui-monospace,monospace", fontSize: 12,
+              }}
+              spellCheck={false}
+            />
+            {rawErr && <div className="tm-json-err">{rawErr}</div>}
+            {!rawErr && rawEdit.trim() && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                <span style={{ fontSize: 11.5, color: "var(--green, #1fb57a)" }}>Valid JSON — try saving</span>
+                <button className="btn grad" onClick={doSave} disabled={saving}>
+                  {saving ? "Saving…" : "Save as draft"}
+                </button>
+                {saveMsg && (
+                  <span style={{ fontSize: 12.5, color: saveMsg.err ? "var(--red, #e5476f)" : "var(--green, #1fb57a)", fontWeight: 600 }}>
+                    {saveMsg.text}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 /* ── GridCard ────────────────────────────────────────────────── */
 
 function GridCard({ row, onEdit, stat }: { row: TemplateRow; onEdit: () => void; stat?: TemplateSalesStat }) {
@@ -778,6 +1093,7 @@ export default function TemplatesManager({ rows, migrationMissing, salesStats }:
   const [filter, setFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [showImport, setShowImport] = useState(false);
+  const [showAI, setShowAI] = useState(false);
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.type === filter);
 
@@ -840,8 +1156,11 @@ export default function TemplatesManager({ rows, migrationMissing, salesStats }:
         title="Premium templates"
         sub="Manage the template catalog that sellers browse and purchase in the marketplace."
         action={
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="dx-editbtn" onClick={() => setShowImport((v) => !v)}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="dx-editbtn" onClick={() => { setShowAI((v) => !v); setShowImport(false); }}>
+              {showAI ? "Hide AI" : "Generate with AI"}
+            </button>
+            <button className="dx-editbtn" onClick={() => { setShowImport((v) => !v); setShowAI(false); }}>
               {showImport ? "Hide import" : "Import manifest"}
             </button>
             <button className="btn grad" onClick={() => setEditRow("new")}>+ New template</button>
@@ -878,6 +1197,13 @@ export default function TemplatesManager({ rows, migrationMissing, salesStats }:
           delta: totalSales > 0 ? `${totalSales} sale${totalSales !== 1 ? "s" : ""} · wallet + Razorpay` : "No paid sales yet",
         },
       ]} />
+
+      {/* Generate with AI panel (admin authoring tool — never exposed to sellers) */}
+      {showAI && (
+        <div style={{ marginBottom: 20 }}>
+          <GenerateWithAIPanel onDone={onImportDone} />
+        </div>
+      )}
 
       {/* Import manifest panel */}
       {showImport && (
