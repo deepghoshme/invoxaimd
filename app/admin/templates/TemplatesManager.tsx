@@ -12,6 +12,7 @@ import {
   exportTemplateManifest,
   type TemplateRow,
   type TemplateInput,
+  type TemplateSalesStat,
 } from "./actions";
 
 /* ── helpers ─────────────────────────────────────────────────── */
@@ -655,7 +656,7 @@ function ImportManifestPanel({ onDone }: { onDone: () => void }) {
 
 /* ── GridCard ────────────────────────────────────────────────── */
 
-function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
+function GridCard({ row, onEdit, stat }: { row: TemplateRow; onEdit: () => void; stat?: TemplateSalesStat }) {
   const router = useRouter();
   const [toggling, startToggle] = useTransition();
   const [deleting, startDelete] = useTransition();
@@ -723,7 +724,21 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
             ))}
           </div>
         )}
-        <div className="tm-sales">{row.sales_count} sale{row.sales_count !== 1 ? "s" : ""}</div>
+        <div className="tm-sales">
+          {row.sales_count} sale{row.sales_count !== 1 ? "s" : ""}
+          {stat && stat.revenue_paise > 0 && (
+            <span style={{ marginLeft: 8, color: "var(--primary)", fontWeight: 600 }}>
+              · {inr(stat.revenue_paise)}
+            </span>
+          )}
+          {stat && stat.revenue_paise > 0 && (stat.wallet_count > 0 || stat.razorpay_count > 0) && (
+            <span style={{ marginLeft: 6, color: "var(--muted)", fontSize: 11 }}>
+              ({stat.wallet_count > 0 ? `${stat.wallet_count}W` : ""}
+              {stat.wallet_count > 0 && stat.razorpay_count > 0 ? "+" : ""}
+              {stat.razorpay_count > 0 ? `${stat.razorpay_count}R` : ""})
+            </span>
+          )}
+        </div>
 
         <div className="tm-card-foot">
           <span className={`tm-card-price${row.tier === "free" ? " free" : ""}`}>
@@ -755,9 +770,9 @@ function GridCard({ row, onEdit }: { row: TemplateRow; onEdit: () => void }) {
 
 /* ── Main component ──────────────────────────────────────────── */
 
-type Props = { rows: TemplateRow[]; migrationMissing: boolean };
+type Props = { rows: TemplateRow[]; migrationMissing: boolean; salesStats: TemplateSalesStat[] };
 
-export default function TemplatesManager({ rows, migrationMissing }: Props) {
+export default function TemplatesManager({ rows, migrationMissing, salesStats }: Props) {
   const router = useRouter();
   const [editRow, setEditRow] = useState<TemplateRow | "new" | null>(null);
   const [filter, setFilter] = useState<string>("all");
@@ -766,35 +781,56 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.type === filter);
 
+  // Build a lookup map from template_id → sales stats
+  const statsMap = new Map<string, TemplateSalesStat>(salesStats.map((s) => [s.template_id, s]));
+
   // KPI counts
   const total = rows.length;
   const published = rows.filter((r) => r.status === "published").length;
   const premium = rows.filter((r) => r.tier === "premium").length;
   const totalSales = rows.reduce((s, r) => s + r.sales_count, 0);
+  const totalRevenueFromStats = salesStats.reduce((s, st) => s + st.revenue_paise, 0);
 
   const onImportDone = useCallback(() => {
     router.refresh();
   }, [router]);
 
   // Table rows
-  const tableRows = filtered.map((r) => [
-    <span key="thumb" className="tm-thumb-pre">
-      {r.thumbnail_url
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={r.thumbnail_url} alt={r.name} />
-        : <div className="tm-thumb-mock"><i style={{ height: 6, width: "60%" }} /><i style={{ height: 4, width: "80%" }} /><i style={{ height: 4, width: "70%" }} /></div>
-      }
-    </span>,
-    <strong key="name">{r.name}</strong>,
-    <span key="type" style={{ fontSize: 12 }}>{TYPE_LABELS[r.type] ?? r.type}</span>,
-    <span key="tier" className={`tm-badge tm-badge-${r.tier === "premium" ? "prem" : "free"}`}>{r.tier}</span>,
-    <span key="price">{inr(r.price_paise)}</span>,
-    r.status === "published" ? <Live key="st">Published</Live> : <Tag key="st" kind="neu">Draft</Tag>,
-    <span key="sales">{r.sales_count}</span>,
-    <span key="acts" style={{ display: "flex", gap: 6, whiteSpace: "nowrap" }}>
-      <button className="dx-editbtn" onClick={() => setEditRow(r)}>Edit</button>
-    </span>,
-  ]);
+  const tableRows = filtered.map((r) => {
+    const stat = statsMap.get(r.id);
+    return [
+      <span key="thumb" className="tm-thumb-pre">
+        {r.thumbnail_url
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={r.thumbnail_url} alt={r.name} />
+          : <div className="tm-thumb-mock"><i style={{ height: 6, width: "60%" }} /><i style={{ height: 4, width: "80%" }} /><i style={{ height: 4, width: "70%" }} /></div>
+        }
+      </span>,
+      <strong key="name">{r.name}</strong>,
+      <span key="type" style={{ fontSize: 12 }}>{TYPE_LABELS[r.type] ?? r.type}</span>,
+      <span key="tier" className={`tm-badge tm-badge-${r.tier === "premium" ? "prem" : "free"}`}>{r.tier}</span>,
+      <span key="price">{inr(r.price_paise)}</span>,
+      r.status === "published" ? <Live key="st">Published</Live> : <Tag key="st" kind="neu">Draft</Tag>,
+      <span key="sales">
+        {r.sales_count}
+        {stat && stat.revenue_paise > 0 && (
+          <span style={{ marginLeft: 6, color: "var(--primary)", fontWeight: 600, fontSize: 12 }}>
+            {inr(stat.revenue_paise)}
+          </span>
+        )}
+        {stat && (stat.wallet_count > 0 || stat.razorpay_count > 0) && (
+          <span style={{ marginLeft: 4, color: "var(--muted)", fontSize: 10.5 }}>
+            {stat.wallet_count > 0 ? `${stat.wallet_count}W` : ""}
+            {stat.wallet_count > 0 && stat.razorpay_count > 0 ? "+" : ""}
+            {stat.razorpay_count > 0 ? `${stat.razorpay_count}R` : ""}
+          </span>
+        )}
+      </span>,
+      <span key="acts" style={{ display: "flex", gap: 6, whiteSpace: "nowrap" }}>
+        <button className="dx-editbtn" onClick={() => setEditRow(r)}>Edit</button>
+      </span>,
+    ];
+  });
 
   return (
     <>
@@ -834,6 +870,13 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
         { icon: "eye", color: "var(--green, #1fb57a)", label: "Published", value: String(published) },
         { icon: "tag", color: "var(--gold)", label: "Premium", value: String(premium) },
         { icon: "bag", color: "var(--primary)", label: "Total sales", value: String(totalSales) },
+        {
+          icon: "rupee",
+          color: "var(--secondary)",
+          label: "Template revenue",
+          value: totalRevenueFromStats > 0 ? inr(totalRevenueFromStats) : "₹0",
+          delta: totalSales > 0 ? `${totalSales} sale${totalSales !== 1 ? "s" : ""} · wallet + Razorpay` : "No paid sales yet",
+        },
       ]} />
 
       {/* Import manifest panel */}
@@ -885,7 +928,7 @@ export default function TemplatesManager({ rows, migrationMissing }: Props) {
       {viewMode === "grid" && filtered.length > 0 && (
         <div className="dx-grid dx-g3" style={{ gap: 16 }}>
           {filtered.map((r) => (
-            <GridCard key={r.id} row={r} onEdit={() => setEditRow(r)} />
+            <GridCard key={r.id} row={r} onEdit={() => setEditRow(r)} stat={statsMap.get(r.id)} />
           ))}
         </div>
       )}

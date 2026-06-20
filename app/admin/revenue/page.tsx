@@ -87,6 +87,16 @@ export default async function RevenueAdminPage({
     { data: thisMonthPlanPayments },
     // this-month wallet recharges (amount only, recharge only — no bonus) — for current-month KPI split
     { data: thisMonthWalletRecharges },
+    // template_purchases via Razorpay — revenue rail 2 for templates.
+    // NOTE: wallet-rail template sales are counted via wallet_ledger (reason='template_purchase')
+    // fetched in walletAll above. We do NOT include wallet-rail rows here to avoid double-counting
+    // (a wallet sale appears in both wallet_ledger AND template_purchases with source='wallet';
+    //  we count it only once via wallet_ledger in the totals aggregation).
+    { data: razorpayTemplatePurchases },
+    // template_purchases joined to templates+stores for the transactions feed.
+    // Fetches both wallet and razorpay source rows so the feed shows both rails.
+    // For per-template analytics we use template_purchases as single source (§ per-template note).
+    { data: templatePurchasesFeed },
   ] = await Promise.all([
     // Paid orders — GMV + commission snapshot
     sb
@@ -160,6 +170,28 @@ export default async function RevenueAdminPage({
       .eq("type", "credit")
       .eq("reason", "recharge")
       .gte("created_at", thisMonthStart),
+
+    // Razorpay-rail template purchases — KPI aggregate (amount only).
+    // Used for the revenue TOTAL. Wallet-rail template sales are counted separately
+    // from wallet_ledger to avoid double-counting (wallet sale exists in both tables;
+    // we pick wallet_ledger as the single source for wallet-rail totals).
+    sb
+      .from("template_purchases")
+      .select("price_paise, created_at")
+      .eq("source", "razorpay"),
+
+    // Template purchases feed for the transactions table (both rails).
+    // For the feed display we use template_purchases for both rails (has template_id,
+    // price_paise, source in one place) joined to templates + stores.
+    // Fetch most-recent 200 rows; exact cross-source pagination is v2.
+    sb
+      .from("template_purchases")
+      .select(
+        "id, price_paise, source, payment_ref, created_at, template:templates(name), store:stores(store_name, subdomain)"
+      )
+      .in("source", ["wallet", "razorpay"])
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
 
   /* ── commission aggregates ───────────────────────────────────────────────── */
@@ -173,9 +205,12 @@ export default async function RevenueAdminPage({
     0
   );
 
-  // Source: wallet_ledger.amount WHERE type='debit' → commission debits
+  // Source: wallet_ledger.amount WHERE type='debit' AND reason='commission'
+  // IMPORTANT: only count reason='commission' (the value written by app/api/checkout/verify/route.ts).
+  // Before this fix the filter was type='debit' which would also count reason='template_purchase'
+  // debits, wrongly inflating commission and double-inflating totalRevenue.
   const walletDebits = (walletAll ?? [])
-    .filter((r) => r.type === "debit")
+    .filter((r) => r.type === "debit" && r.reason === "commission")
     .reduce((s, r) => s + (r.amount ?? 0), 0);
 
   // Authoritative commission = max of order snapshot vs wallet debits
@@ -206,6 +241,32 @@ export default async function RevenueAdminPage({
   // Note: for prorated upgrades, amount < plan.price * 100 (discount already applied)
   const planRevenueTotal = (allPlanPayments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
   const planPaymentCount = (allPlanPayments ?? []).length;
+
+  /* ── template revenue aggregates ─────────────────────────────────────────── */
+
+  // WALLET-RAIL template sales: counted via wallet_ledger (reason='template_purchase').
+  // These debits are already in walletAll (fetched above with all reasons).
+  // NOTE: wallet sales also have a row in template_purchases with source='wallet',
+  // but we do NOT count those here — we count wallet_ledger as the single source
+  // for wallet-rail totals to avoid double-counting.
+  const walletTemplateSalesPaise = (walletAll ?? [])
+    .filter((r) => r.type === "debit" && r.reason === "template_purchase")
+    .reduce((s, r) => s + (r.amount ?? 0), 0);
+  const walletTemplateSalesCount = (walletAll ?? []).filter(
+    (r) => r.type === "debit" && r.reason === "template_purchase"
+  ).length;
+
+  // RAZORPAY-RAIL template sales: counted via template_purchases WHERE source='razorpay'.
+  // These are NOT in wallet_ledger, so there is no double-count risk.
+  const razorpayTemplateSalesPaise = (razorpayTemplatePurchases ?? []).reduce(
+    (s, p) => s + ((p as { price_paise?: number }).price_paise ?? 0),
+    0
+  );
+  const razorpayTemplateSalesCount = (razorpayTemplatePurchases ?? []).length;
+
+  // Total template revenue = wallet rail + razorpay rail (each counted exactly once)
+  const templateRevenueTotal = walletTemplateSalesPaise + razorpayTemplateSalesPaise;
+  const templateSalesCount = walletTemplateSalesCount + razorpayTemplateSalesCount;
 
   /* ── this-month aggregates ───────────────────────────────────────────────── */
 
@@ -240,9 +301,10 @@ export default async function RevenueAdminPage({
 
   /* ── total platform revenue ──────────────────────────────────────────────── */
   // = commission (per-sale, deducted from seller wallets) + plan purchases (cash collected)
+  //   + template sales (wallet rail via wallet_ledger + razorpay rail via template_purchases)
   // Wallet recharge volume is not additive here — those are seller inflows that
   // eventually become commission debits when a sale happens.
-  const totalRevenue = commission + planRevenueTotal;
+  const totalRevenue = commission + planRevenueTotal + templateRevenueTotal;
 
   const totalPaidOrders = paidOrders?.length ?? 0;
   const avgOrderValue = totalPaidOrders > 0 ? Math.round(gmv / totalPaidOrders) : 0;
@@ -279,7 +341,7 @@ export default async function RevenueAdminPage({
   /* ── build merged transaction rows for the feed ──────────────────────────── */
   type TxEntry = {
     date: string;
-    type: "Plan" | "Recharge" | "Bonus";
+    type: "Plan" | "Recharge" | "Bonus" | "Template";
     storeName: string;
     storeSubdomain: string;
     desc: string;
@@ -317,13 +379,40 @@ export default async function RevenueAdminPage({
     };
   });
 
+  // Template purchase tx rows — built from template_purchases feed (both rails).
+  // For the feed we use template_purchases as the single source for both wallet and
+  // razorpay rails because it has template_id + template name in one joined query.
+  // NOTE: the revenue TOTALS use wallet_ledger for wallet-rail to avoid double-counting;
+  // the feed display using template_purchases is fine because we display, not sum, here.
+  const templateTxRows: TxEntry[] = (templatePurchasesFeed ?? []).map((p) => {
+    const rec = p as {
+      price_paise?: number;
+      source?: string;
+      created_at?: string;
+      template?: { name?: string | null } | null;
+      store?: { store_name?: string | null; subdomain?: string | null } | null;
+    };
+    const store = rec.store;
+    const tmpl = rec.template;
+    const tmplName = tmpl?.name ?? "Unknown template";
+    const src = rec.source ?? "wallet";
+    return {
+      date: rec.created_at ?? "",
+      type: "Template",
+      storeName: store?.store_name ?? "—",
+      storeSubdomain: store?.subdomain ?? "",
+      desc: `${tmplName} (${src})`,
+      amount: Number(rec.price_paise ?? 0),
+    };
+  });
+
   // Merge and sort by timestamp descending
-  const mergedTx = [...planTxRows, ...walletTxRows].sort(
+  const mergedTx = [...planTxRows, ...walletTxRows, ...templateTxRows].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  // Total count = plan payments + wallet recharge credits (both sources)
-  const txTotal = (planPaymentsTotal ?? 0) + (walletCreditsTotal ?? 0);
+  // Total count = plan payments + wallet recharge credits + template sales
+  const txTotal = (planPaymentsTotal ?? 0) + (walletCreditsTotal ?? 0) + templateSalesCount;
 
   const txTableRows = mergedTx.map((tx) => [
     <span key="d" style={{ whiteSpace: "nowrap", color: "var(--muted)", fontSize: 12 }}>
@@ -333,6 +422,8 @@ export default async function RevenueAdminPage({
       <Tag key="t" kind="paid">Plan purchase</Tag>
     ) : tx.type === "Bonus" ? (
       <Tag key="t" kind="neu">Recharge bonus</Tag>
+    ) : tx.type === "Template" ? (
+      <Tag key="t" kind="paid">Template sale</Tag>
     ) : (
       <Tag key="t" kind="pend">Wallet recharge</Tag>
     ),
@@ -393,7 +484,7 @@ export default async function RevenueAdminPage({
 
       <Phead
         title="Revenue overview"
-        sub="All platform revenue streams — commission, plan subscriptions, and wallet recharges — from real ledger tables."
+        sub="All platform revenue streams — commission, plan subscriptions, wallet recharges, and template sales — from real ledger tables."
         action={
           <button className="btn ghost" style={{ cursor: "default", fontSize: 12.5 }}>
             All time
@@ -409,7 +500,7 @@ export default async function RevenueAdminPage({
             color: "var(--primary)",
             label: "Platform revenue",
             value: totalRevenue > 0 ? inr(totalRevenue) : "₹0",
-            delta: "Commission + plan purchases",
+            delta: "Commission + plan purchases + templates",
           },
           {
             icon: "tag",
@@ -419,6 +510,15 @@ export default async function RevenueAdminPage({
             delta: planPaymentCount > 0
               ? `${planPaymentCount} payment${planPaymentCount === 1 ? "" : "s"}`
               : "No plan purchases yet",
+          },
+          {
+            icon: "layers",
+            color: "var(--secondary)",
+            label: "Template sales",
+            value: templateRevenueTotal > 0 ? inr(templateRevenueTotal) : "₹0",
+            delta: templateSalesCount > 0
+              ? `${templateSalesCount} sale${templateSalesCount === 1 ? "" : "s"} · wallet + Razorpay`
+              : "No template sales yet",
           },
           {
             icon: "wallet",
@@ -431,7 +531,7 @@ export default async function RevenueAdminPage({
           },
           {
             icon: "users",
-            color: "var(--secondary)",
+            color: "var(--muted)",
             label: "Active sellers",
             value: String(activeSellers ?? 0),
             delta: activeSubCount > 0
@@ -518,11 +618,15 @@ export default async function RevenueAdminPage({
             real={walletRechargePaid > 0}
           />
           <StreamRow
-            color="var(--border)"
+            color="var(--secondary)"
             name="Premium templates"
-            desc="One-time template marketplace sales — not yet tracked"
-            value="— (coming soon)"
-            real={false}
+            desc={
+              templateSalesCount > 0
+                ? `${templateSalesCount} sale${templateSalesCount === 1 ? "" : "s"} · one-time unlock (wallet + Razorpay rails)`
+                : "One-time template marketplace sales — wallet + Razorpay rails"
+            }
+            value={inr(templateRevenueTotal)}
+            real={templateRevenueTotal > 0}
           />
           <StreamRow
             color="var(--border)"
@@ -536,6 +640,7 @@ export default async function RevenueAdminPage({
           <p className="rv-note">
             Streams showing "— (coming soon)" have no backing table yet.
             All real numbers come from live DB queries on every page load.
+            Template sales are tracked via <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>template_purchases</code> (Razorpay rail) and <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>wallet_ledger</code> reason=template_purchase (wallet rail).
           </p>
         </Card>
       </div>
@@ -604,7 +709,20 @@ export default async function RevenueAdminPage({
             <span className="dx-fw6 dx-muted">{walletCreditsAll > 0 ? inr(walletCreditsAll) : "₹0"}</span>
           </div>
           <div className="dx-kv">
-            <span>Template / domain / overage</span>
+            <span>
+              Template sales
+              {templateSalesCount > 0 && (
+                <span className="dx-muted" style={{ fontSize: 11.5, marginLeft: 6, fontWeight: 400 }}>
+                  ({templateSalesCount} sale{templateSalesCount === 1 ? "" : "s"})
+                </span>
+              )}
+            </span>
+            <span className="dx-fw6" style={{ color: templateRevenueTotal > 0 ? "var(--primary)" : undefined }}>
+              {templateRevenueTotal > 0 ? inr(templateRevenueTotal) : "₹0"}
+            </span>
+          </div>
+          <div className="dx-kv">
+            <span>Domain add-ons / overage</span>
             <span className="dx-fw6 dx-muted">—</span>
           </div>
           <div
@@ -635,16 +753,20 @@ export default async function RevenueAdminPage({
           <p className="dx-muted" style={{ fontSize: 11.5, marginTop: 10 }}>
             Platform revenue = commission (
             <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>wallet_ledger</code>
-            {" "}debits) + plan purchases (
+            {" "}reason=commission) + plan purchases (
             <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>plan_payments</code>
-            {" "}amounts). Wallet recharge inflow funds future commission — not additive revenue.
+            {" "}amounts) + template sales (
+            <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>wallet_ledger</code>
+            {" "}reason=template_purchase +{" "}
+            <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 10.5 }}>template_purchases</code>
+            {" "}source=razorpay). Wallet recharge inflow funds future commission — not additive revenue.
           </p>
         </Card>
       </div>
 
       {/* ── Platform transactions feed ────────────────────────────────────────── */}
       <div style={{ marginTop: 24 }}>
-        <Card title="Platform transactions" link="Plan purchases + wallet recharges · all sellers">
+        <Card title="Platform transactions" link="Plan purchases + wallet recharges + template sales · all sellers">
 
           {/* KPI mini row */}
           {/* All-time row */}
@@ -707,17 +829,21 @@ export default async function RevenueAdminPage({
             <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, background: "var(--surface2)", padding: "1px 5px", borderRadius: 4 }}>
               plan_payments
             </code>
-            {" "}and{" "}
+            ,{" "}
             <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, background: "var(--surface2)", padding: "1px 5px", borderRadius: 4 }}>
               wallet_ledger
             </code>
-            {" "}(credits with reason = recharge / recharge_bonus). Real data only.
+            {" "}(recharge / recharge_bonus), and{" "}
+            <code style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 11, background: "var(--surface2)", padding: "1px 5px", borderRadius: 4 }}>
+              template_purchases
+            </code>
+            {" "}(wallet + razorpay). Real data only. Template rows show most-recent 200.
           </p>
 
           <Table
             cols={["Date", "Type", "Store", "Description", "Amount"]}
             rows={txTableRows}
-            empty="No transactions yet. Plan purchases and wallet recharges will appear here as they happen."
+            empty="No transactions yet. Plan purchases, wallet recharges, and template sales will appear here as they happen."
           />
 
           <Pagination

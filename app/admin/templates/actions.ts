@@ -341,6 +341,73 @@ export async function saveStorePageAsTemplate(input: {
   return { ok: true, id: (data as { id: string }).id };
 }
 
+// ── templateSalesStats ────────────────────────────────────────────────────────
+
+/**
+ * Per-template revenue analytics for the admin template manager.
+ *
+ * Source: template_purchases WHERE source IN ('wallet','razorpay').
+ * We use template_purchases as the SINGLE source for both rails here because
+ * every paid purchase (wallet or razorpay) writes a template_purchases row with
+ * source set accordingly. This gives us template_id + price_paise in one table,
+ * which wallet_ledger does not have (ledger rows don't carry template_id).
+ * NOTE: the /admin/revenue TOTAL uses wallet_ledger for wallet-rail to avoid
+ * double-counting against the broader ledger; per-template analytics is a separate
+ * aggregation that simply counts template_purchases once per purchase row.
+ *
+ * ADMIN-ONLY.
+ */
+export type TemplateSalesStat = {
+  template_id: string;
+  sales_count: number;
+  revenue_paise: number;
+  wallet_count: number;
+  razorpay_count: number;
+};
+
+export async function templateSalesStats(): Promise<
+  { ok: true; stats: TemplateSalesStat[] } | { ok: false; error: string }
+> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  const adminSb = createAdminClient();
+  const { data, error } = await adminSb
+    .from("template_purchases")
+    .select("template_id, price_paise, source")
+    .in("source", ["wallet", "razorpay"]);
+
+  if (error) {
+    // Graceful degradation if template_purchases table not yet applied
+    if (
+      error.code === "42P01" ||
+      (error.message?.toLowerCase().includes("does not exist") &&
+        error.message?.toLowerCase().includes("relation"))
+    ) {
+      return { ok: true, stats: [] };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  // Aggregate in JS — avoids a raw SQL RPC and keeps this compatible with PostgREST
+  const map = new Map<string, TemplateSalesStat>();
+  for (const row of data ?? []) {
+    const tid = row.template_id as string;
+    const paise = Number((row as { price_paise?: number }).price_paise ?? 0);
+    const src = (row as { source?: string }).source ?? "wallet";
+    if (!map.has(tid)) {
+      map.set(tid, { template_id: tid, sales_count: 0, revenue_paise: 0, wallet_count: 0, razorpay_count: 0 });
+    }
+    const s = map.get(tid)!;
+    s.sales_count += 1;
+    s.revenue_paise += paise;
+    if (src === "razorpay") s.razorpay_count += 1;
+    else s.wallet_count += 1;
+  }
+
+  return { ok: true, stats: Array.from(map.values()) };
+}
+
 // ── exportTemplateManifest ────────────────────────────────────────────────────
 
 /**
