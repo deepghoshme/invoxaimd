@@ -23,7 +23,6 @@
  */
 
 import { useState, useTransition, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { applyTemplate } from "./actions";
 import { startTemplatePurchase } from "./gallery-actions";
 import { SINGLETON_PAGE_TYPES, TYPE_TO_PAGE, type TemplateType, type PageTypeEnum } from "@/lib/templates-apply";
@@ -493,7 +492,6 @@ function TemplateCard({
 // ── Main Gallery ──────────────────────────────────────────────────────────────
 
 export default function TemplateGallery({ templates }: Props) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [filterType, setFilterType] = useState<string>("");
@@ -536,7 +534,7 @@ export default function TemplateGallery({ templates }: Props) {
         if (result.ok) {
           setRailChooser(null);
           showToast("Template purchased and applied! Opening builder...", "ok");
-          router.push(result.redirect);
+          window.location.assign(result.redirect);
         } else if ("needsRecharge" in result && result.needsRecharge) {
           const balRs = result.balance != null ? fmtPrice(result.balance) : null;
           const priceRs = result.price_paise != null ? fmtPrice(result.price_paise) : "";
@@ -554,7 +552,7 @@ export default function TemplateGallery({ templates }: Props) {
         setRailBusy(false);
       }
     });
-  }, [railChooser, router, showToast]);
+  }, [railChooser, showToast]);
 
   // ── Razorpay rail ────────────────────────────────────────────────────────────
   const handleRazorpayPurchase = useCallback(async () => {
@@ -598,7 +596,7 @@ export default function TemplateGallery({ templates }: Props) {
             const result = await (await import("./actions")).applyTemplate(tmpl.id, { pageType: mapped });
             if (result.ok) {
               showToast("Template applied! Opening builder...", "ok");
-              router.push(result.redirect);
+              window.location.assign(result.redirect);
             } else {
               showToast((result as { error: string }).error ?? "Failed to apply.", "err");
             }
@@ -643,7 +641,7 @@ export default function TemplateGallery({ templates }: Props) {
 
             setRailChooser(null);
             showToast("Template purchased and applied! Opening builder...", "ok");
-            router.push(v.redirect);
+            window.location.assign(v.redirect);
           } catch (e) {
             showToast(e instanceof Error ? e.message : "Verification failed", "err");
           } finally {
@@ -657,7 +655,7 @@ export default function TemplateGallery({ templates }: Props) {
       showToast(e instanceof Error ? e.message : "Payment failed", "err");
       setRailChooser(null);
     }
-  }, [railChooser, router, showToast]);
+  }, [railChooser, showToast]);
 
   // ── Main apply handler ───────────────────────────────────────────────────────
   const handleApply = useCallback(
@@ -686,7 +684,7 @@ export default function TemplateGallery({ templates }: Props) {
           const result = await applyTemplate(tmpl.id, { pageType: mapped as PageTypeEnum });
           if (result.ok) {
             showToast("Template applied! Opening builder...", "ok");
-            router.push(result.redirect);
+            window.location.assign(result.redirect);
           } else {
             showToast((result as { error: string }).error ?? "Failed to apply template.", "err");
           }
@@ -697,7 +695,7 @@ export default function TemplateGallery({ templates }: Props) {
         }
       });
     },
-    [preview, router, showToast],
+    [preview, showToast],
   );
 
   return (
