@@ -135,6 +135,13 @@ export interface ThemeTokens {
 // Page document (stored in pages.content as JSON with v=6)
 // ---------------------------------------------------------------------------
 
+/** Optional sticky mobile call-to-action bar (shown only on phones). */
+export interface MobileCta {
+  enabled: boolean;
+  label: string;
+  url: string;
+}
+
 export interface PageDoc {
   /** Matches pages.id */
   id: string;
@@ -145,6 +152,8 @@ export interface PageDoc {
   themeId: string;
   pageBg: 'none' | 'orbs' | 'grid' | 'aurora' | 'mesh' | 'dots';
   sections: Section[];
+  /** Sticky bottom CTA on mobile (optional). */
+  mobileCta?: MobileCta;
   status: 'draft' | 'published';
   updatedAt: string; // ISO 8601
 }

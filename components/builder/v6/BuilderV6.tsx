@@ -258,8 +258,8 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
             <div className="bx-chrome"><span className="bx-dot" /><span className="bx-dot" /><span className="bx-dot" /><span className="bx-url">{doc.slug || "preview"}.invoxai.io</span></div>
             <div className="bx-scr">
               {device === "web"
-                ? <ScaledFrame width={1180}><RenderEngine doc={doc} /></ScaledFrame>
-                : <RenderEngine doc={doc} />}
+                ? <ScaledFrame width={1180}><RenderEngine doc={doc} device="web" /></ScaledFrame>
+                : <RenderEngine doc={doc} device="mobile" />}
             </div>
           </div>
         </div>
@@ -273,9 +273,18 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
               <div className="bx-field"><label>Theme</label>
                 <Chips value={doc.themeId} options={THEMES.map((t) => ({ value: t.id, label: t.name }))} onChange={(v) => setDoc((d) => ({ ...d, themeId: v }))} />
               </div>
-              <div className="bx-field" style={{ marginBottom: 0 }}><label>Page background</label>
+              <div className="bx-field"><label>Page background</label>
                 <Chips value={doc.pageBg} options={PAGE_BGS.map((b) => ({ value: b.id, label: b.label }))} onChange={(v) => setDoc((d) => ({ ...d, pageBg: v }))} />
               </div>
+              <div className="bx-field bx-row"><label style={{ marginBottom: 0 }}>Mobile bottom CTA</label>
+                <Switch on={doc.mobileCta?.enabled === true} onClick={() => setDoc((d) => ({ ...d, mobileCta: { enabled: !(d.mobileCta?.enabled === true), label: d.mobileCta?.label ?? "Get started", url: d.mobileCta?.url ?? "#" } }))} />
+              </div>
+              {doc.mobileCta?.enabled && (
+                <>
+                  <div className="bx-field"><label>CTA label</label><input type="text" value={doc.mobileCta.label} onChange={(e) => setDoc((d) => ({ ...d, mobileCta: { ...d.mobileCta!, label: e.target.value } }))} /></div>
+                  <div className="bx-field" style={{ marginBottom: 0 }}><label>CTA link</label><input type="url" value={doc.mobileCta.url} onChange={(e) => setDoc((d) => ({ ...d, mobileCta: { ...d.mobileCta!, url: e.target.value } }))} /></div>
+                </>
+              )}
             </div>
 
             <div className="bx-railhead"><h4>Sections</h4><span className="bx-msg">{sections.length}</span></div>
@@ -310,8 +319,8 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
               <div className="bx-chrome"><span className="bx-dot" /><span className="bx-dot" /><span className="bx-dot" /><span className="bx-url">{doc.slug || "preview"}.invoxai.io</span></div>
               <div className="bx-scr">
                 {device === "web"
-                  ? <ScaledFrame width={1180}><RenderEngine sections={sections} themeId={doc.themeId} pageBg={doc.pageBg} editor selectedId={selectedId} onSelectSection={setSelectedId} /></ScaledFrame>
-                  : <RenderEngine sections={sections} themeId={doc.themeId} pageBg={doc.pageBg} editor selectedId={selectedId} onSelectSection={setSelectedId} />}
+                  ? <ScaledFrame width={1180}><RenderEngine sections={sections} themeId={doc.themeId} pageBg={doc.pageBg} mobileCta={doc.mobileCta} device="web" editor selectedId={selectedId} onSelectSection={setSelectedId} /></ScaledFrame>
+                  : <RenderEngine sections={sections} themeId={doc.themeId} pageBg={doc.pageBg} mobileCta={doc.mobileCta} device="mobile" editor selectedId={selectedId} onSelectSection={setSelectedId} />}
               </div>
             </div>
           </div>

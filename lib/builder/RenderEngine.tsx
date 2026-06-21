@@ -7,7 +7,7 @@
  * Self-contained: do NOT import from any existing studio/route/db module.
  */
 import type { CSSProperties, ReactNode } from 'react';
-import type { PageDoc, Section } from './types';
+import type { MobileCta, PageDoc, Section } from './types';
 import { getTheme, themeVars } from './themes';
 import { pageBgStyle, sectionBgStyle } from './backgrounds';
 
@@ -672,10 +672,19 @@ const ENGINE_CSS = `
 .bx-anim-fade{animation:bxFade .8s ease both}
 .bx-anim-float{animation:bxFloat 4s ease-in-out infinite}
 .bx-marquee{animation:bxMarquee 22s linear infinite}
+/* sticky mobile CTA bar */
+.bx-mobilecta{position:sticky;bottom:0;z-index:20;display:none;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(0,0,0,.1)}
+.bx-mobilecta a{flex:none;background:var(--bx-grad);color:#fff;font-weight:700;font-family:var(--bx-font-display);padding:11px 22px;border-radius:12px;text-decoration:none}
+.bx-mobilecta .lbl{font-weight:700;font-family:var(--bx-font-display)}
+/* real-viewport mobile rules */
 @media (max-width:760px){
   .bx-root [style*="grid-template-columns"]{grid-template-columns:1fr !important}
   .bx-mobile-hidden{display:none !important}
+  .bx-mobilecta{display:flex}
 }
+/* forced mobile (editor preview / device='mobile') — viewport-independent */
+.bx-dev-mobile [style*="grid-template-columns"]{grid-template-columns:1fr !important}
+.bx-dev-mobile .bx-mobilecta{display:flex}
 @media (prefers-reduced-motion:reduce){
   .bx-anim-up,.bx-anim-zoom,.bx-anim-fade,.bx-anim-float,.bx-marquee{animation:none !important}
 }
@@ -694,18 +703,24 @@ export interface RenderEngineProps {
   selectedId?: string | null;
   /** Editor: click-to-select callback; when set, sections become clickable. */
   onSelectSection?: (id: string) => void;
+  /** Force a device layout regardless of viewport (editor preview). */
+  device?: 'web' | 'mobile';
+  /** Sticky mobile CTA bar (overrides doc.mobileCta when provided). */
+  mobileCta?: MobileCta;
 }
 
 /**
  * The single render engine. Pass a `doc` (public/preview) or raw
  * `sections`/`themeId`/`pageBg` (editor live preview).
  */
-export function RenderEngine({ doc, sections, themeId, pageBg, editor, selectedId, onSelectSection }: RenderEngineProps) {
+export function RenderEngine({ doc, sections, themeId, pageBg, editor, selectedId, onSelectSection, device, mobileCta }: RenderEngineProps) {
   const secs = doc?.sections ?? sections ?? [];
   const theme = getTheme(doc?.themeId ?? themeId);
   const bg = doc?.pageBg ?? pageBg ?? 'none';
+  const cta = mobileCta ?? doc?.mobileCta;
+  const rootClass = `bx-root${device === 'mobile' ? ' bx-dev-mobile' : ''}`;
   return (
-    <div className="bx-root" style={themeVars(theme)}>
+    <div className={rootClass} style={themeVars(theme)}>
       <style dangerouslySetInnerHTML={{ __html: ENGINE_CSS }} />
       {bg !== 'none' && <div className="bx-pagebg" style={pageBgStyle(bg)} aria-hidden />}
       {secs.length === 0 && <div className="bx-empty">No sections yet — add one to get started.</div>}
@@ -718,6 +733,11 @@ export function RenderEngine({ doc, sections, themeId, pageBg, editor, selectedI
           onSelect={onSelectSection}
         />
       ))}
+      {cta?.enabled && cta.label && (
+        <div className="bx-mobilecta">
+          <a href={safeHref(cta.url || '#')} style={{ flex: 1, textAlign: 'center' }}>{cta.label}</a>
+        </div>
+      )}
     </div>
   );
 }
