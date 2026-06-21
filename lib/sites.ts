@@ -99,14 +99,18 @@ export async function getPublishedPage(
   pageType: string,
 ): Promise<SitePage | null> {
   const supabase = createAdminClient();
+  // "many" page types (opp/pay/…) can have several published rows; resolving by
+  // type alone must not error (maybeSingle throws PGRST116 on >1). Take the most
+  // recently published. Singletons (website/store/bio/courses) still return one.
   const { data } = await supabase
     .from("pages")
     .select("id, page_type, title, template_id, content, seo, pixels, status, theme_id, page_bg")
     .eq("store_id", storeId)
     .eq("page_type", pageType)
     .eq("status", "published")
-    .maybeSingle();
-  return (data as SitePage | null) ?? null;
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(1);
+  return ((data?.[0] as SitePage | undefined) ?? null);
 }
 
 /** A published "many" page (opp/pay/…) resolved by its public_id. */
