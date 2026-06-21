@@ -47,6 +47,9 @@ import "../../../booking.css";
 import ProductTemplate from "@/components/templates/ProductTemplate";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
 import PixelInjector from "@/components/PixelInjector";
+import RenderEngine from "@/lib/builder/RenderEngine";
+import type { PageDoc, PageType, Section, MobileCta } from "@/lib/builder/types";
+import { DEFAULT_THEME_ID } from "@/lib/builder/themes";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +75,7 @@ async function resolve(domain: string, path?: string[]) {
       async ({ createAdminClient }) =>
         createAdminClient()
           .from("pages")
-          .select("id, page_type, title, template_id, content, seo, pixels, status")
+          .select("id, page_type, title, template_id, content, seo, pixels, status, theme_id, page_bg")
           .eq("id", store.alias_page_id!)
           .eq("store_id", store.id)
           .eq("status", "published")
@@ -198,6 +201,31 @@ export default async function SitePage({ params }: { params: Promise<Params> }) 
   const storeSeo = await getStoreSeoDefaults(store.id);
 
   const { show_brand_badge } = await getPlatformSettings();
+
+  // Page Builder v6 rows: content.v === 6. Render via the single engine.
+  // Legacy rows (no content.v) fall through to the existing dispatch untouched.
+  if ((page.content as { v?: number })?.v === 6) {
+    const c = page.content as { v: number; type?: string; sections?: unknown; mobileCta?: unknown };
+    const pageDoc: PageDoc = {
+      id: page.id,
+      ownerId: "",
+      type: (c.type as PageType) ?? "landing",
+      slug: "",
+      title: page.title ?? store.store_name ?? "",
+      themeId: page.theme_id ?? DEFAULT_THEME_ID,
+      pageBg: (page.page_bg as PageDoc["pageBg"]) ?? "none",
+      sections: Array.isArray(c.sections) ? (c.sections as Section[]) : [],
+      mobileCta: c.mobileCta as MobileCta | undefined,
+      status: (page.status as PageDoc["status"]) ?? "published",
+      updatedAt: new Date().toISOString(),
+    };
+    return (
+      <>
+        <PixelInjector pixels={page.pixels as { meta_pixel_id?: string; google_id?: string }} storePixels={storeSeo} />
+        <RenderEngine doc={pageDoc} />
+      </>
+    );
+  }
 
   if (page.page_type === "opp") {
     const gateway = await getStoreGateway(store.id);

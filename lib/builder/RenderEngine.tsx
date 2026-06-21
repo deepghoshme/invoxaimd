@@ -3,13 +3,19 @@
  * InvoxAI Page Builder v6 — the ONE render engine.
  * Renders a PageDoc (or a raw Section[]) and is shared by the editor preview,
  * the Preview overlay and the public SSR route. Presentational + SSR-safe
- * (no hooks, no event handlers) so it renders identically on server & client.
+ * (no hooks, no event handlers at this level) so it renders identically on
+ * server & client.
  * Self-contained: do NOT import from any existing studio/route/db module.
+ *
+ * Client-interactive widgets live in ./runtime.tsx ("use client") and are
+ * imported here. Next.js app router hydrates them automatically; they each
+ * render a meaningful SSR fallback so renderToStaticMarkup is safe.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import type { MobileCta, PageDoc, Section } from './types';
 import { getTheme, themeVars } from './themes';
 import { pageBgStyle, sectionBgStyle } from './backgrounds';
+import { Countdown, LeadForm, Popup } from './runtime';
 
 // ---------------------------------------------------------------------------
 // prop readers
@@ -46,6 +52,98 @@ function safeHref(u: string): string {
   if (!trimmed) return '#';
   if (/^(https?:|mailto:|tel:|#|\/)/i.test(trimmed)) return trimmed;
   return '#';
+}
+
+// ---------------------------------------------------------------------------
+// Video embed — host-allowlisted, SSR-safe (no client needed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a user-supplied video URL and return a safe embed src or null.
+ *
+ * Host allowlist:
+ *   - youtube.com / www.youtube.com / youtu.be  → https://www.youtube.com/embed/{id}
+ *   - vimeo.com / www.vimeo.com                → https://player.vimeo.com/video/{id}
+ *   - direct file: url ending in .mp4 / .webm / .ogg with http(s) scheme → { type:'file', src }
+ *
+ * Any other host (or unparseable URL) → null (fall back to poster+play glyph).
+ * The embed src is built from a hard-coded trusted prefix + only the extracted
+ * video ID, never from string-concatenating the user-supplied host.
+ */
+type VideoEmbed =
+  | { kind: 'youtube'; embedSrc: string }
+  | { kind: 'vimeo'; embedSrc: string }
+  | { kind: 'file'; src: string }
+  | null;
+
+function parseVideoUrl(raw: string): VideoEmbed {
+  const url = (raw || '').trim();
+  if (!url) return null;
+
+  // Scheme check: must be http or https.
+  if (!/^https?:\/\//i.test(url)) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+
+  // --- YouTube ---
+  if (host === 'youtube.com' || host === 'youtu.be') {
+    let id: string | null = null;
+    if (host === 'youtu.be') {
+      // https://youtu.be/{id}
+      id = parsed.pathname.replace(/^\//, '').split('/')[0] || null;
+    } else {
+      // https://www.youtube.com/watch?v={id}
+      // https://www.youtube.com/embed/{id}
+      id = parsed.searchParams.get('v');
+      if (!id) {
+        // /embed/{id} or /shorts/{id}
+        const parts = parsed.pathname.replace(/^\//, '').split('/');
+        if ((parts[0] === 'embed' || parts[0] === 'shorts') && parts[1]) {
+          id = parts[1];
+        }
+      }
+    }
+    // Validate id: YouTube ids are 11 alphanumeric + - _ chars.
+    if (id && /^[\w-]{1,32}$/.test(id)) {
+      return { kind: 'youtube', embedSrc: `https://www.youtube.com/embed/${id}` };
+    }
+    return null;
+  }
+
+  // --- Vimeo ---
+  if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+    // https://vimeo.com/{id}  or  https://player.vimeo.com/video/{id}
+    const parts = parsed.pathname.replace(/^\//, '').split('/');
+    let id: string | null = null;
+    if (host === 'player.vimeo.com') {
+      // /video/{id}
+      if (parts[0] === 'video' && parts[1]) id = parts[1];
+    } else {
+      // /channels/{channel}/{id}  or  /{id}
+      const last = parts[parts.length - 1];
+      if (/^\d+$/.test(last)) id = last;
+    }
+    if (id && /^\d+$/.test(id)) {
+      return { kind: 'vimeo', embedSrc: `https://player.vimeo.com/video/${id}` };
+    }
+    return null;
+  }
+
+  // --- Direct file (.mp4 / .webm / .ogg) ---
+  const ext = parsed.pathname.split('.').pop()?.toLowerCase() ?? '';
+  if (['mp4', 'webm', 'ogg'].includes(ext)) {
+    // src is the sanitized safeHref output (scheme-checked above).
+    return { kind: 'file', src: url };
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +252,7 @@ const grid = (cols: number, gap = 18): CSSProperties => ({
 // per-block renderers
 // ---------------------------------------------------------------------------
 
-function renderBlock(s: Section): ReactNode {
+function renderBlock(s: Section, editor?: boolean): ReactNode {
   const p = s.props || {};
   switch (s.type) {
     // ---- Structure ----
@@ -461,15 +559,43 @@ function renderBlock(s: Section): ReactNode {
       );
     }
     case 'video': {
+      const videoUrl = str(p, 'url');
+      const embed = parseVideoUrl(videoUrl);
       return (
         <Container style={{ textAlign: 'center', maxWidth: 880 }}>
           {str(p, 'heading') && <div style={{ marginBottom: 20 }}><H>{str(p, 'heading')}</H></div>}
-          <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden' }}>
-            <Img src={str(p, 'poster')} style={{ aspectRatio: '16/9' }} />
-            <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-              <span style={{ width: 64, height: 64, borderRadius: 999, background: 'rgba(255,255,255,.92)', color: 'var(--bx-brand)', display: 'grid', placeItems: 'center', fontSize: 24 }}>▶</span>
+          {embed && embed.kind === 'file' ? (
+            // Direct MP4/WebM/OGG file
+            <div style={{ borderRadius: 18, overflow: 'hidden' }}>
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <video
+                controls
+                src={embed.src}
+                poster={str(p, 'poster') || undefined}
+                style={{ width: '100%', display: 'block', aspectRatio: '16/9', background: '#000' }}
+              />
             </div>
-          </div>
+          ) : embed ? (
+            // YouTube or Vimeo iframe embed
+            <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', aspectRatio: '16/9' }}>
+              <iframe
+                src={embed.embedSrc}
+                title={str(p, 'heading') || 'Video'}
+                allowFullScreen
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+              />
+            </div>
+          ) : (
+            // Fallback: poster + play glyph (unknown URL or no URL)
+            <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden' }}>
+              <Img src={str(p, 'poster')} style={{ aspectRatio: '16/9' }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                <span style={{ width: 64, height: 64, borderRadius: 999, background: 'rgba(255,255,255,.92)', color: 'var(--bx-brand)', display: 'grid', placeItems: 'center', fontSize: 24 }}>▶</span>
+              </div>
+            </div>
+          )}
         </Container>
       );
     }
@@ -597,15 +723,12 @@ function renderBlock(s: Section): ReactNode {
     case 'countdown': {
       return (
         <Container style={{ textAlign: 'center' }}>
-          <H lvl={3}>{str(p, 'heading')}</H>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
-            {['Days', 'Hrs', 'Min', 'Sec'].map((u) => (
-              <div key={u} style={{ minWidth: 64 }}>
-                <div style={{ fontSize: 32, fontWeight: 800, fontFamily: 'var(--bx-font-display)', background: 'rgba(0,0,0,.06)', borderRadius: 12, padding: '10px 0' }}>00</div>
-                <div style={{ opacity: 0.7, fontSize: 12, marginTop: 4 }}>{u}</div>
-              </div>
-            ))}
-          </div>
+          <Countdown
+            target={str(p, 'target')}
+            expiredText={str(p, 'expiredText', 'This offer has ended.')}
+            heading={str(p, 'heading')}
+            editor={editor}
+          />
         </Container>
       );
     }
@@ -618,36 +741,37 @@ function renderBlock(s: Section): ReactNode {
       );
     }
     case 'lead': {
-      const fields = list(p, 'fields');
+      const rawFields = list<Record<string, unknown>>(p, 'fields');
+      const leadFields = rawFields.map((fl) => ({
+        key: str(fl, 'key'),
+        label: str(fl, 'label'),
+        type: str(fl, 'type', 'text'),
+      }));
       return (
         <Container style={{ maxWidth: 480, textAlign: 'center' }}>
-          <H>{str(p, 'heading')}</H>
-          {str(p, 'sub') && <Sub>{str(p, 'sub')}</Sub>}
-          <form style={{ display: 'grid', gap: 10, marginTop: 20, textAlign: 'left' }}>
-            {fields.map((fl, i) => {
-              const r = fl as Record<string, unknown>;
-              const type = str(r, 'type', 'text');
-              const name = str(r, 'key') || undefined;
-              const common: CSSProperties = { padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,.15)', width: '100%', font: 'inherit' };
-              return type === 'textarea'
-                ? <textarea key={i} name={name} placeholder={str(r, 'label')} rows={3} style={common} />
-                : <input key={i} name={name} type={type} placeholder={str(r, 'label')} style={common} />;
-            })}
-            <span style={{ ...btnStyle(s), textAlign: 'center' }}>{str(p, 'submitLabel', 'Submit')}</span>
-          </form>
+          <LeadForm
+            heading={str(p, 'heading')}
+            sub={str(p, 'sub')}
+            fields={leadFields}
+            submitLabel={str(p, 'submitLabel', 'Submit')}
+            action={str(p, 'action')}
+            editor={editor}
+            btnInlineStyle={{ ...btnStyle(s), textAlign: 'center' }}
+          />
         </Container>
       );
     }
     case 'popup': {
-      // In static render the popup is shown inline as a card preview.
       return (
-        <Container style={{ maxWidth: 420 }}>
-          <Card style={{ textAlign: 'center', boxShadow: '0 30px 70px -30px rgba(0,0,0,.5)' }}>
-            <H lvl={3}>{str(p, 'title')}</H>
-            <p style={{ opacity: 0.78, marginTop: 8 }}>{str(p, 'text')}</p>
-            {str(p, 'ctaLabel') && <div style={{ marginTop: 16 }}><a href={safeHref(str(p, 'ctaUrl', '#'))} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a></div>}
-          </Card>
-        </Container>
+        <Popup
+          delay={num(p, 'delay', 5)}
+          title={str(p, 'title')}
+          text={str(p, 'text')}
+          ctaLabel={str(p, 'ctaLabel')}
+          ctaUrl={str(p, 'ctaUrl', '#')}
+          editor={editor}
+          btnInlineStyle={btnStyle(s)}
+        />
       );
     }
 
@@ -676,12 +800,24 @@ function SectionView({
   onSelect?: (id: string) => void;
 }) {
   if (section.mobileHidden && !editor) {
-    return <section className="bx-mobile-hidden" style={sectionStyle(section)}>{renderBlock(section)}</section>;
+    return <section className="bx-mobile-hidden" style={sectionStyle(section)}>{renderBlock(section, editor)}</section>;
   }
+
+  // Navbar sticky: apply position:sticky only on live pages (not in editor,
+  // where sticky inside the editor scroll area is jarring).
+  const isNavbarSticky = section.type === 'navbar' && bool(section.props || {}, 'sticky') && !editor;
+  const stickyStyle: CSSProperties | undefined = isNavbarSticky
+    ? { position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }
+    : undefined;
+
   const cls = section.anim ? ANIM_CLASS[section.anim] : undefined;
   const node = (
-    <section className={cls} data-block={section.type} style={sectionStyle(section)}>
-      {renderBlock(section)}
+    <section
+      className={cls}
+      data-block={section.type}
+      style={{ ...sectionStyle(section), ...stickyStyle }}
+    >
+      {renderBlock(section, editor)}
     </section>
   );
   // Editor affordance: clickable wrapper with selection outline + type tag.

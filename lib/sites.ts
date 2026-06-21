@@ -37,6 +37,8 @@ export type SitePage = {
   seo: Record<string, unknown>;
   pixels: Record<string, unknown>;
   status: string;
+  theme_id?: string | null;
+  page_bg?: string | null;
 };
 
 /** Resolve a seller store from an incoming public host (subdomain or custom domain). */
@@ -99,7 +101,7 @@ export async function getPublishedPage(
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("pages")
-    .select("id, page_type, title, template_id, content, seo, pixels, status")
+    .select("id, page_type, title, template_id, content, seo, pixels, status, theme_id, page_bg")
     .eq("store_id", storeId)
     .eq("page_type", pageType)
     .eq("status", "published")
@@ -116,7 +118,7 @@ export async function getPublishedPageByPublicId(
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("pages")
-    .select("id, page_type, title, template_id, content, seo, pixels, status")
+    .select("id, page_type, title, template_id, content, seo, pixels, status, theme_id, page_bg")
     .eq("store_id", storeId)
     .eq("page_type", pageType)
     .eq("public_id", pid)
@@ -176,7 +178,7 @@ export async function getPageById(pageId: string): Promise<SitePage | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("pages")
-    .select("id, page_type, title, template_id, content, seo, pixels, status")
+    .select("id, page_type, title, template_id, content, seo, pixels, status, theme_id, page_bg")
     .eq("id", pageId)
     .maybeSingle();
   return (data as SitePage | null) ?? null;
@@ -371,7 +373,7 @@ export async function getNewestPublishedPage(storeId: string): Promise<SitePage 
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("pages")
-    .select("id, page_type, title, template_id, content, seo, pixels, status")
+    .select("id, page_type, title, template_id, content, seo, pixels, status, theme_id, page_bg")
     .eq("store_id", storeId)
     .eq("status", "published")
     .order("published_at", { ascending: false, nullsFirst: false })
