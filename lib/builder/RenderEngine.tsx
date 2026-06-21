@@ -622,16 +622,39 @@ const ANIM_CLASS: Record<string, string> = {
   up: 'bx-anim-up', zoom: 'bx-anim-zoom', float: 'bx-anim-float', fade: 'bx-anim-fade',
 };
 
-function SectionView({ section, editor }: { section: Section; editor?: boolean }) {
+function SectionView({
+  section,
+  editor,
+  selected,
+  onSelect,
+}: {
+  section: Section;
+  editor?: boolean;
+  selected?: boolean;
+  onSelect?: (id: string) => void;
+}) {
   if (section.mobileHidden && !editor) {
     return <section className="bx-mobile-hidden" style={sectionStyle(section)}>{renderBlock(section)}</section>;
   }
   const cls = section.anim ? ANIM_CLASS[section.anim] : undefined;
-  return (
+  const node = (
     <section className={cls} data-block={section.type} style={sectionStyle(section)}>
       {renderBlock(section)}
     </section>
   );
+  // Editor affordance: clickable wrapper with selection outline + type tag.
+  if (onSelect) {
+    return (
+      <div
+        className={`bx-sec-wrap${selected ? ' sel' : ''}`}
+        onClick={(e) => { e.stopPropagation(); onSelect(section.id); }}
+      >
+        <span className="bx-tag">{section.type}{section.mobileHidden ? ' · hidden' : ''}</span>
+        {node}
+      </div>
+    );
+  }
+  return node;
 }
 
 /** Engine styles: keyframes + responsive rules, scoped to the engine root. */
@@ -667,13 +690,17 @@ export interface RenderEngineProps {
   pageBg?: PageDoc['pageBg'];
   /** Editor mode keeps mobile-hidden sections visible. */
   editor?: boolean;
+  /** Editor: currently selected section id (adds outline). */
+  selectedId?: string | null;
+  /** Editor: click-to-select callback; when set, sections become clickable. */
+  onSelectSection?: (id: string) => void;
 }
 
 /**
  * The single render engine. Pass a `doc` (public/preview) or raw
  * `sections`/`themeId`/`pageBg` (editor live preview).
  */
-export function RenderEngine({ doc, sections, themeId, pageBg, editor }: RenderEngineProps) {
+export function RenderEngine({ doc, sections, themeId, pageBg, editor, selectedId, onSelectSection }: RenderEngineProps) {
   const secs = doc?.sections ?? sections ?? [];
   const theme = getTheme(doc?.themeId ?? themeId);
   const bg = doc?.pageBg ?? pageBg ?? 'none';
@@ -681,7 +708,16 @@ export function RenderEngine({ doc, sections, themeId, pageBg, editor }: RenderE
     <div className="bx-root" style={themeVars(theme)}>
       <style dangerouslySetInnerHTML={{ __html: ENGINE_CSS }} />
       {bg !== 'none' && <div className="bx-pagebg" style={pageBgStyle(bg)} aria-hidden />}
-      {secs.map((s) => <SectionView key={s.id} section={s} editor={editor} />)}
+      {secs.length === 0 && <div className="bx-empty">No sections yet — add one to get started.</div>}
+      {secs.map((s) => (
+        <SectionView
+          key={s.id}
+          section={s}
+          editor={editor}
+          selected={selectedId === s.id}
+          onSelect={onSelectSection}
+        />
+      ))}
     </div>
   );
 }
