@@ -35,6 +35,19 @@ function lines(s: string): string[] {
   return s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
 }
 
+/**
+ * Sanitize a user-authored URL before emitting it in an href.
+ * Page content is seller-authored and rendered publicly (SSR), so links must
+ * be scheme-allowlisted to block javascript:/data:/vbscript: XSS vectors.
+ * Allows relative paths, fragments, mailto/tel and explicit http(s).
+ */
+function safeHref(u: string): string {
+  const trimmed = (u || '').trim();
+  if (!trimmed) return '#';
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(trimmed)) return trimmed;
+  return '#';
+}
+
 // ---------------------------------------------------------------------------
 // section-level styling
 // ---------------------------------------------------------------------------
@@ -151,9 +164,9 @@ function renderBlock(s: Section): ReactNode {
         <Container style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <strong style={{ fontFamily: 'var(--bx-font-display)', fontSize: 18 }}>{str(p, 'logoText', 'InvoxAI')}</strong>
           <nav style={{ display: 'flex', gap: 18, opacity: 0.85, fontSize: 14 }}>
-            {links.map((l, i) => <a key={i} href={str(l as Record<string, unknown>, 'url', '#')} style={{ color: 'inherit', textDecoration: 'none' }}>{str(l as Record<string, unknown>, 'label')}</a>)}
+            {links.map((l, i) => <a key={i} href={safeHref(str(l as Record<string, unknown>, 'url', '#'))} style={{ color: 'inherit', textDecoration: 'none' }}>{str(l as Record<string, unknown>, 'label')}</a>)}
           </nav>
-          {str(p, 'ctaLabel') && <a href={str(p, 'ctaUrl', '#')} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a>}
+          {str(p, 'ctaLabel') && <a href={safeHref(str(p, 'ctaUrl', '#'))} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a>}
         </Container>
       );
     }
@@ -166,7 +179,7 @@ function renderBlock(s: Section): ReactNode {
             <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>{str(p, 'tagline')}</div>
           </div>
           <nav style={{ display: 'flex', gap: 18, fontSize: 14, opacity: 0.85 }}>
-            {links.map((l, i) => <a key={i} href={str(l as Record<string, unknown>, 'url', '#')} style={{ color: 'inherit', textDecoration: 'none' }}>{str(l as Record<string, unknown>, 'label')}</a>)}
+            {links.map((l, i) => <a key={i} href={safeHref(str(l as Record<string, unknown>, 'url', '#'))} style={{ color: 'inherit', textDecoration: 'none' }}>{str(l as Record<string, unknown>, 'label')}</a>)}
           </nav>
           <div style={{ width: '100%', opacity: 0.55, fontSize: 12, marginTop: 8 }}>{str(p, 'copyright')}</div>
         </Container>
@@ -194,8 +207,8 @@ function renderBlock(s: Section): ReactNode {
           <div style={{ marginTop: 14 }}><H lvl={1}>{str(p, 'title')}</H></div>
           {str(p, 'subtitle') && <Sub>{str(p, 'subtitle')}</Sub>}
           <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap', justifyContent: s.align === 'center' || !s.align ? (split ? 'flex-start' : 'center') : undefined }}>
-            {str(p, 'b1Label') && <a href={str(p, 'b1Url', '#')} style={btnStyle(s)}>{str(p, 'b1Label')}</a>}
-            {str(p, 'b2Label') && <a href={str(p, 'b2Url', '#')} style={btnStyle(s, 'secondary')}>{str(p, 'b2Label')}</a>}
+            {str(p, 'b1Label') && <a href={safeHref(str(p, 'b1Url', '#'))} style={btnStyle(s)}>{str(p, 'b1Label')}</a>}
+            {str(p, 'b2Label') && <a href={safeHref(str(p, 'b2Url', '#'))} style={btnStyle(s, 'secondary')}>{str(p, 'b2Label')}</a>}
           </div>
         </div>
       );
@@ -473,7 +486,7 @@ function renderBlock(s: Section): ReactNode {
         <div>
           <H>{str(p, 'title')}</H>
           <p style={{ opacity: 0.78, marginTop: 12, lineHeight: 1.6 }}>{str(p, 'text')}</p>
-          {str(p, 'b1Label') && <div style={{ marginTop: 18 }}><a href={str(p, 'b1Url', '#')} style={btnStyle(s)}>{str(p, 'b1Label')}</a></div>}
+          {str(p, 'b1Label') && <div style={{ marginTop: 18 }}><a href={safeHref(str(p, 'b1Url', '#'))} style={btnStyle(s)}>{str(p, 'b1Label')}</a></div>}
         </div>
       );
       if (s.variant === 'full') {
@@ -519,7 +532,7 @@ function renderBlock(s: Section): ReactNode {
                   <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0', display: 'grid', gap: 8 }}>
                     {feat.map((ft, j) => <li key={j} style={{ display: 'flex', gap: 8, opacity: 0.85 }}><span style={{ color: 'var(--bx-brand)' }}>✓</span>{ft}</li>)}
                   </ul>
-                  <a href={str(r, 'ctaUrl', '#')} style={{ ...btnStyle(s, featured ? 'primary' : 'secondary'), display: 'block', textAlign: 'center' }}>{str(r, 'ctaLabel', 'Choose')}</a>
+                  <a href={safeHref(str(r, 'ctaUrl', '#'))} style={{ ...btnStyle(s, featured ? 'primary' : 'secondary'), display: 'block', textAlign: 'center' }}>{str(r, 'ctaLabel', 'Choose')}</a>
                 </Card>
               );
             })}
@@ -559,7 +572,7 @@ function renderBlock(s: Section): ReactNode {
       return (
         <Container style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
           <strong style={{ fontFamily: 'var(--bx-font-display)', fontSize: 20 }}>{str(p, 'text')}</strong>
-          {str(p, 'ctaLabel') && <a href={str(p, 'ctaUrl', '#')} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a>}
+          {str(p, 'ctaLabel') && <a href={safeHref(str(p, 'ctaUrl', '#'))} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a>}
         </Container>
       );
     }
@@ -590,7 +603,7 @@ function renderBlock(s: Section): ReactNode {
           <Card style={{ textAlign: 'center', boxShadow: '0 30px 70px -30px rgba(0,0,0,.5)' }}>
             <H lvl={3}>{str(p, 'title')}</H>
             <p style={{ opacity: 0.78, marginTop: 8 }}>{str(p, 'text')}</p>
-            {str(p, 'ctaLabel') && <div style={{ marginTop: 16 }}><a href={str(p, 'ctaUrl', '#')} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a></div>}
+            {str(p, 'ctaLabel') && <div style={{ marginTop: 16 }}><a href={safeHref(str(p, 'ctaUrl', '#'))} style={btnStyle(s)}>{str(p, 'ctaLabel')}</a></div>}
           </Card>
         </Container>
       );
