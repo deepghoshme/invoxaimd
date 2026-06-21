@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import ImageInput from "@/components/ImageInput";
 import { RenderEngine } from "@/lib/builder/RenderEngine";
+import { saveV6Page } from "@/app/studio/v6/actions";
 import {
   REGISTRY, blocksByCategory, createSection,
 } from "@/lib/builder/registry";
@@ -187,6 +188,18 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
   const [libOpen, setLibOpen] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function save(publish?: boolean) {
+    setBusy(true); setMsg(null);
+    const res = await saveV6Page(doc, publish);
+    setBusy(false);
+    if (!res.ok) { setMsg(res.error ?? "Failed"); return; }
+    if (publish !== undefined) setDoc((d) => ({ ...d, status: publish ? "published" : "draft" }));
+    setMsg(publish === true ? "Published ✓" : publish === false ? "Unpublished" : "Saved ✓");
+    setTimeout(() => setMsg(null), 1800);
+  }
 
   const sections = doc.sections;
   const selected = sections.find((s) => s.id === selectedId) ?? null;
@@ -245,9 +258,11 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
             <button className={device === "web" ? "on" : ""} onClick={() => setDevice("web")}>🖥</button>
             <button className={device === "mobile" ? "on" : ""} onClick={() => setDevice("mobile")}>📱</button>
           </div>
-          <span className="bx-msg">In-memory (save in Phase 5)</span>
-          <button className="bx-btn" disabled title="Persistence lands in Phase 5">Save draft</button>
-          <button className="bx-btn grad" disabled title="Publish lands in Phase 7">Publish</button>
+          {msg && <span className="bx-msg">{msg}</span>}
+          <button className="bx-btn" onClick={() => save()} disabled={busy}>{doc.status === "published" ? "Update live" : "Save draft"}</button>
+          {doc.status === "published"
+            ? <button className="bx-btn" onClick={() => save(false)} disabled={busy}>Unpublish</button>
+            : <button className="bx-btn grad" onClick={() => save(true)} disabled={busy}>Publish</button>}
         </div>
       </div>
 
