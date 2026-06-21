@@ -158,3 +158,269 @@ QUICK CHECKLIST before you upload
 [ ] accent is a number 0-15 ; font/bg/btshape from the allowed lists
 [ ] order[] lists your sections ; sections{} sets them true ; data arrays use the exact field names
 [ ] valid JSON (no comments, no trailing commas)
+
+================================================================================
+## Page Builder v6 Template format
+================================================================================
+
+> NOTE: This section describes the v6 code-defined template format. It
+> SUPERSEDES the old manifest (JSON-upload) format described above for any page
+> that is managed by Page Builder v6. The old manifest format still applies to
+> pages built with the legacy per-type studios (website, store, bio, etc.).
+
+Page Builder v6 uses a single Section[] engine for all page types. Templates
+are TypeScript objects stored in the `TEMPLATES` array inside
+`lib/builder/templates.ts`. Applying a template replaces a page's sections,
+themeId, and pageBg in one atomic call to `applyTemplate` (same file).
+
+The v6 template format is validated at runtime by `lib/builder/validate.ts`
+(exports `validateTemplate`, `validateSection`, `validatePageDoc`,
+`coerceSection`). The validator checks every block type and variant against
+`REGISTRY[type].fields`, so any drift between a template and the registry is
+caught immediately.
+
+--------------------------------------------------------------------------------
+### Template TypeScript shape
+--------------------------------------------------------------------------------
+
+```ts
+interface Template {
+  id:           string;          // unique slug, e.g. 'saas-launch'
+  name:         string;          // display name, e.g. 'SaaS Launch'
+  category:     string;          // gallery grouping, e.g. 'SaaS', 'Agency'
+  type?:        PageType;        // v6 page type (see below); omit = any type
+  description?: string;          // one-line gallery blurb
+  themeId:      string;          // one of the 13 theme ids (see below); required
+  pageBg?:      PageBg;          // page background; defaults to 'none'
+  tag:          'Free' | 'Pro';  // pricing tier shown in the gallery
+  blocks:       TemplateTuple[]; // ordered list of block tuples
+}
+```
+
+Field notes:
+
+- `id` — machine-readable slug; must be unique across all entries in TEMPLATES.
+- `name` — shown in the template gallery card.
+- `category` — free-form string used for filtering (e.g. 'SaaS', 'Education').
+- `type` — one of the eight v6 PageType values: `landing | vip | lead | event |
+  booking | courses | opp | website`. Omit to make the template available to
+  every page type. When present, the gallery can filter by page type.
+- `description` — optional one-line summary shown in gallery cards.
+- `themeId` — required, must be one of the 13 registered theme ids (see the
+  Theme IDs section below). The validator rejects an unknown id.
+- `pageBg` — optional animated background applied with the template. Valid
+  values: `none | orbs | grid | aurora | mesh | dots`. Defaults to `'none'`
+  when omitted (see `applyTemplate` in templates.ts).
+- `tag` — `'Free'` (anyone can apply) or `'Pro'` (purchase wiring applied
+  later). Must be exactly one of these two strings; the validator rejects
+  anything else.
+- `blocks` — ordered array of TemplateTuple (one per section on the page).
+
+--------------------------------------------------------------------------------
+### TemplateTuple
+--------------------------------------------------------------------------------
+
+```ts
+type TemplateTuple = [BlockType, variant?, partialProps?]
+```
+
+A tuple of one to three elements:
+
+1. `BlockType` (required) — the block type string, e.g. `'hero'`, `'pricing'`.
+   Must be one of the 29 registered types (see Block Reference below).
+
+2. `variant` (optional) — layout variant string. Defaults to the block's first
+   registered variant when omitted. Must match one of the variant strings in
+   `REGISTRY[type].variants`; the validator rejects unknown values.
+
+3. `partialProps` (optional) — plain object with prop overrides. Shallow-merged
+   over the block's registry defaults by `createSection`. Only include the keys
+   you want to change; missing keys are filled from the registry defaults.
+
+Example tuples:
+
+```ts
+['navbar']
+// → navbar with all registry defaults (variant 'left', default logo/links)
+
+['hero', 'center', { title: 'Ship faster', subtitle: 'No code required.', b1Label: 'Get started' }]
+// → hero block, center variant, three prop overrides
+
+['pricing']
+// → pricing block, first variant ('cards'), all defaults
+```
+
+--------------------------------------------------------------------------------
+### Theme IDs (13 total)
+--------------------------------------------------------------------------------
+
+These ids come directly from `lib/builder/themes.ts` (THEMES array). The
+default theme is `violet`.
+
+| id       | Name     | Brand     | Secondary | Accent  |
+|----------|----------|-----------|-----------|---------|
+| violet   | Violet   | #7C3AED   | #A855F7   | #06B6D4 |
+| ocean    | Ocean    | #2563EB   | #3B82F6   | #06B6D4 |
+| emerald  | Emerald  | #059669   | #10B981   | #84CC16 |
+| sunset   | Sunset   | #F97316   | #FB923C   | #EF4444 |
+| rose     | Rose     | #E11D48   | #F43F5E   | #FB7185 |
+| midnight | Midnight | #1E293B   | #334155   | #38BDF8 |
+| gold     | Gold     | #D97706   | #F59E0B   | #FCD34D |
+| teal     | Teal     | #0D9488   | #14B8A6   | #2DD4BF |
+| crimson  | Crimson  | #DC2626   | #EF4444   | #F87171 |
+| indigo   | Indigo   | #4F46E5   | #6366F1   | #818CF8 |
+| forest   | Forest   | #166534   | #16A34A   | #4ADE80 |
+| slate    | Slate    | #475569   | #64748B   | #94A3B8 |
+| magenta  | Magenta  | #C026D3   | #D946EF   | #F0ABFC |
+
+--------------------------------------------------------------------------------
+### Block Reference (29 blocks, generated from live registry)
+--------------------------------------------------------------------------------
+
+For repeater fields the row item fields are listed in parentheses after the
+`repeater` kind annotation. Only override keys that actually exist here;
+unknown keys produce a validator warning and are silently dropped by
+`coerceSection`.
+
+#### Structure
+
+| Block type | Label  | Variants              | Fields (key:kind)                                                                                       |
+|------------|--------|-----------------------|---------------------------------------------------------------------------------------------------------|
+| navbar     | Navbar | left, center, split   | logoText:text, logoImg:image, links:repeater (label:text, url:url), ctaLabel:text, ctaUrl:url, sticky:toggle |
+| footer     | Footer | simple, columns, minimal | logoText:text, tagline:text, links:repeater (label:text, url:url), socials:repeater (icon:icon, url:url), copyright:text |
+
+#### Header
+
+| Block type | Label    | Variants                   | Fields (key:kind)                                                                                                    |
+|------------|----------|----------------------------|----------------------------------------------------------------------------------------------------------------------|
+| badgebar   | Badge bar | pills, ticker             | items:repeater (icon:icon, text:text)                                                                                |
+| hero       | Hero     | center, left, right, split | eyebrow:text, title:text, subtitle:textarea, b1Label:text, b1Url:url, b2Label:text, b2Url:url, image:image, rating:number |
+| flip3d     | 3D flip  | card, tilt                 | title:text, subtitle:textarea, image:image                                                                           |
+| webinfo    | Info bar | bar, cards                 | items:repeater (label:text, value:text)                                                                              |
+
+#### Social proof
+
+| Block type   | Label        | Variants              | Fields (key:kind)                                                                                     |
+|--------------|--------------|-----------------------|-------------------------------------------------------------------------------------------------------|
+| logos        | Logo wall    | row, grid, marquee    | heading:text, logos:repeater (img:image, alt:text)                                                    |
+| marquee      | Marquee      | single, double        | items:repeater (text:text)                                                                            |
+| proof        | Social proof | stars, avatars, mixed | heading:text, rating:number, count:number, avatars:repeater (img:image)                               |
+| testimonials | Testimonials | grid, slider, marquee | heading:text, items:repeater (quote:textarea, name:text, role:text, avatar:image)                     |
+
+#### Content
+
+| Block type | Label          | Variants                        | Fields (key:kind)                                                                                              |
+|------------|----------------|---------------------------------|----------------------------------------------------------------------------------------------------------------|
+| features   | Features       | grid, list, icon-cards          | heading:text, sub:textarea, items:repeater (icon:icon, title:text, text:textarea)                              |
+| bento      | Bento grid     | 3x2, asym                       | heading:text, items:repeater (title:text, text:textarea, span:select)                                          |
+| tabs       | Tabs           | top, side                       | heading:text, items:repeater (label:text, title:text, text:textarea, image:image)                              |
+| orbital    | Orbital        | ring                            | heading:text, center:text, items:repeater (label:text)                                                         |
+| alist      | Accordion list | accordion, checklist            | heading:text, items:repeater (title:text, text:textarea)                                                       |
+| stats      | Stats          | row, cards                      | heading:text, items:repeater (value:text, label:text)                                                          |
+| steps      | Steps          | horizontal, vertical, numbered  | heading:text, items:repeater (title:text, text:textarea)                                                       |
+| video      | Video          | embed, lightbox                 | heading:text, url:url, poster:image                                                                            |
+| faq        | FAQ            | accordion, two-col              | heading:text, items:repeater (q:text, a:textarea)                                                              |
+| counters   | Counters       | row                             | heading:text, items:repeater (value:number, label:text, suffix:text)                                           |
+
+#### Layout
+
+| Block type | Label       | Variants               | Fields (key:kind)                                                              |
+|------------|-------------|------------------------|--------------------------------------------------------------------------------|
+| grid       | Card grid   | 2col, 3col, 4col       | heading:text, items:repeater (image:image, title:text, text:textarea)          |
+| media      | Media + text | left, right, full     | title:text, text:textarea, image:image, b1Label:text, b1Url:url                |
+| gallery    | Gallery     | grid, masonry, carousel | heading:text, images:repeater (img:image, caption:text)                        |
+
+#### Commerce
+
+| Block type | Label   | Variants              | Fields (key:kind)                                                                                                           |
+|------------|---------|-----------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| pricing    | Pricing | cards, table, toggle  | heading:text, sub:textarea, plans:repeater (name:text, price:text, period:text, features:textarea, ctaLabel:text, ctaUrl:url, featured:toggle) |
+| payment    | Payment | inline, button, card  | heading:text, amount:number, currency:select, label:text, productId:text                                                    |
+
+#### Capture
+
+| Block type | Label      | Variants               | Fields (key:kind)                                                                       |
+|------------|------------|------------------------|-----------------------------------------------------------------------------------------|
+| countdown  | Countdown  | bar, block             | heading:text, target:text, expiredText:text                                             |
+| banner     | CTA banner | band, floating         | text:text, ctaLabel:text, ctaUrl:url                                                    |
+| lead       | Lead form  | inline, stacked, card  | heading:text, sub:textarea, fields:repeater (label:text, key:text, type:select), submitLabel:text, action:url |
+| popup      | Popup      | center, slidein        | title:text, text:textarea, ctaLabel:text, ctaUrl:url, delay:number                     |
+
+--------------------------------------------------------------------------------
+### Worked example
+--------------------------------------------------------------------------------
+
+The following is a complete, valid Template object. It uses real block types,
+real variants, real prop keys, and a real theme id. Copy-paste it into the
+`TEMPLATES` array in `lib/builder/templates.ts` and it will pass
+`validateTemplate` without errors.
+
+```ts
+{
+  id: 'coaching-pro',
+  name: 'Coaching Pro',
+  category: 'Education',
+  type: 'landing',
+  description: 'High-converting coaching or course page with social proof and FAQ.',
+  themeId: 'indigo',
+  pageBg: 'aurora',
+  tag: 'Pro',
+  blocks: [
+    ['navbar'],
+    ['badgebar', 'pills'],
+    ['hero', 'center', {
+      eyebrow: 'LIMITED SPOTS',
+      title: 'Transform your career in 90 days',
+      subtitle: 'A proven, hands-on programme built by practitioners — not theorists.',
+      b1Label: 'Apply now',
+      b1Url: '#apply',
+      b2Label: 'See the curriculum',
+      b2Url: '#curriculum',
+    }],
+    ['proof', 'mixed'],
+    ['features', 'grid'],
+    ['steps', 'numbered'],
+    ['testimonials', 'marquee'],
+    ['stats', 'row'],
+    ['pricing', 'cards'],
+    ['faq', 'accordion'],
+    ['banner', 'band', { text: 'Cohort closes Friday.', ctaLabel: 'Reserve your seat', ctaUrl: '#apply' }],
+    ['footer'],
+  ],
+}
+```
+
+Key points illustrated above:
+
+- `blocks` entries without a variant or props use the block's first registered
+  variant and all registry defaults (e.g. `['navbar']`, `['footer']`).
+- `['hero', 'center', { ... }]` — the third element is a partial props object;
+  only the listed keys are overridden. All other hero props (b2Label, image,
+  rating, etc.) remain at their registry defaults.
+- `['banner', 'band', { text: '...', ctaLabel: '...', ctaUrl: '...' }]` — the
+  banner block's three prop keys are all set explicitly.
+- `themeId: 'indigo'` and `pageBg: 'aurora'` are both from the valid sets
+  documented above; swapping to any other valid id/value requires no other
+  change.
+
+Templates live in `lib/builder/templates.ts` as the `TEMPLATES` array and are
+expanded into fresh Section objects (with new ids) via `applyTemplate`. The
+helper `templateSections` is available if you only need the Section array
+without overwriting the full PageDoc.
+
+--------------------------------------------------------------------------------
+### Validator
+--------------------------------------------------------------------------------
+
+`lib/builder/validate.ts` exports four functions:
+
+- `validateTemplate(t)` — checks tag, themeId, pageBg, and every block tuple
+  (type, variant, and each prop key/value) against the live registry. Returns
+  `{ ok: boolean, errors: string[] }`. Errors prefixed `warning:` do not set
+  `ok = false` (unknown prop keys are warnings, not hard errors).
+- `validateSection(section)` — validates a single expanded Section.
+- `validatePageDoc(doc)` — validates a full PageDoc (themeId, pageBg, all
+  sections).
+- `coerceSection(section)` — best-effort clean: starts from registry defaults,
+  merges only known prop keys from the input, carries over section-level
+  controls (bg, size, align, anim, …). Safe to call on untrusted input.
