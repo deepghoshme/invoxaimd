@@ -26,6 +26,7 @@ const NAV: GatedNavGroup[] = [
     { label: "A/B test", icon: "chart", href: "/dashboard/abtest", feature: "abtest" },
   ] },
   { label: "Pages", items: [
+    { label: "Page builder ✨", icon: "layers", href: "/studio/v6" },
     { label: "Website", icon: "site", href: "/dashboard/website", feature: "website" },
     { label: "Bio page", icon: "link", href: "/dashboard/pages/bio", feature: "bio" },
     { label: "Store", icon: "bag", href: "/dashboard/store", feature: "store" },
