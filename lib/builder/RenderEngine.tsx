@@ -160,9 +160,12 @@ function renderBlock(s: Section): ReactNode {
     // ---- Structure ----
     case 'navbar': {
       const links = list(p, 'links');
+      const logoImg = str(p, 'logoImg');
       return (
         <Container style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <strong style={{ fontFamily: 'var(--bx-font-display)', fontSize: 18 }}>{str(p, 'logoText', 'InvoxAI')}</strong>
+          {logoImg
+            ? <Img src={logoImg} alt={str(p, 'logoText', 'Logo')} style={{ height: 30, width: 'auto', borderRadius: 6, aspectRatio: 'auto' }} />
+            : <strong style={{ fontFamily: 'var(--bx-font-display)', fontSize: 18 }}>{str(p, 'logoText', 'InvoxAI')}</strong>}
           <nav style={{ display: 'flex', gap: 18, opacity: 0.85, fontSize: 14 }}>
             {links.map((l, i) => <a key={i} href={safeHref(str(l as Record<string, unknown>, 'url', '#'))} style={{ color: 'inherit', textDecoration: 'none' }}>{str(l as Record<string, unknown>, 'label')}</a>)}
           </nav>
@@ -172,6 +175,7 @@ function renderBlock(s: Section): ReactNode {
     }
     case 'footer': {
       const links = list(p, 'links');
+      const socials = list(p, 'socials');
       return (
         <Container style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -181,6 +185,11 @@ function renderBlock(s: Section): ReactNode {
           <nav style={{ display: 'flex', gap: 18, fontSize: 14, opacity: 0.85 }}>
             {links.map((l, i) => <a key={i} href={safeHref(str(l as Record<string, unknown>, 'url', '#'))} style={{ color: 'inherit', textDecoration: 'none' }}>{str(l as Record<string, unknown>, 'label')}</a>)}
           </nav>
+          {socials.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, fontSize: 18 }}>
+              {socials.map((so, i) => <a key={i} href={safeHref(str(so as Record<string, unknown>, 'url', '#'))} style={{ color: 'inherit', textDecoration: 'none' }} aria-label="social">{str(so as Record<string, unknown>, 'icon', '🌐')}</a>)}
+            </div>
+          )}
           <div style={{ width: '100%', opacity: 0.55, fontSize: 12, marginTop: 8 }}>{str(p, 'copyright')}</div>
         </Container>
       );
@@ -210,6 +219,12 @@ function renderBlock(s: Section): ReactNode {
             {str(p, 'b1Label') && <a href={safeHref(str(p, 'b1Url', '#'))} style={btnStyle(s)}>{str(p, 'b1Label')}</a>}
             {str(p, 'b2Label') && <a href={safeHref(str(p, 'b2Url', '#'))} style={btnStyle(s, 'secondary')}>{str(p, 'b2Label')}</a>}
           </div>
+          {num(p, 'rating') > 0 && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 18, justifyContent: split ? 'flex-start' : 'center' }}>
+              <span style={{ color: 'var(--bx-acc)', fontSize: 18 }}>{'★'.repeat(Math.round(num(p, 'rating')))}{'☆'.repeat(Math.max(0, 5 - Math.round(num(p, 'rating'))))}</span>
+              <span style={{ opacity: 0.7, fontSize: 14 }}>{num(p, 'rating').toFixed(1)}</span>
+            </div>
+          )}
         </div>
       );
       if (split) {
@@ -279,8 +294,16 @@ function renderBlock(s: Section): ReactNode {
     }
     case 'proof': {
       const r = num(p, 'rating', 4.9);
+      const avatars = list(p, 'avatars');
       return (
         <Container style={{ textAlign: 'center' }}>
+          {avatars.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              {avatars.map((av, i) => (
+                <Img key={i} src={str(av as Record<string, unknown>, 'img')} alt="" style={{ width: 38, height: 38, borderRadius: 999, objectFit: 'cover', border: '2px solid #fff', marginLeft: i ? -10 : 0, aspectRatio: 'auto' }} />
+              ))}
+            </div>
+          )}
           <div style={{ fontSize: 22, color: 'var(--bx-acc)' }}>{'★'.repeat(Math.round(r))}{'☆'.repeat(Math.max(0, 5 - Math.round(r)))}</div>
           <H lvl={3}>{str(p, 'heading')}</H>
           {num(p, 'count') > 0 && <div style={{ opacity: 0.7, fontSize: 13 }}>{num(p, 'count').toLocaleString()} reviews</div>}
@@ -293,13 +316,22 @@ function renderBlock(s: Section): ReactNode {
         <Container>
           {str(p, 'heading') && <div style={{ textAlign: 'center', marginBottom: 28 }}><H>{str(p, 'heading')}</H></div>}
           <div style={grid(Math.min(items.length || 1, 3))}>
-            {items.map((it, i) => (
-              <Card key={i}>
-                <p style={{ fontStyle: 'italic', lineHeight: 1.6 }}>“{str(it as Record<string, unknown>, 'quote')}”</p>
-                <div style={{ marginTop: 14, fontWeight: 700 }}>{str(it as Record<string, unknown>, 'name')}</div>
-                <div style={{ opacity: 0.65, fontSize: 13 }}>{str(it as Record<string, unknown>, 'role')}</div>
-              </Card>
-            ))}
+            {items.map((it, i) => {
+              const r = it as Record<string, unknown>;
+              const avatar = str(r, 'avatar');
+              return (
+                <Card key={i}>
+                  <p style={{ fontStyle: 'italic', lineHeight: 1.6 }}>“{str(r, 'quote')}”</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                    {avatar && <Img src={avatar} alt="" style={{ width: 40, height: 40, borderRadius: 999, objectFit: 'cover', aspectRatio: 'auto' }} />}
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{str(r, 'name')}</div>
+                      <div style={{ opacity: 0.65, fontSize: 13 }}>{str(r, 'role')}</div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </Container>
       );
@@ -504,7 +536,16 @@ function renderBlock(s: Section): ReactNode {
         <Container>
           {str(p, 'heading') && <div style={{ textAlign: 'center', marginBottom: 24 }}><H>{str(p, 'heading')}</H></div>}
           <div style={grid(3)}>
-            {images.map((im, i) => <Img key={i} src={str(im as Record<string, unknown>, 'img')} style={{ aspectRatio: '1/1', objectFit: 'cover', width: '100%' }} />)}
+            {images.map((im, i) => {
+              const r = im as Record<string, unknown>;
+              const caption = str(r, 'caption');
+              return (
+                <figure key={i} style={{ margin: 0 }}>
+                  <Img src={str(r, 'img')} style={{ aspectRatio: '1/1', objectFit: 'cover', width: '100%' }} />
+                  {caption && <figcaption style={{ fontSize: 12, opacity: 0.7, marginTop: 6, textAlign: 'center' }}>{caption}</figcaption>}
+                </figure>
+              );
+            })}
           </div>
         </Container>
       );
@@ -586,10 +627,11 @@ function renderBlock(s: Section): ReactNode {
             {fields.map((fl, i) => {
               const r = fl as Record<string, unknown>;
               const type = str(r, 'type', 'text');
+              const name = str(r, 'key') || undefined;
               const common: CSSProperties = { padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,.15)', width: '100%', font: 'inherit' };
               return type === 'textarea'
-                ? <textarea key={i} placeholder={str(r, 'label')} rows={3} style={common} />
-                : <input key={i} type={type} placeholder={str(r, 'label')} style={common} />;
+                ? <textarea key={i} name={name} placeholder={str(r, 'label')} rows={3} style={common} />
+                : <input key={i} name={name} type={type} placeholder={str(r, 'label')} style={common} />;
             })}
             <span style={{ ...btnStyle(s), textAlign: 'center' }}>{str(p, 'submitLabel', 'Submit')}</span>
           </form>
