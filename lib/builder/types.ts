@@ -171,7 +171,13 @@ export interface Template {
   id: string;
   name: string;
   category: string;
+  /** Which v6 page type this template targets. */
+  type?: PageType;
+  /** One-line description for the gallery. */
+  description?: string;
   themeId: string;
+  /** Page background applied with the template. */
+  pageBg?: PageDoc['pageBg'];
   tag: 'Free' | 'Pro';
   blocks: TemplateTuple[];
 }

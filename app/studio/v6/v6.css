@@ -90,6 +90,18 @@
 .bx-lib-card .nm { font-size: 13px; font-weight: 600; }
 .bx-lib-close { float: right; border: 0; background: transparent; font-size: 20px; cursor: pointer; color: var(--secondary); }
 
+/* template gallery */
+.bx-tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.bx-tpl-card { display: flex; flex-direction: column; text-align: left; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; background: var(--surface, var(--bg)); color: var(--text); padding: 0; }
+.bx-tpl-card:hover { border-color: var(--primary); }
+.bx-tpl-bar { position: relative; height: 76px; display: block; }
+.bx-tpl-tag { position: absolute; top: 8px; right: 8px; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.9); color: #111; }
+.bx-tpl-tag.pro { background: #111; color: #fff; }
+.bx-tpl-body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; }
+.bx-tpl-name { font-size: 14px; font-weight: 700; }
+.bx-tpl-cat { font-size: 11px; color: var(--secondary); }
+.bx-tpl-desc { font-size: 12px; color: var(--secondary); margin-top: 2px; }
+
 /* suggest-more */
 .bx-suggest { margin-top: 16px; padding: 12px; background: var(--surface2, rgba(127,127,127,.06)); border: 1px solid var(--border); border-radius: 12px; }
 .bx-suggest .hd { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); margin-bottom: 8px; }

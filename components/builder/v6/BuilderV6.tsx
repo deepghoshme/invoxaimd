@@ -17,6 +17,8 @@ import {
 } from "@/lib/builder/registry";
 import { THEMES } from "@/lib/builder/themes";
 import { SECTION_BGS, PAGE_BGS } from "@/lib/builder/backgrounds";
+import { TEMPLATES, applyTemplate } from "@/lib/builder/templates";
+import { getTheme } from "@/lib/builder/themes";
 import type {
   BlockType, FieldDef, PageDoc, Section, SectionBg,
 } from "@/lib/builder/types";
@@ -186,6 +188,7 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
   const [device, setDevice] = useState<"web" | "mobile">("web");
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [libOpen, setLibOpen] = useState(false);
+  const [galOpen, setGalOpen] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -200,6 +203,14 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
     setMsg(publish === true ? "Published ✓" : publish === false ? "Unpublished" : "Saved ✓");
     setTimeout(() => setMsg(null), 1800);
   }
+
+  const applyTpl = (t: typeof TEMPLATES[number]) => {
+    if (doc.sections.length && !window.confirm(`Apply "${t.name}"? This replaces all current sections, theme and background.`)) return;
+    const next = applyTemplate(doc, t);
+    setDoc(next);
+    setSelectedId(next.sections[0]?.id ?? null);
+    setGalOpen(false);
+  };
 
   const sections = doc.sections;
   const selected = sections.find((s) => s.id === selectedId) ?? null;
@@ -252,6 +263,7 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
             <button className={view === "edit" ? "on" : ""} onClick={() => setView("edit")}>Builder</button>
             <button className={view === "preview" ? "on" : ""} onClick={() => setView("preview")}>Preview</button>
           </div>
+          <button className="bx-btn" onClick={() => setGalOpen(true)}>✨ Templates</button>
         </div>
         <div className="grp">
           <div className="bx-seg">
@@ -419,6 +431,34 @@ export default function BuilderV6({ initial }: { initial: PageDoc }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* template gallery popup */}
+      {galOpen && (
+        <div className="bx-lib-overlay" onClick={() => setGalOpen(false)}>
+          <div className="bx-lib" onClick={(e) => e.stopPropagation()}>
+            <button className="bx-lib-close" onClick={() => setGalOpen(false)}>✕</button>
+            <h3>Start from a template</h3>
+            <p className="sub">Applying a template replaces all sections, the theme and the background.</p>
+            <div className="bx-tpl-grid">
+              {TEMPLATES.map((t) => {
+                const th = getTheme(t.themeId);
+                return (
+                  <button key={t.id} type="button" className="bx-tpl-card" onClick={() => applyTpl(t)}>
+                    <span className="bx-tpl-bar" style={{ background: `linear-gradient(135deg, ${th.brand}, ${th.b2} 60%, ${th.acc})` }}>
+                      <span className={`bx-tpl-tag${t.tag === "Pro" ? " pro" : ""}`}>{t.tag}</span>
+                    </span>
+                    <span className="bx-tpl-body">
+                      <span className="bx-tpl-name">{t.name}</span>
+                      <span className="bx-tpl-cat">{t.category} · {t.blocks.length} sections</span>
+                      {t.description && <span className="bx-tpl-desc">{t.description}</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
